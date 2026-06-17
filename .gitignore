@@ -1,0 +1,44 @@
+# Python byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local SQLite Database
+database/
+*.db
+
+# Log files
+logs/
+*.log
+
+# Generated HTML & PDF Reports
+reports/
+*.html
+*.pdf
+
+# Local Cache Files
+cache/
+*.json
+
+# Local Configuration settings (contains API paths/SMTP credentials)
+config/
+settings.json
+
+# Environment / Venv
+venv/
+.venv/
+env/
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE config files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
