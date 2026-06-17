@@ -20,7 +20,7 @@ from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
 
-FFUF_TIMEOUT = 300
+FFUF_TIMEOUT = 7200
 
 # Small built-in wordlist used when no system wordlist is found
 _BUILTIN_WORDLIST = [
@@ -87,7 +87,8 @@ def run_ffuf_scan(url):
         "-o", "-",          # output to stdout
         "-of", "json",      # JSON format
         "-s",               # silent (no progress bar)
-        "-t", "40",         # 40 concurrent threads
+        "-t", "5",          # reduced from 40 to 5 threads
+        "-rate", "5",       # Rate limit to 5 requests per second
         "-mc", "all",       # match all status codes (we filter ourselves)
         "-fc", "404",       # but filter out 404s
         "-timeout", "10",   # per-request timeout in seconds

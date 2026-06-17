@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+perl "/home/dxt/Downloads/SecurityManagementPlatform-main/bin/nikto_src/nikto.pl" "$@"

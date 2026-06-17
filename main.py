@@ -24,6 +24,13 @@ from tools.scheduler import start_scheduler, shutdown_scheduler
 from ui.dashboard import DashboardWindow
 
 def main():
+    # Prepend project-local bin/ directory to system PATH
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bin_dir = os.path.join(base_dir, "bin")
+    os.makedirs(bin_dir, exist_ok=True)
+    if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+        os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
+
     # 1. Initialize directory structures
     init_directories()
 

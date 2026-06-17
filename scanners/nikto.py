@@ -20,7 +20,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nikto to run before forcefully killing it
-NIKTO_TIMEOUT = 600
+NIKTO_TIMEOUT = 7200
 
 # Nikto OSVDB IDs and keyword patterns that map to higher severities
 # Everything else defaults to "Medium" since nikto focuses on web misconfigs
@@ -71,7 +71,8 @@ def run_nikto_scan(url):
     # -output - : send output to stdout (dash = stdout)
     # -nointeractive : never prompt
     # -Tuning x : run all plugin tuning categories  (x = all)
-    cmd = [nikto_bin, "-h", url, "-Format", "csv", "-output", "-", "-nointeractive", "-Tuning", "x"]
+    # -Pause 1 : pause 1 second between requests to throttle
+    cmd = [nikto_bin, "-h", url, "-Format", "csv", "-output", "-", "-nointeractive", "-Tuning", "x", "-Pause", "1"]
 
     try:
         process = subprocess.Popen(

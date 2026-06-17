@@ -20,7 +20,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nuclei to run before forcefully killing it
-NUCLEI_TIMEOUT = 600
+NUCLEI_TIMEOUT = 7200
 
 def run_nuclei_scan(url):
     """
@@ -35,10 +35,12 @@ def run_nuclei_scan(url):
     add_log_entry("INFO", f"Nuclei Started: Scanning target {url}")
     
     # Run Nuclei with JSON Lines output
-    # -jsonl : Output findings in JSONL format
     # -u : target url
     # -silent : Only output findings (quiets banner and progress logs on stdout)
-    cmd = [nuclei_bin, "-u", url, "-jsonl", "-silent"]
+    # -rl 5 : Rate Limit (5 req/sec) to avoid DDoS
+    # -t : Explicitly scan all major templates for intense scan
+    cmd = [nuclei_bin, "-u", url, "-jsonl", "-silent", "-rl", "5", 
+           "-t", "cves,vulnerabilities,misconfiguration,exposures,default-logins,takeovers"]
     
     findings = []
     try:

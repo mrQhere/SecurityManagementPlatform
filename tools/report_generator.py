@@ -46,9 +46,15 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     html_path = os.path.join(BASE_DIR, "reports", "html", html_filename)
     pdf_path = os.path.join(BASE_DIR, "reports", "pdf", pdf_filename)
     
+    from tools.db_manager import get_scan
+    scan_rec = get_scan(scan_id)
+    scanned_by = scan_rec.get("scanned_by") if scan_rec else None
+    if not scanned_by:
+        scanned_by = load_settings().get("tester_name", "Security Auditor")
+    
     # Generate HTML
     try:
-        generate_html_report(html_path, target, current_findings, previous_scan)
+        generate_html_report(html_path, target, current_findings, previous_scan, scanned_by)
         logger.info(f"HTML Report generated at {html_path}")
     except Exception as e:
         logger.error(f"Failed to generate HTML report: {e}", exc_info=True)
@@ -57,7 +63,7 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     # Generate PDF
     if REPORTLAB_AVAILABLE:
         try:
-            generate_pdf_report(pdf_path, target, current_findings, previous_scan)
+            generate_pdf_report(pdf_path, target, current_findings, previous_scan, scanned_by)
             logger.info(f"PDF Report generated at {pdf_path}")
         except Exception as e:
             logger.error(f"Failed to generate PDF report: {e}", exc_info=True)
@@ -68,10 +74,11 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
         
     return html_path, pdf_path
 
-def generate_html_report(filepath, target, findings, previous_scan=None):
+def generate_html_report(filepath, target, findings, previous_scan=None, scanned_by=None):
     """Renders a highly professional HTML report with styling and all required sections."""
-    settings = load_settings()
-    tester_name = settings.get("tester_name", "Security Auditor")
+    if not scanned_by:
+        settings = load_settings()
+        scanned_by = settings.get("tester_name", "Security Auditor")
     url = target["url"]
     scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -291,7 +298,7 @@ def generate_html_report(filepath, target, findings, previous_scan=None):
         <div class="meta-box">
             <div class="meta-item"><strong>Target Scope:</strong> {url}</div>
             <div class="meta-item"><strong>Scan Date:</strong> {scan_time}</div>
-            <div class="meta-item"><strong>Report Prepared By:</strong> {tester_name}</div>
+            <div class="meta-item"><strong>Scan Done By / Prepared By:</strong> {scanned_by}</div>
             <div class="meta-item"><strong>Total Findings:</strong> {len(findings)}</div>
         </div>
 
@@ -339,10 +346,11 @@ def generate_html_report(filepath, target, findings, previous_scan=None):
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(html_content)
 
-def generate_pdf_report(filepath, target, findings, previous_scan=None):
+def generate_pdf_report(filepath, target, findings, previous_scan=None, scanned_by=None):
     """Generates PDF report using ReportLab platypus flowables with cover page and professional sections."""
-    settings = load_settings()
-    tester_name = settings.get("tester_name", "Security Auditor")
+    if not scanned_by:
+        settings = load_settings()
+        scanned_by = settings.get("tester_name", "Security Auditor")
     url = target["url"]
     scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -444,8 +452,8 @@ def generate_pdf_report(filepath, target, findings, previous_scan=None):
     
     # Prepared By metadata card
     cover_meta_data = [
-        [Paragraph(f"<b>REPORT PREPARED BY:</b>", cover_meta_style)],
-        [Paragraph(f"{tester_name}", body_style)],
+        [Paragraph(f"<b>SCAN DONE BY / PREPARED BY:</b>", cover_meta_style)],
+        [Paragraph(f"{scanned_by}", body_style)],
         [Spacer(1, 8)],
         [Paragraph(f"<b>ASSESSMENT DATE:</b>", cover_meta_style)],
         [Paragraph(f"{scan_time}", body_style)],

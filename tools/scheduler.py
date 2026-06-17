@@ -59,27 +59,32 @@ def trigger_intel_job():
     from intelligence.nvd import sync_nvd
     from intelligence.cisa import sync_cisa
     from intelligence.github_adv import sync_github_adv
+    from intelligence.epss import sync_epss
     
     success = True
-    # 1. Sync CISA
+    
+    try:
+        sync_nvd()
+    except Exception as e:
+        logger.error(f"NVD sync failed: {e}")
+        success = False
+
     try:
         sync_cisa()
     except Exception as e:
         logger.error(f"CISA sync failed: {e}")
         success = False
         
-    # 2. Sync GitHub Advisories
     try:
         sync_github_adv()
     except Exception as e:
         logger.error(f"GitHub Advisories sync failed: {e}")
         success = False
-
-    # 3. Sync NVD
+        
     try:
-        sync_nvd()
+        sync_epss()
     except Exception as e:
-        logger.error(f"NVD sync failed: {e}")
+        logger.error(f"EPSS sync failed: {e}")
         success = False
         
     if success:

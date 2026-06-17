@@ -48,10 +48,26 @@ def get_latest_risk_score_for_target(target_id):
     finally:
         conn.close()
 
-# Premium Dark Mode QSS Stylesheet
+def get_latest_scan_operator_for_target(target_id):
+    from tools.db_manager import get_db_connection
+    conn = get_db_connection()
+    try:
+        row = conn.execute("""
+            SELECT s.scanned_by FROM scans s
+            WHERE s.target_id = ?
+            ORDER BY s.id DESC LIMIT 1
+        """, (target_id,)).fetchone()
+        return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
+    except Exception:
+        return "N/A"
+    finally:
+        conn.close()
+
+
+# Premium Cyber-Dark Mode QSS Stylesheet
 QSS_DARK_THEME = """
 QMainWindow {
-    background-color: #090d16;
+    background-color: #060913;
 }
 QWidget {
     color: #f1f5f9;
@@ -59,14 +75,15 @@ QWidget {
     font-size: 13px;
 }
 QFrame#sidebar_frame {
-    background-color: #0c121e;
-    border-right: 1px solid #1f2a3f;
+    background-color: #0c0f1d;
+    border-right: 1px solid #1e293b;
 }
 QLabel#app_title {
     color: #3b82f6;
-    font-weight: bold;
-    font-size: 15px;
-    padding: 15px;
+    font-weight: 800;
+    font-size: 17px;
+    padding: 20px 10px;
+    letter-spacing: 2px;
 }
 QListWidget#sidebar {
     background-color: transparent;
@@ -75,28 +92,28 @@ QListWidget#sidebar {
 QListWidget#sidebar::item {
     color: #94a3b8;
     padding: 12px 18px;
-    border-radius: 6px;
-    margin: 4px 8px;
+    border-radius: 8px;
+    margin: 5px 10px;
     font-weight: bold;
 }
 QListWidget#sidebar::item:hover {
-    background-color: #151b26;
-    color: #3b82f6;
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
 }
 QListWidget#sidebar::item:selected {
-    background-color: #1e293b;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #172554, stop:1 #0f172a);
     color: #3b82f6;
-    border-left: 3px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
 }
 QFrame#page_container {
-    background-color: #090d16;
+    background-color: #060913;
 }
 QGroupBox {
-    background-color: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 10px;
-    margin-top: 15px;
-    padding-top: 15px;
+    background-color: #0e1222;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
     font-weight: bold;
     font-size: 14px;
     color: #3b82f6;
@@ -104,14 +121,14 @@ QGroupBox {
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 0 10px;
-    left: 15px;
+    padding: 0 12px;
+    left: 20px;
 }
 QLineEdit, QComboBox {
-    background-color: #1f2937;
-    border: 1px solid #374151;
-    border-radius: 6px;
-    padding: 8px 12px;
+    background-color: #1a1e36;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px 14px;
     color: #f1f5f9;
 }
 QLineEdit:focus, QComboBox:focus {
@@ -121,19 +138,19 @@ QPushButton {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3b82f6, stop:1 #1d4ed8);
     color: white;
     border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
+    border-radius: 8px;
+    padding: 10px 20px;
     font-weight: bold;
 }
 QPushButton:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #60a5fa, stop:1 #3b82f6);
 }
 QPushButton:pressed {
-    background: #1e3a8a;
+    background: #172554;
 }
 QPushButton:disabled {
-    background: #1f2937;
-    color: #4b5563;
+    background: #1e293b;
+    color: #64748b;
 }
 QPushButton#btn_delete {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ef4444, stop:1 #b91c1c);
@@ -142,63 +159,73 @@ QPushButton#btn_delete:hover {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f87171, stop:1 #ef4444);
 }
 QPushButton#btn_toggle {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4b5563, stop:1 #374151);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #475569, stop:1 #334155);
+    color: #f1f5f9;
+    border: 1px solid #4b5563;
 }
 QPushButton#btn_toggle:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6b7280, stop:1 #4b5563);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #64748b, stop:1 #475569);
+    border: 1px solid #6b7280;
 }
 QTableWidget {
-    background-color: #111827;
-    gridline-color: #1f2937;
-    border: 1px solid #1f2937;
-    border-radius: 8px;
-    selection-background-color: #1f2937;
+    background-color: #0e1222;
+    gridline-color: #1e293b;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    selection-background-color: #1e293b;
     selection-color: #f1f5f9;
 }
+QTableWidget QPushButton {
+    padding: 2px 4px;
+    font-size: 11px;
+    border-radius: 4px;
+    font-weight: bold;
+}
 QHeaderView::section {
-    background-color: #1f2937;
-    color: #9ca3af;
-    padding: 8px;
+    background-color: #151b35;
+    color: #94a3b8;
+    padding: 10px;
     border: none;
     font-weight: bold;
 }
 QListWidget {
-    background-color: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 8px;
-    padding: 5px;
+    background-color: #0e1222;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 8px;
 }
 QListWidget::item {
-    padding: 8px 12px;
-    border-bottom: 1px solid #1f2937;
+    padding: 10px 14px;
+    border-bottom: 1px solid #1e293b;
 }
 QListWidget::item:last {
     border-bottom: none;
 }
 QScrollBar:vertical {
     border: none;
-    background: #090d16;
-    width: 8px;
+    background: #060913;
+    width: 10px;
     margin: 0px;
 }
 QScrollBar::handle:vertical {
-    background: #4b5563;
-    min-height: 20px;
-    border-radius: 4px;
+    background: #1e293b;
+    min-height: 25px;
+    border-radius: 5px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #6b7280;
+    background: #334155;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
 }
 QTextEdit {
-    background-color: #0b0f19;
-    border: 1px solid #1f2937;
-    border-radius: 8px;
+    background-color: #04060c;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 12px;
     color: #cbd5e1;
+    padding: 12px;
 }
 """
 
@@ -256,7 +283,7 @@ class DashboardWindow(QMainWindow):
             ("Dashboard", "Overview & status"),
             ("Targets", "URL monitoring & scans"),
             ("Threat Intel", "CVE Advisories feed"),
-            ("SMTP Config", "Configure email alerts"),
+            ("System Settings", "Configure scan operator, reports, and email alerts"),
             ("Audit Logs", "System logs")
         ]
         
@@ -292,20 +319,23 @@ class DashboardWindow(QMainWindow):
         card.setObjectName("kpi_card")
         card.setStyleSheet("""
             QFrame#kpi_card {
-                background-color: #111827;
-                border: 1px solid #1f2937;
-                border-radius: 10px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0e1225, stop:1 #161b35);
+                border: 1px solid #1e293b;
+                border-radius: 12px;
+            }
+            QFrame#kpi_card:hover {
+                border: 1px solid #3b82f6;
             }
         """)
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setContentsMargins(18, 18, 18, 18)
         
         title_lbl = QLabel(title)
-        title_lbl.setStyleSheet("color: #9ca3af; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+        title_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 800; letter-spacing: 1.5px;")
         layout.addWidget(title_lbl)
         
         val_lbl = QLabel(value)
-        val_lbl.setStyleSheet("color: #f1f5f9; font-size: 24px; font-weight: bold;")
+        val_lbl.setStyleSheet("color: #f8fafc; font-size: 26px; font-weight: bold;")
         layout.addWidget(val_lbl)
         
         return card, val_lbl
@@ -398,13 +428,15 @@ class DashboardWindow(QMainWindow):
         # Main targets table
         self.grp_targets = QGroupBox("Configured Targets")
         grp_targets_layout = QVBoxLayout(self.grp_targets)
-        self.tbl_targets = QTableWidget(0, 5)
-        self.tbl_targets.setHorizontalHeaderLabels(["URL Target", "Status", "Risk Score", "Last Scan Timestamp", "Actions"])
+        self.tbl_targets = QTableWidget(0, 6)
+        self.tbl_targets.setHorizontalHeaderLabels(["URL Target", "Status", "Risk Score", "Last Scan Timestamp", "Scan Done By", "Actions"])
         self.tbl_targets.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.tbl_targets.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.tbl_targets.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.tbl_targets.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        self.tbl_targets.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.tbl_targets.horizontalHeader().setSectionResizeMode(5, QHeaderView.Fixed)
+        self.tbl_targets.setColumnWidth(5, 250)
         self.tbl_targets.setSelectionBehavior(QTableWidget.SelectRows)
         grp_targets_layout.addWidget(self.tbl_targets)
         layout.addWidget(self.grp_targets)
@@ -453,6 +485,12 @@ class DashboardWindow(QMainWindow):
         self.cmb_intel_severity.currentTextChanged.connect(self.refresh_intel_feed)
         filter_layout.addWidget(self.cmb_intel_severity)
         
+        # Fetch CVEs button
+        self.btn_cve_sync = QPushButton("Fetch Current CVEs")
+        self.btn_cve_sync.setToolTip("Query NVD, CISA, and GitHub Advisories APIs now")
+        self.btn_cve_sync.clicked.connect(self.force_intel_sync)
+        filter_layout.addWidget(self.btn_cve_sync)
+        
         grp_intel_layout.addLayout(filter_layout)
         
         # CVE List
@@ -469,7 +507,7 @@ class DashboardWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        title = QLabel("SYSTEM & ALERT SETTINGS")
+        title = QLabel("SYSTEM SETTINGS")
         title.setFont(QFont("Segoe UI", 16, QFont.Bold))
         title.setStyleSheet("color: #3b82f6;")
         layout.addWidget(title)
@@ -531,7 +569,12 @@ class DashboardWindow(QMainWindow):
         
         self.txt_tester_name = QLineEdit()
         self.txt_tester_name.setPlaceholderText("e.g. John Doe (Security Auditor)")
-        report_form.addRow("Tester / Auditor Name:", self.txt_tester_name)
+        report_form.addRow("Scan Done By / Tester Name:", self.txt_tester_name)
+        
+        self.btn_check_tools = QPushButton("Check Dependencies & Tools")
+        self.btn_check_tools.setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #8b5cf6, stop:1 #7c3aed);")
+        self.btn_check_tools.clicked.connect(self.check_tools_dependencies)
+        report_form.addRow("System Tools:", self.btn_check_tools)
         
         layout.addWidget(report_box)
         
@@ -638,40 +681,62 @@ class DashboardWindow(QMainWindow):
         ssl_val = self.chk_smtp_ssl.isChecked()
         tester = self.txt_tester_name.text().strip() or "Security Auditor"
         
-        if not host or not port_text or not user or not pw or not receiver:
-            QMessageBox.warning(self, "Missing Settings", "All SMTP configuration fields are required.")
-            return
-            
-        try:
-            port = int(port_text)
-        except ValueError:
-            QMessageBox.warning(self, "Invalid Port", "SMTP Port must be a number.")
-            return
-            
         current_settings = load_settings()
-        current_settings.update({
-            "smtp_host": host,
-            "smtp_port": port,
-            "smtp_ssl": ssl_val,
-            "smtp_user": user,
-            "smtp_pass": pw,
-            "smtp_sender": sender,
-            "smtp_receiver": receiver,
-            "tester_name": tester
-        })
+        current_settings["tester_name"] = tester
         
+        smtp_configured = True
+        if not host and not port_text and not user and not pw and not receiver:
+            smtp_configured = False
+        else:
+            if not host or not port_text or not user or not pw or not receiver:
+                QMessageBox.warning(self, "Missing Settings", "To configure email notifications, all SMTP fields are required.")
+                return
+            try:
+                port = int(port_text)
+            except ValueError:
+                QMessageBox.warning(self, "Invalid Port", "SMTP Port must be a number.")
+                return
+            
+            current_settings.update({
+                "smtp_host": host,
+                "smtp_port": port,
+                "smtp_ssl": ssl_val,
+                "smtp_user": user,
+                "smtp_pass": pw,
+                "smtp_sender": sender,
+                "smtp_receiver": receiver
+            })
+            
         if save_settings(current_settings):
-            QMessageBox.information(self, "Settings Saved", "System settings saved successfully.")
-            self.lbl_smtp_status.setText("Settings saved.")
-            self.lbl_smtp_status.setStyleSheet("color: #10b981; font-weight: bold;")
+            if smtp_configured:
+                QMessageBox.information(self, "Settings Saved", "System settings saved successfully.")
+                self.lbl_smtp_status.setText("Settings saved.")
+                self.lbl_smtp_status.setStyleSheet("color: #10b981; font-weight: bold;")
+            else:
+                QMessageBox.information(self, "Settings Saved", "General settings saved. SMTP notifications remain disabled.")
+                self.lbl_smtp_status.setText("General settings saved.")
+                self.lbl_smtp_status.setStyleSheet("color: #10b981; font-style: italic;")
             # Clear logged SMTP warnings so the system will try sending again
             try:
                 from tools.alert_engine import _logged_alerts
                 _logged_alerts.clear()
-            except Exception:
-                pass
-        else:
-            QMessageBox.critical(self, "Error", "Failed to save settings to config/settings.json.")
+            except Exception as e:
+                add_log_entry("ERROR", f"Error saving SMTP settings: {e}")
+                QMessageBox.critical(self, "Error", "Failed to save settings to database.")
+
+    def check_tools_dependencies(self):
+        from tools.tool_installer import check_and_install_all
+        self.btn_check_tools.setEnabled(False)
+        self.btn_check_tools.setText("Checking...")
+        QApplication.processEvents()
+        try:
+            check_and_install_all(auto_install=True)
+            QMessageBox.information(self, "Tools Check Complete", "Dependencies and tools have been verified. Check the Audit Logs for detailed output.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred while checking tools: {e}")
+        finally:
+            self.btn_check_tools.setEnabled(True)
+            self.btn_check_tools.setText("Check Dependencies & Tools")
 
     def test_smtp_connection(self):
         host = self.txt_smtp_host.text().strip()
@@ -812,6 +877,12 @@ class DashboardWindow(QMainWindow):
             scan_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.tbl_targets.setItem(idx, 3, scan_item)
             
+            # Scan Done By
+            operator_name = get_latest_scan_operator_for_target(target["id"])
+            operator_item = QTableWidgetItem(operator_name)
+            operator_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.tbl_targets.setItem(idx, 4, operator_item)
+            
             # Action Buttons: Toggle, Scan, Delete
             actions_widget = QWidget()
             actions_layout = QHBoxLayout(actions_widget)
@@ -853,7 +924,7 @@ class DashboardWindow(QMainWindow):
             btn_delete.clicked.connect(lambda checked=False, t=target: self.delete_target_click(t))
             actions_layout.addWidget(btn_delete)
             
-            self.tbl_targets.setCellWidget(idx, 4, actions_widget)
+            self.tbl_targets.setCellWidget(idx, 5, actions_widget)
             
         # Populate Dashboard Overview Table
         self.tbl_dashboard_targets.setRowCount(len(targets))
@@ -908,13 +979,23 @@ class DashboardWindow(QMainWindow):
                 pass
                 
             status = scan["status"]
-            progress_msg = "Completed"
-            if status == "Running Nmap":
-                progress_msg = "▶ Running Nmap | 0/2 Tools Completed"
-            elif status == "Running Nuclei":
-                progress_msg = "▶ Running Nuclei | 1/2 Tools Completed"
-            elif status == "Report Pending":
-                progress_msg = "□ Report Pending | 2/2 Tools Completed"
+            # Map database status to descriptive multi-tool pipeline steps
+            status_map = {
+                "Running HTTPx": "▶ Running HTTPx probe (1/9)",
+                "Running WhatWeb": "▶ Running WhatWeb fingerprinting (2/9)",
+                "Running Subfinder": "▶ Running Subfinder DNS discovery (3/9)",
+                "Running Nmap": "▶ Running Nmap port scan (4/9)",
+                "Running SSL Scan": "▶ Running SSL/TLS certificate scan (5/9)",
+                "Running Nikto": "▶ Running Nikto web vulnerability scan (6/9)",
+                "Running Nuclei": "▶ Running Nuclei template scan (7/9)",
+                "Running ffuf": "▶ Running ffuf directory fuzzing (8/9)",
+                "Running ZAP": "▶ Running OWASP ZAP active scan (9/9)",
+                "Correlating CVEs": "□ Correlating CVE threat intel",
+                "Report Pending": "□ Generating HTML & PDF reports",
+                "Completed": "✓ Completed",
+                "Failed": "✗ Failed"
+            }
+            progress_msg = status_map.get(status, f"▶ {status}")
                 
             scan_text = f"{scan['url']} -> {progress_msg} | Elapsed: {dur_str}"
             item = QListWidgetItem(scan_text)
@@ -980,26 +1061,44 @@ class DashboardWindow(QMainWindow):
                 break
 
     def refresh_master_log(self):
-        logs = get_log_entries(limit=250)
-        
-        level_filter = self.cmb_log_level.currentText()
-        search_query = self.txt_log_search.text().lower().strip()
-        
-        log_text = ""
-        for entry in reversed(logs):
-            if level_filter != "All Levels" and entry['level'] != level_filter:
-                continue
-            if search_query and search_query not in entry['message'].lower() and search_query not in entry['level'].lower():
-                continue
+        from tools.config_manager import BASE_DIR
+        log_path = os.path.join(BASE_DIR, "logs", "master.log")
+        if not os.path.exists(log_path):
+            self.txt_logs.setPlainText("Log file not found.")
+            return
+
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                # Read the last 500 lines to show plenty of log history
+                lines = f.readlines()[-500:]
                 
-            log_text += f"[{entry['timestamp']}] [{entry['level']}] {entry['message']}\n"
+            level_filter = self.cmb_log_level.currentText()
+            search_query = self.txt_log_search.text().lower().strip()
             
-        scrollbar = self.txt_logs.verticalScrollBar()
-        at_bottom = scrollbar.value() == scrollbar.maximum()
-        
-        self.txt_logs.setPlainText(log_text)
-        if at_bottom:
-            scrollbar.setValue(scrollbar.maximum())
+            filtered_lines = []
+            for line in lines:
+                line_lower = line.lower()
+                # Check level filter
+                if level_filter != "All Levels":
+                    if f"[{level_filter}]" not in line:
+                        continue
+                # Check search query
+                if search_query and search_query not in line_lower:
+                    continue
+                filtered_lines.append(line)
+                
+            log_text = "".join(filtered_lines)
+            
+            if self.txt_logs.toPlainText() != log_text:
+                scrollbar = self.txt_logs.verticalScrollBar()
+                at_bottom = scrollbar.value() == scrollbar.maximum()
+                
+                self.txt_logs.setPlainText(log_text)
+                if at_bottom or getattr(self, "first_log_load", True):
+                    scrollbar.setValue(scrollbar.maximum())
+                    self.first_log_load = False
+        except Exception as e:
+            self.txt_logs.setPlainText(f"Error reading logs: {e}")
 
     def refresh_updates_errors(self):
         self.lst_dashboard_updates.clear()
@@ -1077,6 +1176,9 @@ class DashboardWindow(QMainWindow):
     def force_intel_sync(self):
         self.btn_sync.setEnabled(False)
         self.btn_sync.setText("Syncing Feed...")
+        if hasattr(self, 'btn_cve_sync'):
+            self.btn_cve_sync.setEnabled(False)
+            self.btn_cve_sync.setText("Syncing Feed...")
         
         t = threading.Thread(target=self._run_async_intel_sync, daemon=True)
         t.start()
@@ -1087,6 +1189,7 @@ class DashboardWindow(QMainWindow):
         from intelligence.cisa import sync_cisa
         from intelligence.github_adv import sync_github_adv
         from intelligence.nvd import sync_nvd
+        from intelligence.epss import sync_epss
         
         success = True
         try:
@@ -1107,6 +1210,12 @@ class DashboardWindow(QMainWindow):
             logger.error(f"NVD sync failed: {e}")
             success = False
             
+        try:
+            sync_epss()
+        except Exception as e:
+            logger.error(f"EPSS sync failed: {e}")
+            success = False
+            
         if success:
             logger.info("CVE Feed Synced successfully.")
         else:
@@ -1117,6 +1226,9 @@ class DashboardWindow(QMainWindow):
     def _enable_sync_button(self):
         self.btn_sync.setEnabled(True)
         self.btn_sync.setText("Sync Threat Intel")
+        if hasattr(self, 'btn_cve_sync'):
+            self.btn_cve_sync.setEnabled(True)
+            self.btn_cve_sync.setText("Fetch Current CVEs")
         self.poll_updates()
 
     def open_latest_report(self, target):

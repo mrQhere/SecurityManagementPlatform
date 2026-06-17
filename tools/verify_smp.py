@@ -33,10 +33,18 @@ class TestSMPComponents(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
+        # Prepend project-local bin/ directory to system PATH
+        bin_dir = os.path.join(BASE_DIR, "bin")
+        os.makedirs(bin_dir, exist_ok=True)
+        if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+            os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
         # Initialize DB and directories
         init_db()
         # Setup logging for testing
         setup_logging()
+        # Ensure scanning tools are checked/installed before running components tests
+        from tools.tool_installer import check_and_install_all
+        check_and_install_all(auto_install=True)
 
     def test_01_config_manager(self):
         """Test reading and writing settings."""

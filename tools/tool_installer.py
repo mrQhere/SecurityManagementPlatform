@@ -27,6 +27,13 @@ import shutil
 import subprocess
 import logging
 
+from tools.config_manager import BASE_DIR
+# Prepend project-local bin/ directory to system PATH
+bin_dir = os.path.join(BASE_DIR, "bin")
+os.makedirs(bin_dir, exist_ok=True)
+if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+    os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
+
 logger = logging.getLogger("smp")
 
 # ── Tool registry ─────────────────────────────────────────────────────────────
@@ -47,6 +54,9 @@ TOOLS = [
     ("Nmap",                   "nmap",        "apt",    "nmap"),
     ("Nikto",                  "nikto",       "apt",    "nikto"),
     ("WhatWeb",                "whatweb",     "apt",    "whatweb"),
+    ("Wapiti",                 "wapiti",      "apt",    "wapiti"),
+    ("SQLMap",                 "sqlmap",      "apt",    "sqlmap"),
+    ("Traceroute",             "traceroute",  "apt",    "traceroute"),
 
     # Go binaries (projectdiscovery.io)
     ("Nuclei",    "nuclei",    "go",  "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"),
@@ -85,10 +95,10 @@ def _apt_install(package):
             logger.warning(f"  [!] apt-get not available. Install manually: sudo apt install {package}")
             return False
 
-        # Try without sudo first (root), then with sudo
+        # Try without sudo first (root), then with sudo (non-interactive)
         for cmd in (
             ["apt-get", "install", "-y", "-qq", package],
-            ["sudo", "apt-get", "install", "-y", "-qq", package],
+            ["sudo", "-n", "apt-get", "install", "-y", "-qq", package],
         ):
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             if result.returncode == 0:
@@ -155,6 +165,10 @@ def check_and_install_all(auto_install=True):
         # For pip packages, try importing instead of binary check
         if method == "pip" and not binary:
             module = arg.replace("-", "_").replace(".", "_").split("@")[0]
+            if module == "python_owasp_zap_v2_4":
+                module = "zapv2"
+            else:
+                module = module.lower()
             try:
                 __import__(module)
                 logger.debug(f"Tool check: pip package '{arg}' already installed.")
@@ -193,6 +207,26 @@ def check_and_install_all(auto_install=True):
         else:
             missing.append(display_name)
 
+    # ── Fallback: Local download of missing Go/Nikto tools ───────────────────
+    if missing and auto_install:
+        downloaded = _download_missing_tools_locally(missing)
+        if downloaded:
+            still_missing = []
+            for name in missing:
+                entry = next((t for t in TOOLS if t[0] == name), None)
+                if entry:
+                    display_name, binary, method, arg = entry
+                    if binary and shutil.which(binary):
+                        installed.append(display_name)
+                        go_inst_cmd = f"go install {arg}"
+                        if go_inst_cmd in go_missing:
+                            go_missing.remove(go_inst_cmd)
+                    else:
+                        still_missing.append(display_name)
+                else:
+                    still_missing.append(name)
+            missing = still_missing
+
     # Single clean summary – only 1–2 lines in the main log
     logger.info(
         f"Tool Check Complete: {len(installed)} ready | "
@@ -206,4 +240,106 @@ def check_and_install_all(auto_install=True):
         )
 
     return {"installed": installed, "missing": missing, "skipped": skipped}
+
+
+def _download_missing_tools_locally(missing):
+    import zipfile
+    import tarfile
+    import requests
+
+    bin_dir = os.path.join(BASE_DIR, "bin")
+    os.makedirs(bin_dir, exist_ok=True)
+
+    # Map from tool display name to its download URL
+    urls = {
+        "Nuclei": "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_amd64.zip",
+        "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip",
+        "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
+        "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
+        "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
+    }
+
+    downloaded_any = False
+
+    for name in missing:
+        if name not in urls:
+            continue
+
+        url = urls[name]
+        logger.info(f"Downloading pre-compiled {name} from {url}...")
+
+        # Temp folder for extraction
+        temp_extract_dir = os.path.join(bin_dir, f"temp_{name.lower()}")
+        os.makedirs(temp_extract_dir, exist_ok=True)
+
+        temp_file = os.path.join(temp_extract_dir, "archive")
+
+        try:
+            # Download file
+            response = requests.get(url, stream=True, timeout=120)
+            response.raise_for_status()
+            with open(temp_file, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            # Extract based on file type
+            if url.endswith(".zip") or "zip" in url.lower():
+                with zipfile.ZipFile(temp_file, "r") as zip_ref:
+                    zip_ref.extractall(temp_extract_dir)
+            elif url.endswith(".tar.gz") or "tar.gz" in url.lower() or "tgz" in url.lower():
+                with tarfile.open(temp_file, "r:gz") as tar_ref:
+                    tar_ref.extractall(temp_extract_dir)
+
+            # Locate binary and move it to bin_dir
+            if name == "Nikto":
+                # Find nikto.pl recursively
+                nikto_pl_path = None
+                for root_dir, _, filenames in os.walk(temp_extract_dir):
+                    if "nikto.pl" in filenames:
+                        nikto_pl_path = os.path.join(root_dir, "nikto.pl")
+                        break
+                if nikto_pl_path:
+                    # Move the whole extracted directory to bin_dir/nikto_src
+                    nikto_src_target = os.path.join(bin_dir, "nikto_src")
+                    if os.path.exists(nikto_src_target):
+                        shutil.rmtree(nikto_src_target)
+                    shutil.move(os.path.dirname(nikto_pl_path), nikto_src_target)
+
+                    # Create the wrapper script `nikto` in bin_dir
+                    wrapper_path = os.path.join(bin_dir, "nikto")
+                    with open(wrapper_path, "w", encoding="utf-8") as wf:
+                        wf.write(f'#!/usr/bin/env bash\nperl "{os.path.join(nikto_src_target, "nikto.pl")}" "$@"\n')
+                    os.chmod(wrapper_path, 0o755)
+                    logger.info(f"Successfully installed local wrapper for Nikto.")
+                    downloaded_any = True
+                else:
+                    logger.warning(f"Could not find nikto.pl in the extracted archive.")
+            else:
+                # Go binaries: nuclei, subfinder, httpx, ffuf
+                binary_name = name.lower()
+                # Find the binary filename recursively
+                binary_found_path = None
+                for root_dir, _, filenames in os.walk(temp_extract_dir):
+                    if binary_name in filenames:
+                        binary_found_path = os.path.join(root_dir, binary_name)
+                        break
+                if binary_found_path:
+                    target_bin_path = os.path.join(bin_dir, binary_name)
+                    if os.path.exists(target_bin_path):
+                        os.remove(target_bin_path)
+                    shutil.move(binary_found_path, target_bin_path)
+                    os.chmod(target_bin_path, 0o755)
+                    logger.info(f"Successfully installed local binary: {binary_name}")
+                    downloaded_any = True
+                else:
+                    logger.warning(f"Could not find {binary_name} binary in the extracted archive.")
+
+        except Exception as e:
+            logger.error(f"Error downloading/installing {name}: {e}")
+        finally:
+            # Cleanup temp extract folder
+            if os.path.exists(temp_extract_dir):
+                shutil.rmtree(temp_extract_dir)
+
+    return downloaded_any
 

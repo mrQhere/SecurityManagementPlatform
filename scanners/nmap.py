@@ -21,7 +21,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nmap to run before forcefully killing it
-NMAP_TIMEOUT = 300
+NMAP_TIMEOUT = 7200
 
 def extract_host_from_url(url):
     """Extract host name or IP address from a URL to pass to Nmap."""
@@ -53,9 +53,10 @@ def run_nmap_scan(url):
     logger.info(f"Nmap Started: Scanning host {host}")
     add_log_entry("INFO", f"Nmap Started: Scanning host {host}")
     
-    # We will run a fast version scan: -F (fast scan), -sV (service detection), -T4 (aggressive timing)
+    # Intense scan mode: all ports (-p-), version detect (-sV), default scripts (-sC), OS detect (-O).
+    # Throttled rate: --max-rate 50
     # Outputting XML to stdout: -oX -
-    cmd = [nmap_bin, "-F", "-sV", "-T4", "-oX", "-", host]
+    cmd = [nmap_bin, "-p-", "-sV", "-sC", "-O", "--max-rate", "50", "-oX", "-", host]
     
     try:
         process = subprocess.Popen(

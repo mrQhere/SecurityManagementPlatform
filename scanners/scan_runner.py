@@ -52,6 +52,9 @@ from scanners.httpx_scanner import run_httpx_scan
 from scanners.ffuf import run_ffuf_scan
 from scanners.ssl_scanner import run_ssl_scan
 from scanners.zap import run_zap_scan
+from scanners.wapiti import run_wapiti_scan
+from scanners.sqlmap import run_sqlmap_scan
+from scanners.traceroute import run_traceroute
 
 logger = logging.getLogger("smp.scan")
 
@@ -210,9 +213,17 @@ def _run_scan_sequence(target):
     scan_id = create_scan(target_id)  # initial status = "Running Nmap"
 
     try:
-        # ── Step 1: HTTPx probe ───────────────────────────────────────────
+        # ── Step 1: Traceroute ─────────────────────────────────────────────
+        update_scan_status(scan_id, "Running Traceroute")
+        logger.info(f"[1/12] Network Traceroute – {url}")
+        trace_result = run_traceroute(url)
+        _save_findings(scan_id, trace_result or [], "Traceroute")
+        if trace_result is None:
+            add_log_entry("WARNING", f"Traceroute failed or not installed for {url}")
+
+        # ── Step 2: HTTPx probe ───────────────────────────────────────────
         update_scan_status(scan_id, "Running HTTPx")
-        logger.info(f"[1/9] HTTPx probe – {url}")
+        logger.info(f"[2/12] HTTPx probe – {url}")
         httpx_result = run_httpx_scan(url)
 
         if isinstance(httpx_result, dict) and httpx_result:
@@ -226,18 +237,18 @@ def _run_scan_sequence(target):
             ]
             _save_technologies(scan_id, tech_list, "HTTPx")
 
-        # ── Step 2: WhatWeb ───────────────────────────────────────────────
+        # ── Step 3: WhatWeb ───────────────────────────────────────────────
         update_scan_status(scan_id, "Running WhatWeb")
-        logger.info(f"[2/9] WhatWeb fingerprinting – {url}")
+        logger.info(f"[3/12] WhatWeb fingerprinting – {url}")
         whatweb_results = run_whatweb_scan(url)
         if whatweb_results:
             _save_technologies(scan_id, whatweb_results, "WhatWeb")
         if whatweb_results is None:
             add_log_entry("WARNING", f"WhatWeb failed or not installed for {url}")
 
-        # ── Step 3: Subfinder ─────────────────────────────────────────────
+        # ── Step 4: Subfinder ─────────────────────────────────────────────
         update_scan_status(scan_id, "Running Subfinder")
-        logger.info(f"[3/9] Subfinder – {url}")
+        logger.info(f"[4/12] Subfinder – {url}")
         subfinder_results = run_subfinder_scan(url)
         if subfinder_results:
             for sub in subfinder_results:
@@ -255,55 +266,71 @@ def _run_scan_sequence(target):
         if subfinder_results is None:
             add_log_entry("WARNING", f"Subfinder failed or not installed for {url}")
 
-        # ── Step 4: Nmap ──────────────────────────────────────────────────
+        # ── Step 5: Nmap ──────────────────────────────────────────────────
         update_scan_status(scan_id, "Running Nmap")
-        logger.info(f"[4/9] Nmap port scan – {url}")
+        logger.info(f"[5/12] Nmap port scan – {url}")
         nmap_results = run_nmap_scan(url)
         _save_nmap_findings(scan_id, nmap_results or [])
         if nmap_results is None:
             add_log_entry("WARNING", f"Nmap failed or not installed for {url}")
 
-        # ── Step 5: SSL Scanner ───────────────────────────────────────────
+        # ── Step 6: SSL Scanner ───────────────────────────────────────────
         update_scan_status(scan_id, "Running SSL Scan")
-        logger.info(f"[5/9] SSL/TLS scan – {url}")
+        logger.info(f"[6/12] SSL/TLS scan – {url}")
         ssl_results = run_ssl_scan(url)
         _save_findings(scan_id, ssl_results or [], "SSL")
         if ssl_results is None:
             add_log_entry("WARNING", f"SSL scan failed or sslyze not installed for {url}")
 
-        # ── Step 6: Nikto ─────────────────────────────────────────────────
+        # ── Step 7: Nikto ─────────────────────────────────────────────────
         update_scan_status(scan_id, "Running Nikto")
-        logger.info(f"[6/9] Nikto web vuln scan – {url}")
+        logger.info(f"[7/12] Nikto web vuln scan – {url}")
         nikto_results = run_nikto_scan(url)
         _save_findings(scan_id, nikto_results or [], "Nikto")
         if nikto_results is None:
             add_log_entry("WARNING", f"Nikto failed or not installed for {url}")
 
-        # ── Step 7: Nuclei ────────────────────────────────────────────────
+        # ── Step 8: Nuclei ────────────────────────────────────────────────
         update_scan_status(scan_id, "Running Nuclei")
-        logger.info(f"[7/9] Nuclei template scan – {url}")
+        logger.info(f"[8/12] Nuclei template scan – {url}")
         nuclei_results = run_nuclei_scan(url)
         _save_findings(scan_id, nuclei_results or [], "Nuclei")
         if nuclei_results is None:
             add_log_entry("WARNING", f"Nuclei failed or not installed for {url}")
 
-        # ── Step 8: ffuf ──────────────────────────────────────────────────
+        # ── Step 9: ffuf ──────────────────────────────────────────────────
         update_scan_status(scan_id, "Running ffuf")
-        logger.info(f"[8/9] ffuf directory fuzzing – {url}")
+        logger.info(f"[9/12] ffuf directory fuzzing – {url}")
         ffuf_results = run_ffuf_scan(url)
         _save_findings(scan_id, ffuf_results or [], "ffuf")
         if ffuf_results is None:
             add_log_entry("WARNING", f"ffuf failed or not installed for {url}")
 
-        # ── Step 9: OWASP ZAP (optional) ─────────────────────────────────
+        # ── Step 10: OWASP ZAP (optional) ─────────────────────────────────
         zap_results = []
         if settings.get("zap_enabled", False):
             update_scan_status(scan_id, "Running ZAP")
-            logger.info(f"[9/9] ZAP active scan – {url}")
+            logger.info(f"[10/12] ZAP active scan – {url}")
             zap_results = run_zap_scan(url) or []
             _save_findings(scan_id, zap_results, "ZAP")
         else:
-            logger.info("[9/9] ZAP disabled in settings – skipping.")
+            logger.info("[10/12] ZAP disabled in settings – skipping.")
+
+        # ── Step 11: Wapiti ───────────────────────────────────────────────
+        update_scan_status(scan_id, "Running Wapiti")
+        logger.info(f"[11/12] Wapiti web vuln scan – {url}")
+        wapiti_results = run_wapiti_scan(url)
+        _save_findings(scan_id, wapiti_results or [], "Wapiti")
+        if wapiti_results is None:
+            add_log_entry("WARNING", f"Wapiti failed or not installed for {url}")
+
+        # ── Step 12: SQLMap ───────────────────────────────────────────────
+        update_scan_status(scan_id, "Running SQLMap")
+        logger.info(f"[12/12] SQLMap SQLi scan – {url}")
+        sqlmap_results = run_sqlmap_scan(url)
+        _save_findings(scan_id, sqlmap_results or [], "SQLMap")
+        if sqlmap_results is None:
+            add_log_entry("WARNING", f"SQLMap failed or not installed for {url}")
 
         # ── PHASE 6: CVE Correlation ──────────────────────────────────────
         update_scan_status(scan_id, "Correlating CVEs")

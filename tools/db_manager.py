@@ -56,9 +56,16 @@ def _initialize_db_schema(conn):
             start_time TEXT NOT NULL,
             end_time TEXT,
             status TEXT NOT NULL, -- 'Running Nmap', 'Running Nuclei', 'Completed', 'Failed', 'Report Pending'
+            scanned_by TEXT,
             FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE
         );
     """)
+
+    # Check if scanned_by column exists (migration for existing DBs)
+    try:
+        cursor.execute("SELECT scanned_by FROM scans LIMIT 1")
+    except sqlite3.OperationalError:
+        cursor.execute("ALTER TABLE scans ADD COLUMN scanned_by TEXT")
     
     # findings table
     cursor.execute("""
@@ -93,7 +100,8 @@ def _initialize_db_schema(conn):
             severity TEXT NOT NULL,
             description TEXT,
             published_date TEXT,
-            source TEXT NOT NULL -- 'NVD', 'CISA', 'GitHub'
+            source TEXT NOT NULL,
+            epss_score REAL DEFAULT NULL
         );
     """)
     
@@ -140,6 +148,11 @@ def init_db():
     """Initialize all SQLite tables required for the application."""
     conn = get_db_connection()
     _initialize_db_schema(conn)
+    try:
+        conn.execute("ALTER TABLE cves ADD COLUMN epss_score REAL DEFAULT NULL")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
     conn.close()
 
 # ----------------- Target Management -----------------
@@ -207,16 +220,28 @@ def get_targets():
 
 def create_scan(target_id):
     """Create a new scan record and return its ID."""
+    from tools.config_manager import load_settings
+    settings = load_settings()
+    tester_name = settings.get("tester_name", "Security Auditor")
     conn = get_db_connection()
     try:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO scans (target_id, start_time, status) VALUES (?, ?, ?)",
-            (target_id, now, "Running Nmap")
+            "INSERT INTO scans (target_id, start_time, status, scanned_by) VALUES (?, ?, ?, ?)",
+            (target_id, now, "Running Nmap", tester_name)
         )
         conn.commit()
         return cursor.lastrowid
+    finally:
+        conn.close()
+
+def get_scan(scan_id):
+    """Retrieve a scan record by ID."""
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM scans WHERE id = ?", (scan_id,)).fetchone()
+        return dict(row) if row else None
     finally:
         conn.close()
 
@@ -334,7 +359,7 @@ def get_alerts(limit=50):
 
 # ----------------- CVEs Management -----------------
 
-def add_cve(cve, severity, description, published_date, source):
+def add_cve(cve, severity, description, published_date, source, epss_score=None):
     """
     Add a new threat intelligence entry to the database.
 
@@ -361,18 +386,18 @@ def add_cve(cve, severity, description, published_date, source):
             # Delete the old record so we insert a completely fresh row
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
             conn.execute(
-                "INSERT INTO cves (cve, severity, description, published_date, source) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (cve, severity, description, published_date, source)
+                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (cve, severity, description, published_date, source, epss_score)
             )
             conn.commit()
             return False  # Updated, not new – no alert
 
         # 2. Genuinely new entry
         conn.execute(
-            "INSERT INTO cves (cve, severity, description, published_date, source) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (cve, severity, description, published_date, source)
+            "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (cve, severity, description, published_date, source, epss_score)
         )
         conn.commit()
         return True  # New – caller may trigger alert
@@ -382,9 +407,9 @@ def add_cve(cve, severity, description, published_date, source):
         try:
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
             conn.execute(
-                "INSERT INTO cves (cve, severity, description, published_date, source) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (cve, severity, description, published_date, source)
+                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (cve, severity, description, published_date, source, epss_score)
             )
             conn.commit()
         except Exception:

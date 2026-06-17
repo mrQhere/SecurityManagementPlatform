@@ -16,6 +16,12 @@ import json
 # Define the base directory of the project
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Prepend project-local bin/ directory to system PATH
+bin_dir = os.path.join(BASE_DIR, "bin")
+os.makedirs(bin_dir, exist_ok=True)
+if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+    os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
+
 # Folders to initialize
 REQUIRED_FOLDERS = [
     os.path.join(BASE_DIR, "database"),
