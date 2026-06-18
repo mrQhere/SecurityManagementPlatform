@@ -1,44 +1,74 @@
-# Python byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# =============================================================================
+# Security Management Platform (SMP) — .gitignore
+# =============================================================================
 
-# Local SQLite Database
-database/
-*.db
+# ─── Sensitive / Personal Data ───────────────────────────────────────────────
+config/settings.json          # Contains SMTP credentials — NEVER commit
+database/security.db          # SQLite database — local only
+database/*.db
 
-# Log files
+# ─── Logs ────────────────────────────────────────────────────────────────────
 logs/
 *.log
 
-# Generated HTML & PDF Reports
-reports/
-*.html
-*.pdf
+# ─── Reports (generated output) ──────────────────────────────────────────────
+reports/html/
+reports/pdf/
+reports/**/*.html
+reports/**/*.pdf
 
-# Local Cache Files
-cache/
-*.json
+# ─── Intel Cache ─────────────────────────────────────────────────────────────
+cache/intel_cache.json
 
-# Local Configuration settings (contains API paths/SMTP credentials)
-config/
-settings.json
-
-# Environment / Venv
+# ─── Python Virtual Environment ──────────────────────────────────────────────
 venv/
 .venv/
 env/
-.env
+.env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
 
-# OS-specific files
+# ─── Project-local Binaries ──────────────────────────────────────────────────
+bin/
+*.exe
+*.bin
+
+# ─── OS / IDE Artifacts ──────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
-
-# IDE config files
-.vscode/
+desktop.ini
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.swp
+*.swo
+*~
+
+# ─── VS Code (keep launch.json for dev convenience, ignore workspace) ─────────
+.vscode/*.code-workspace
+.vscode/settings.json
+
+# ─── Temporary Files ─────────────────────────────────────────────────────────
+*.tmp
+*.temp
+ffuf_out_*.json
+/tmp/
+
+# ─── Build / Distribution ────────────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+site/
+
+# ─── Test Artifacts ──────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
