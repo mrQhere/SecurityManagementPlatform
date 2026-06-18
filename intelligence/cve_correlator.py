@@ -36,6 +36,7 @@ then generates findings and alerts for matched vulnerabilities.
 import json
 import logging
 import re
+import itertools
 
 logger = logging.getLogger("smp.scan")
 
@@ -60,73 +61,103 @@ def correlate_cves_for_scan(scan_id):
     """
     try:
         technologies = get_technologies_for_scan(scan_id)
-        all_cves = get_cves(limit=500)
-        add_log_entry("INFO", f"CVE Correlation Started: {len(technologies)} technologies vs {len(all_cves)} CVEs.")
+        add_log_entry("INFO", f"CVE Correlation Started: {len(technologies)} technologies to check.")
     except Exception as e:
         logger.error(f"CVE Correlation Failed during data load: {e}")
         return 0
 
-    if not technologies or not all_cves:
+    if not technologies:
         add_log_entry("INFO", "CVE Correlation Completed: Nothing to correlate.")
         return 0
 
     correlation_count = 0
     seen_pairs = set()  # (tech_name, cve_id) – avoid duplicates
 
-    for tech in technologies:
-        tech_name = tech.get("name", "")
-        tech_version = tech.get("version", "")
-        if not tech_name:
-            continue
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        logger.error(f"CVE Correlation: Failed to get database connection: {e}")
+        return 0
 
-        tech_tokens = _tokenise(tech_name)
-
-        for cve in all_cves:
-            cve_id = cve.get("cve", "")
-            desc = cve.get("description", "")
-            severity = cve.get("severity", "Medium")
-            source = cve.get("source", "")
-
-            pair_key = (tech_name.lower(), cve_id)
-            if pair_key in seen_pairs:
+    try:
+        for tech in technologies:
+            tech_name = tech.get("name", "")
+            tech_version = tech.get("version", "")
+            if not tech_name:
                 continue
 
-            # Match: tech name appears in CVE description (case-insensitive)
-            desc_lower = desc.lower()
-            if tech_name.lower() in desc_lower:
-                matched = True
-            else:
-                # Fuzzy: at least 2 tokens from tech name appear in description
-                cve_tokens = _tokenise(desc)
-                overlap = tech_tokens & cve_tokens
-                matched = len(overlap) >= 2 and len(tech_tokens) <= 4
+            tech_tokens = _tokenise(tech_name)
 
-            if not matched:
-                continue
+            # Build dynamic SQL query to fetch candidate CVEs
+            # 1. Full string match: description LIKE %tech_name%
+            clauses = ["description LIKE ?"]
+            params = [f"%{tech_name}%"]
 
-            seen_pairs.add(pair_key)
-            correlation_count += 1
+            # 2. Or, if tech_tokens has 2 to 4 tokens, check if at least 2 tokens are present (for fuzzy match)
+            if len(tech_tokens) >= 2 and len(tech_tokens) <= 4:
+                pairs = list(itertools.combinations(tech_tokens, 2))
+                for p1, p2 in pairs:
+                    clauses.append("(description LIKE ? AND description LIKE ?)")
+                    params.append(f"%{p1}%")
+                    params.append(f"%{p2}%")
 
-            version_note = f" (detected version: {tech_version})" if tech_version else ""
-            description = (
-                f"Technology Match: {tech_name}{version_note}\n"
-                f"CVE / Advisory: {cve_id}  [{source}]\n"
-                f"CVE Severity: {severity}\n\n"
-                f"Description: {desc}\n\n"
-                f"Recommendation: Update {tech_name} to its latest stable version and "
-                f"review the advisory for specific mitigations."
-            )
+            query = "SELECT cve, severity, description, source FROM cves WHERE " + " OR ".join(clauses)
 
             try:
-                add_finding(
-                    scan_id=scan_id,
-                    severity=severity,
-                    title=f"[CVE Match] {cve_id} affects {tech_name}",
-                    description=description,
-                    source_tool="CVE Correlation",
-                )
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                candidates = [dict(row) for row in cursor.fetchall()]
             except Exception as e:
-                logger.error(f"CVE Correlation: Failed to add finding: {e}")
+                logger.error(f"CVE Correlation: SQL query failed for technology '{tech_name}': {e}")
+                continue
+
+            for cve in candidates:
+                cve_id = cve.get("cve", "")
+                desc = cve.get("description", "")
+                severity = cve.get("severity", "Medium")
+                source = cve.get("source", "")
+
+                pair_key = (tech_name.lower(), cve_id)
+                if pair_key in seen_pairs:
+                    continue
+
+                # Verification: apply the exact match logic in Python
+                desc_lower = desc.lower()
+                if tech_name.lower() in desc_lower:
+                    matched = True
+                else:
+                    cve_tokens = _tokenise(desc)
+                    overlap = tech_tokens & cve_tokens
+                    matched = len(overlap) >= 2 and len(tech_tokens) <= 4
+
+                if not matched:
+                    continue
+
+                seen_pairs.add(pair_key)
+                correlation_count += 1
+
+                version_note = f" (detected version: {tech_version})" if tech_version else ""
+                description = (
+                    f"Technology Match: {tech_name}{version_note}\n"
+                    f"CVE / Advisory: {cve_id}  [{source}]\n"
+                    f"CVE Severity: {severity}\n\n"
+                    f"Description: {desc}\n\n"
+                    f"Recommendation: Update {tech_name} to its latest stable version and "
+                    f"review the advisory for specific mitigations."
+                )
+
+                try:
+                    add_finding(
+                        scan_id=scan_id,
+                        severity=severity,
+                        title=f"[CVE Match] {cve_id} affects {tech_name}",
+                        description=description,
+                        source_tool="CVE Correlation",
+                    )
+                except Exception as e:
+                    logger.error(f"CVE Correlation: Failed to add finding: {e}")
+    finally:
+        conn.close()
 
     logger.info(f"CVE Correlation Completed: {correlation_count} CVE-technology matches found.")
     add_log_entry("INFO", f"CVE Correlation Completed: {correlation_count} matches found.")

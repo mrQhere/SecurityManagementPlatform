@@ -71,11 +71,8 @@ def run_nmap_scan(url):
     logger.info(f"Nmap Started: Scanning host {host}")
     add_log_entry("INFO", f"Nmap Started: Scanning host {host}")
     
-    # Fast scan mode per way.md: top-100 ports (-F), version detect (-sV), aggressive timing (-T4).
-    # Avoids -O (OS detection: requires root/CAP_NET_ADMIN) and -p- (all 65535 ports: very slow).
-    # Avoids -sC (default scripts: can trigger IDS on some targets).
-    # --max-rate 50 keeps us IDS-friendly.
-    cmd = [nmap_bin, "-F", "-sV", "-T4", "--max-rate", "50", "-oX", "-", host]
+    # Intense but slow scan: removed -F (fast), added -T2 (polite) and low rate limit
+    cmd = [nmap_bin, "-sV", "-T2", "--max-rate", "10", "-oX", "-", host]
     
     try:
         process = subprocess.Popen(

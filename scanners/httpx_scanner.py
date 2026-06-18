@@ -72,6 +72,8 @@ def run_httpx_scan(url):
         "-web-server",    # extract web server header
         "-tls-grab",      # grab TLS details
         "-no-color",
+        "-t", "2",        # Threads = 2
+        "-rl", "2",       # Rate limit = 2
     ]
 
     try:

@@ -116,20 +116,23 @@ def sync_cisa():
         cache = load_intel_cache()
         local_version = cache.get("cisa_catalog_version", "")
 
+        from tools.db_manager import get_db_connection
+        from tools.config_manager import load_settings
+
+        conn = get_db_connection()
+        cisa_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'CISA KEV'").fetchone()[0]
+        conn.close()
+
         if remote_version and local_version == remote_version:
             # Version unchanged — but still sync in case DB was cleared
-            from tools.db_manager import get_cve_stats
-            if get_cve_stats().get("total", 0) > 0:
+            if cisa_count >= 100:
                 logger.info(f"CISA Catalog up to date (Version: {local_version}). Skipping re-import.")
                 return True
 
         logger.info(f"CISA: Syncing {len(vulnerabilities)} KEV entries (version '{remote_version}')…")
         
         # Determine if database already has records (prevents alert flooding on first import)
-        from tools.db_manager import get_cve_stats
-        from tools.config_manager import load_settings
-        initial_stats = get_cve_stats()
-        is_initial_sync = (initial_stats.get("total", 0) == 0)
+        is_initial_sync = (cisa_count == 0)
 
         # Only call process_cve_alert when SMTP is actually configured
         settings = load_settings()

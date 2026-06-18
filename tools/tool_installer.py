@@ -93,7 +93,7 @@ def _pip_install(package):
     """Install a pip package into the current Python environment."""
     try:
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--quiet", package],
+            [sys.executable, "-m", "pip", "install", "--break-system-packages", "--quiet", package],
             capture_output=True, text=True, timeout=120
         )
         if result.returncode == 0:
@@ -268,18 +268,32 @@ def _download_missing_tools_locally(missing):
     import zipfile
     import tarfile
     import requests
+    import platform
 
     bin_dir = os.path.join(BASE_DIR, "bin")
     os.makedirs(bin_dir, exist_ok=True)
 
+    # Detect architecture to download the correct pre-built binary
+    machine = platform.machine().lower()
+    is_arm64 = "arm64" in machine or "aarch64" in machine
+
     # Map from tool display name to its download URL
-    urls = {
-        "Nuclei": "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_amd64.zip",
-        "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip",
-        "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
-        "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
-        "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
-    }
+    if is_arm64:
+        urls = {
+            "Nuclei": "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_arm64.zip",
+            "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_arm64.zip",
+            "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
+            "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
+            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
+        }
+    else:
+        urls = {
+            "Nuclei": "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_amd64.zip",
+            "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip",
+            "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
+            "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
+            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
+        }
 
     downloaded_any = False
 

@@ -73,6 +73,12 @@ from scanners.zap import run_zap_scan
 from scanners.wapiti import run_wapiti_scan
 from scanners.sqlmap import run_sqlmap_scan
 from scanners.traceroute import run_traceroute
+from scanners.shodan_idb import run_shodan_idb_scan
+from scanners.wayback import run_wayback_scan
+from scanners.crtsh import run_crtsh_scan
+from scanners.hackertarget import run_hackertarget_scan
+from scanners.whois_scanner import run_whois_scan
+from tools.report_generator import generate_scan_reports
 
 logger = logging.getLogger("smp.scan")
 
@@ -202,7 +208,8 @@ def _diff_findings(current_findings, previous_scan):
             title = cur["title"]
             cur_sev = cur["severity"]
             if title not in prev_map:
-                new_findings_detected = True
+                if cur_sev in ("Low", "Medium", "High", "Critical"):
+                    new_findings_detected = True
             else:
                 prev_sev = prev_map[title]
                 if severity_rank.get(cur_sev, 0) > severity_rank.get(prev_sev, 0):
@@ -344,11 +351,49 @@ def _run_scan_sequence(target):
 
         # ── Step 12: SQLMap ───────────────────────────────────────────────
         update_scan_status(scan_id, "Running SQLMap")
-        logger.info(f"[12/12] SQLMap SQLi scan – {url}")
+        logger.info(f"[12/17] SQLMap SQLi scan – {url}")
         sqlmap_results = run_sqlmap_scan(url)
         _save_findings(scan_id, sqlmap_results or [], "SQLMap")
         if sqlmap_results is None:
             add_log_entry("WARNING", f"SQLMap failed or not installed for {url}")
+
+        # ── Step 13: Shodan InternetDB ────────────────────────────────────
+        update_scan_status(scan_id, "Running Shodan")
+        logger.info(f"[13/17] Shodan passive profiling – {url}")
+        shodan_results = run_shodan_idb_scan(url)
+        _save_findings(scan_id, shodan_results or [], "Shodan")
+
+        # ── Step 14: Wayback Machine ──────────────────────────────────────
+        update_scan_status(scan_id, "Running Wayback Machine")
+        logger.info(f"[14/17] Wayback Machine mapping – {url}")
+        wayback_results = run_wayback_scan(url)
+        _save_findings(scan_id, wayback_results or [], "Wayback Machine")
+
+        # ── Step 15: CRT.sh ───────────────────────────────────────────────
+        update_scan_status(scan_id, "Running CRT.sh")
+        logger.info(f"[15/17] CRT.sh subdomain enum – {url}")
+        crtsh_results = run_crtsh_scan(url)
+        _save_findings(scan_id, crtsh_results or [], "CRT.sh")
+
+        # ── Step 16: HackerTarget ─────────────────────────────────────────
+        update_scan_status(scan_id, "Running HackerTarget")
+        logger.info(f"[16/17] HackerTarget Reverse DNS – {url}")
+        ht_results = run_hackertarget_scan(url)
+        _save_findings(scan_id, ht_results or [], "HackerTarget")
+
+        # ── Step 17: Whois ────────────────────────────────────────────────
+        update_scan_status(scan_id, "Running Whois")
+        logger.info(f"[17/17] Whois Registry Info – {url}")
+        whois_results = run_whois_scan(url)
+        _save_findings(scan_id, whois_results or [], "Whois")
+
+        # ── Final Status Check ────────────────────────────────────────────
+        site_up = _determine_site_up(
+            trace_result, httpx_result, whatweb_results, subfinder_results, nmap_results,
+            ssl_results, nikto_results, nuclei_results, ffuf_results, zap_results,
+            wapiti_results, sqlmap_results, shodan_results, wayback_results, crtsh_results,
+            ht_results, whois_results
+        )
 
         # ── PHASE 6: CVE Correlation ──────────────────────────────────────
         update_scan_status(scan_id, "Correlating CVEs")

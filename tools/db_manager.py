@@ -42,6 +42,11 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH, timeout=30.0)
     # Enable foreign keys
     conn.execute("PRAGMA foreign_keys = ON;")
+    # Enable WAL mode for concurrency
+    try:
+        conn.execute("PRAGMA journal_mode = WAL;")
+    except Exception:
+        pass
     # Return rows as dict-like objects
     conn.row_factory = sqlite3.Row
     
@@ -119,7 +124,8 @@ def _initialize_db_schema(conn):
             description TEXT,
             published_date TEXT,
             source TEXT NOT NULL,
-            epss_score REAL DEFAULT NULL
+            epss_score REAL DEFAULT NULL,
+            added_date TEXT
         );
     """)
     
@@ -160,6 +166,19 @@ def _initialize_db_schema(conn):
         );
     """)
 
+    # Delete duplicate CVEs keeping the one with the largest id
+    cursor.execute("""
+        DELETE FROM cves 
+        WHERE id NOT IN (
+            SELECT MAX(id) 
+            FROM cves 
+            GROUP BY cve
+        );
+    """)
+
+    # Enforce uniqueness via index
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cves_cve ON cves(cve);")
+
     conn.commit()
 
 def init_db():
@@ -170,6 +189,18 @@ def init_db():
         conn.execute("ALTER TABLE cves ADD COLUMN epss_score REAL DEFAULT NULL")
     except sqlite3.OperationalError:
         pass
+    try:
+        conn.execute("ALTER TABLE cves ADD COLUMN added_date TEXT")
+        conn.execute("UPDATE cves SET added_date = published_date WHERE added_date IS NULL")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Pre-2018 CVEs cleanup migration
+    try:
+        conn.execute("DELETE FROM cves WHERE cve LIKE 'CVE-%' AND CAST(SUBSTR(cve, 5, 4) AS INTEGER) < 2018")
+    except Exception:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -312,9 +343,17 @@ def get_active_scans():
 # ----------------- Findings Management -----------------
 
 def add_finding(scan_id, severity, title, description, source_tool):
-    """Insert a scan finding."""
+    """Insert a scan finding. Prevents duplicates for the same scan, title and source tool."""
     conn = get_db_connection()
     try:
+        # Check for duplicate finding
+        existing = conn.execute(
+            "SELECT id FROM findings WHERE scan_id = ? AND title = ? AND source_tool = ?",
+            (scan_id, title, source_tool)
+        ).fetchone()
+        if existing:
+            return False
+
         conn.execute(
             "INSERT INTO findings (scan_id, severity, title, description, source_tool) VALUES (?, ?, ?, ?, ?)",
             (scan_id, severity, title, description, source_tool)
@@ -393,8 +432,29 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None)
       True  = new finding → alert may fire
       False = update/replace → silent refresh
     """
+    # Reject entries older than 2018
+    # 1. Check year in CVE ID (e.g. CVE-YYYY-...)
+    if cve.startswith("CVE-"):
+        parts = cve.split("-")
+        if len(parts) >= 2:
+            try:
+                year = int(parts[1])
+                if year < 2018:
+                    return False
+            except ValueError:
+                pass
+    # 2. Check year in published_date (e.g. YYYY-...)
+    if published_date:
+        try:
+            year = int(published_date[:4])
+            if year < 2018:
+                return False
+        except ValueError:
+            pass
+
     conn = get_db_connection()
     try:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # 1. Check whether this CVE ID already exists
         existing = conn.execute(
             "SELECT id FROM cves WHERE cve = ?", (cve,)
@@ -404,18 +464,18 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None)
             # Delete the old record so we insert a completely fresh row
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
             conn.execute(
-                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (cve, severity, description, published_date, source, epss_score)
+                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score, added_date) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cve, severity, description, published_date, source, epss_score, now)
             )
             conn.commit()
             return False  # Updated, not new – no alert
 
         # 2. Genuinely new entry
         conn.execute(
-            "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (cve, severity, description, published_date, source, epss_score)
+            "INSERT INTO cves (cve, severity, description, published_date, source, epss_score, added_date) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (cve, severity, description, published_date, source, epss_score, now)
         )
         conn.commit()
         return True  # New – caller may trigger alert
@@ -423,11 +483,12 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None)
     except Exception as e:
         # Fallback: wipe any partial/corrupt row and re-insert cleanly
         try:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
             conn.execute(
-                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (cve, severity, description, published_date, source, epss_score)
+                "INSERT INTO cves (cve, severity, description, published_date, source, epss_score, added_date) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cve, severity, description, published_date, source, epss_score, now)
             )
             conn.commit()
         except Exception:
@@ -456,13 +517,13 @@ def get_cve_stats():
         
         # New CVEs today
         new_today = conn.execute(
-            "SELECT COUNT(*) FROM cves WHERE published_date LIKE ?",
+            "SELECT COUNT(*) FROM cves WHERE added_date LIKE ?",
             (f"{today_str}%",)
         ).fetchone()[0]
         
         # Critical CVEs today
         critical_today = conn.execute(
-            "SELECT COUNT(*) FROM cves WHERE severity IN ('Critical', 'High') AND published_date LIKE ?",
+            "SELECT COUNT(*) FROM cves WHERE severity IN ('Critical', 'High') AND added_date LIKE ?",
             (f"{today_str}%",)
         ).fetchone()[0]
         
@@ -505,9 +566,17 @@ def get_log_entries(limit=100):
 # ----------------- Technology Management -----------------
 
 def add_technology(scan_id, name, version, category, confidence, source_tool):
-    """Store a detected technology."""
+    """Store a detected technology. Prevents duplicates for the same scan and tool."""
     conn = get_db_connection()
     try:
+        # Check for duplicate technology
+        existing = conn.execute(
+            "SELECT id FROM technologies WHERE scan_id = ? AND name = ? AND version = ? AND source_tool = ?",
+            (scan_id, name, version or "", source_tool)
+        ).fetchone()
+        if existing:
+            return False
+
         conn.execute(
             "INSERT INTO technologies (scan_id, name, version, category, confidence, source_tool) "
             "VALUES (?, ?, ?, ?, ?, ?)",

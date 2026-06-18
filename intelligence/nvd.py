@@ -57,10 +57,10 @@ _HEADERS = {
     "Accept": "application/json",
 }
 
-_PAGE_SIZE    = 2000   # Maximum allowed by NVD API 2.0
+_PAGE_SIZE    = 500    # Smaller page size for much higher API reliability and fewer 503/timeout errors
 _INTER_PAGE_DELAY = 6.5  # NVD mandates ≥6 s between requests
-_MAX_RETRIES  = 3
-_RETRY_DELAYS = [10, 30, 60]   # Seconds between retry attempts
+_MAX_RETRIES  = 6
+_RETRY_DELAYS = [30, 60, 120, 240, 480]   # Seconds between retry attempts
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ def _fetch_page(params: dict):
         return [], 0
 
 
-def _process_vulns(vulns, is_initial_sync: bool, smtp_configured: bool) -> int:
+def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
     """Insert CVEs into the DB and optionally fire alerts. Returns count of new entries."""
     added = 0
     for container in vulns:
@@ -158,9 +158,29 @@ def _process_vulns(vulns, is_initial_sync: bool, smtp_configured: bool) -> int:
         cve_id = cve_obj.get("id", "")
         if not cve_id:
             continue
+
+        # Reject entries older than 2018 (fast-skip)
+        if cve_id.startswith("CVE-"):
+            parts = cve_id.split("-")
+            if len(parts) >= 2:
+                try:
+                    year = int(parts[1])
+                    if year < 2018:
+                        continue
+                except ValueError:
+                    pass
+
+        pub_date = cve_obj.get("published", "")
+        if pub_date:
+            try:
+                year = int(pub_date[:4])
+                if year < 2018:
+                    continue
+            except ValueError:
+                pass
+
         severity    = _parse_severity(cve_obj)
         description = _parse_description(cve_obj)
-        pub_date    = cve_obj.get("published", "")
 
         is_new = add_cve(
             cve=cve_id, severity=severity,
@@ -168,7 +188,7 @@ def _process_vulns(vulns, is_initial_sync: bool, smtp_configured: bool) -> int:
         )
         if is_new:
             added += 1
-            if not is_initial_sync and smtp_configured:
+            if not is_initial and smtp_configured:
                 process_cve_alert(cve_id, severity, description, "NVD")
     return added
 
@@ -182,13 +202,11 @@ def sync_nvd():
     • First call  (DB empty): paginated full-database download.
     • Later calls            : incremental — only CVEs published in the last 30 days.
     """
-    from tools.db_manager import get_cve_stats
+    from tools.db_manager import get_db_connection
     from tools.config_manager import load_settings
 
     logger.info("NVD Sync Started…")
 
-    pre_total    = get_cve_stats().get("total", 0)
-    is_initial   = (pre_total == 0)
     settings     = load_settings()
     smtp_ok      = bool(
         settings.get("smtp_host") and settings.get("smtp_user") and
@@ -196,11 +214,23 @@ def sync_nvd():
     )
 
     cache = load_intel_cache()
+    initial_sync_complete = cache.get("nvd_initial_sync_complete", False)
 
-    if is_initial:
+    # If the cache says complete but NVD count is 0 (e.g. DB deleted), reset it
+    if initial_sync_complete:
+        conn = get_db_connection()
+        nvd_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'NVD'").fetchone()[0]
+        conn.close()
+        if nvd_count == 0:
+            initial_sync_complete = False
+            cache["nvd_initial_sync_complete"] = False
+            cache["nvd_next_start_index"] = 0
+
+    if not initial_sync_complete:
         # ── Full database download ────────────────────────────────────────────
-        logger.info("NVD: First run — downloading FULL CVE database (this may take 30–60 minutes)…")
-        total_added = _full_sync(is_initial=True, smtp_ok=smtp_ok)
+        start_index = cache.get("nvd_next_start_index", 0)
+        logger.info(f"NVD: Initial full sync in progress — resuming from index {start_index}…")
+        total_added = _full_sync(is_initial=True, smtp_ok=smtp_ok, start_index=start_index, cache=cache)
     else:
         # ── Incremental sync: last 30 days ────────────────────────────────────
         total_added = _incremental_sync(is_initial=False, smtp_ok=smtp_ok)
@@ -213,9 +243,8 @@ def sync_nvd():
     return True
 
 
-def _full_sync(is_initial: bool, smtp_ok: bool) -> int:
+def _full_sync(is_initial: bool, smtp_ok: bool, start_index: int = 0, cache: dict = None) -> int:
     """Paginate through the ENTIRE NVD database."""
-    start_index = 0
     total_added = 0
     total_results = None   # unknown until first response
 
@@ -231,14 +260,31 @@ def _full_sync(is_initial: bool, smtp_ok: bool) -> int:
             logger.info(f"NVD reports {total_results:,} total CVEs. Downloading in pages of {_PAGE_SIZE}…")
 
         if not vulns:
+            # If we didn't get vulnerabilities but we haven't reached the end, it is an error
+            if total_results is not None and start_index < total_results:
+                logger.error(f"NVD Full Sync: Empty response page at index {start_index}. Stopping to prevent skipping.")
+                if cache is not None:
+                    cache["nvd_next_start_index"] = start_index
+                    save_intel_cache(cache)
+                break
             break
 
-        total_added += _process_vulns(vulns, is_initial, smtp_ok)
+        page_added = _process_vulns(vulns, is_initial, smtp_ok)
+        total_added += page_added
         start_index += len(vulns)
         logger.info(f"NVD Progress: {start_index:,} / {total_results:,} CVEs processed ({total_added:,} new).")
 
+        # Save progress in cache after every successful page
+        if cache is not None:
+            cache["nvd_next_start_index"] = start_index
+            save_intel_cache(cache)
+
         # Stop if we've fetched everything
         if start_index >= total_results:
+            if cache is not None:
+                cache["nvd_initial_sync_complete"] = True
+                cache["nvd_next_start_index"] = 0
+                save_intel_cache(cache)
             break
 
         # NVD mandatory inter-request delay (≥6 s)

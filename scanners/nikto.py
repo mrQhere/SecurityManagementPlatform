@@ -90,7 +90,7 @@ def run_nikto_scan(url):
     # -nointeractive : never prompt
     # -Tuning x : run all plugin tuning categories  (x = all)
     # -Pause 1 : pause 1 second between requests to throttle
-    cmd = [nikto_bin, "-h", url, "-Format", "csv", "-output", "-", "-nointeractive", "-Tuning", "x", "-Pause", "1"]
+    cmd = [nikto_bin, "-h", url, "-Format", "csv", "-output", "-", "-nointeractive", "-Tuning", "x", "-Pause", "2"]
 
     try:
         process = subprocess.Popen(

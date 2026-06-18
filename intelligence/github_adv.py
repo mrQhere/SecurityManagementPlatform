@@ -106,12 +106,31 @@ def _process_advisories(advisories: list, is_initial: bool, smtp_ok: bool) -> in
         if not intel_id:
             continue
 
+        # Reject entries older than 2018 (fast-skip)
+        if intel_id.startswith("CVE-"):
+            parts = intel_id.split("-")
+            if len(parts) >= 2:
+                try:
+                    year = int(parts[1])
+                    if year < 2018:
+                        continue
+                except ValueError:
+                    pass
+
+        published = adv.get("published_at", "")
+        if published:
+            try:
+                year = int(published[:4])
+                if year < 2018:
+                    continue
+            except ValueError:
+                pass
+
         sev_raw  = adv.get("severity", "medium")
         severity = sev_raw.capitalize()
 
         summary     = adv.get("summary", "")
         description = adv.get("description", "") or ""
-        published   = adv.get("published_at", "")
 
         full_desc = f"{summary}\n\nGitHub Advisory ID: {ghsa_id}\n\nDetails: {description[:1000]}"
 
@@ -129,17 +148,20 @@ def _process_advisories(advisories: list, is_initial: bool, smtp_ok: bool) -> in
 
 def sync_github_adv():
     """
-    Fetch ALL GitHub Security Advisories using cursor-based pagination.
+    Fetch GitHub Security Advisories using cursor-based pagination.
     On first call: downloads everything. Subsequent calls: checks for advisories
     newer than the last synced GHSA ID.
     """
-    from tools.db_manager import get_cve_stats
+    from tools.db_manager import get_db_connection
     from tools.config_manager import load_settings
 
     logger.info("GitHub Advisories Sync Started…")
 
-    pre_total  = get_cve_stats().get("total", 0)
-    is_initial = (pre_total == 0)
+    conn = get_db_connection()
+    gh_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'GitHub Advisories'").fetchone()[0]
+    conn.close()
+    
+    is_initial = (gh_count == 0)
     settings   = load_settings()
     smtp_ok    = bool(
         settings.get("smtp_host") and settings.get("smtp_user") and
@@ -147,17 +169,33 @@ def sync_github_adv():
     )
 
     cache = load_intel_cache()
+    
+    # If the DB is completely empty (e.g. cleared), reset the cache state
+    if is_initial:
+        cache["github_initial_sync_complete"] = False
+        cache["github_next_url"] = None
+
+    initial_sync_complete = cache.get("github_initial_sync_complete", False)
     total_added = 0
     page_count  = 0
 
-    # Start at page 1 — always walk all pages for completeness
-    next_url = GITHUB_API_URL
-    params   = {"per_page": _PAGE_SIZE, "type": "reviewed"}  # reviewed = CVE-assigned advisories
+    # If initial sync is not complete, resume from the cached next_url if available
+    if not initial_sync_complete:
+        next_url = cache.get("github_next_url") or GITHUB_API_URL
+    else:
+        next_url = GITHUB_API_URL
+
+    params = {"per_page": _PAGE_SIZE, "type": "reviewed"}
 
     while next_url:
-        resp = _gh_get(next_url, params if page_count == 0 else None)
+        resp = _gh_get(next_url, params if (page_count == 0 and next_url == GITHUB_API_URL) else None)
+        
         if resp is None or resp.status_code != 200:
             logger.error(f"GitHub Advisories: failed to fetch page {page_count + 1}. Stopping.")
+            if not initial_sync_complete:
+                cache["github_next_url"] = next_url
+                save_intel_cache(cache)
+                logger.info(f"GitHub Advisories: Saved resumption URL {next_url}")
             break
 
         try:
@@ -170,13 +208,29 @@ def sync_github_adv():
             break
 
         page_count  += 1
-        total_added += _process_advisories(advisories, is_initial, smtp_ok)
+        page_added = _process_advisories(advisories, is_initial, smtp_ok)
+        total_added += page_added
+        
         logger.info(f"GitHub Advisories: page {page_count} processed "
                     f"({len(advisories)} entries, {total_added} new total).")
 
+        # If initial sync is complete and we hit a page with no new advisories, we are caught up
+        if initial_sync_complete and page_added == 0:
+            logger.info("GitHub Advisories: Caught up to existing advisories. Stopping pagination.")
+            break
+
         next_url = _next_url(resp)
-        if next_url:
-            time.sleep(_INTER_PAGE)
+        
+        # If we reached the end of the pagination loop
+        if not next_url:
+            if not initial_sync_complete:
+                cache["github_initial_sync_complete"] = True
+                cache["github_next_url"] = None
+                save_intel_cache(cache)
+                logger.info("GitHub Advisories: Initial full sync catch-up complete.")
+            break
+            
+        time.sleep(_INTER_PAGE)
 
     # Update cache
     cache["github_last_sync_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -56,9 +56,11 @@ def run_nuclei_scan(url):
     # -u : target url
     # -silent : Only output findings (quiets banner and progress logs on stdout)
     # -rl 5 : Rate Limit (5 req/sec) to avoid DDoS
-    # -t : Explicitly scan all major templates for intense scan
-    cmd = [nuclei_bin, "-u", url, "-jsonl", "-silent", "-rl", "5", 
-           "-t", "cves,vulnerabilities,misconfiguration,exposures,default-logins,takeovers"]
+    # -t : Explicitly scan all major templates
+    # Slow powerful scan: reduced rate limit to 2 and concurrency to 2
+    cmd = [nuclei_bin, "-u", url, "-jsonl", "-silent", "-rl", "2", "-c", "2",
+           "-t", "cves/", "-t", "vulnerabilities/", "-t", "misconfiguration/",
+           "-t", "exposures/", "-t", "takeovers/"]
     
     findings = []
     try:

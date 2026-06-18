@@ -6,6 +6,10 @@
 config/settings.json          # Contains SMTP credentials — NEVER commit
 database/security.db          # SQLite database — local only
 database/*.db
+way.md                        # Personal developer diary & comprehensive logs
+task.md                       # Local planning artifact
+walkthrough.md                # Local planning artifact
+implementation_plan.md        # Local planning artifact
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 logs/

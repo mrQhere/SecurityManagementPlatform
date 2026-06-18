@@ -307,8 +307,8 @@ def process_alerts_for_scan(
             f"Recommendation: Review the attached security report and patch vulnerabilities.\n"
         )
 
-        # Build finding list (Nuclei + Nikto only – Nmap ports are Info and clutter the email)
-        vuln_findings = [f for f in findings if f.get("source_tool") in ("Nuclei", "Nikto")]
+        # Build finding list (include all security-relevant findings that are not Info to prevent clutter)
+        vuln_findings = [f for f in findings if f.get("severity") in ("Low", "Medium", "High", "Critical")]
         findings_html = "<ul>"
         for f in vuln_findings:
             color = {

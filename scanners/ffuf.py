@@ -114,11 +114,11 @@ def run_ffuf_scan(url):
         "-o", output_path,   # write JSON to named temp file
         "-of", "json",       # JSON format
         "-s",                # silent (no progress bar)
-        "-t", "5",           # reduced threads to avoid flooding
-        "-rate", "5",        # Rate limit to 5 requests per second
+        "-t", "2",           # reduced threads to 2
+        "-rate", "2",        # Rate limit to 2 requests per second
         "-mc", "all",        # match all status codes (we filter ourselves)
         "-fc", "404",        # but filter out 404s
-        "-timeout", "10",    # per-request timeout in seconds
+        "-timeout", "15",    # slightly longer per-request timeout due to throttling
     ]
 
     try:

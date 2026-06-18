@@ -56,10 +56,10 @@ def run_sqlmap_scan(url):
     with tempfile.TemporaryDirectory() as tmpdir:
         output_dir = os.path.join(tmpdir, "sqlmap_out")
         
-        # Intense scan with throttling: --delay=1 (1 second delay), --level=5, --risk=3, --crawl=3
+        # Intense scan with throttling: --delay=2 (2 seconds delay), --threads=1, --level=5, --risk=3, --crawl=3
         cmd = [
             sqlmap_bin, "-u", url, "--batch", "--crawl=3", "--level=5", "--risk=3",
-            "--delay=1", "--output-dir", output_dir, "--smart"
+            "--delay=2", "--threads=1", "--output-dir", output_dir, "--smart"
         ]
         
         try:

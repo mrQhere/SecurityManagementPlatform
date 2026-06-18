@@ -68,7 +68,7 @@ def run_subfinder_scan(url):
     # -json : JSONL output
     # -silent : suppress banner
     # -t 10 : 10 concurrent goroutines (fast)
-    cmd = [bin_path, "-d", domain, "-json", "-silent", "-t", "10"]
+    cmd = [bin_path, "-d", domain, "-json", "-silent", "-t", "2"]
 
     try:
         process = subprocess.Popen(
