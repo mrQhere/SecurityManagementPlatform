@@ -38,6 +38,7 @@ from email.mime.application import MIMEApplication
 
 from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
+from intelligence.cve_correlator import does_cve_match_active_targets
 
 logger = logging.getLogger("smp")
 
@@ -341,6 +342,9 @@ def process_alerts_for_scan(
 def process_cve_alert(cve, severity, description, source):
     """Sends an email alert when a new Critical or High CVE is synchronised."""
     if severity not in ("Critical", "High"):
+        return
+
+    if not does_cve_match_active_targets(cve, description):
         return
 
     subject = f"NEW INTEL ALERT: {severity} {source} Advisory [{cve}]"

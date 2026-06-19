@@ -162,3 +162,41 @@ def correlate_cves_for_scan(scan_id):
     logger.info(f"CVE Correlation Completed: {correlation_count} CVE-technology matches found.")
     add_log_entry("INFO", f"CVE Correlation Completed: {correlation_count} matches found.")
     return correlation_count
+
+def does_cve_match_active_targets(cve_id, desc):
+    """
+    Checks if a newly synced CVE matches any technology currently found 
+    on actively monitored ('Enabled') targets.
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DISTINCT t.name 
+            FROM technologies t
+            JOIN scans s ON t.scan_id = s.id
+            JOIN targets tgt ON s.target_id = tgt.id
+            WHERE tgt.status = 'Enabled'
+        ''')
+        active_techs = [dict(row)["name"] for row in cursor.fetchall() if dict(row).get("name")]
+        conn.close()
+    except Exception as e:
+        logger.error(f"Failed to fetch active technologies for CVE match: {e}")
+        return False
+        
+    if not active_techs:
+        return False
+        
+    cve_tokens = _tokenise(desc)
+    desc_lower = desc.lower()
+    
+    for tech_name in active_techs:
+        if tech_name.lower() in desc_lower:
+            return True
+        tech_tokens = _tokenise(tech_name)
+        overlap = tech_tokens & cve_tokens
+        if len(overlap) >= 2 and len(tech_tokens) <= 4:
+            return True
+            
+    return False
+

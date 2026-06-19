@@ -44,7 +44,7 @@ from intelligence.cisa import load_intel_cache, save_intel_cache
 from tools.db_manager import add_cve
 from tools.alert_engine import process_cve_alert
 
-logger = logging.getLogger("smp.update")
+logger = logging.getLogger("smp.cve")
 
 GITHUB_API_URL = "https://api.github.com/advisories"
 

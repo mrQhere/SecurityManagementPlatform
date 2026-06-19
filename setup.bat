@@ -112,7 +112,7 @@ echo         https://github.com/sullo/nikto  (use WSL2 for easiest setup)
 REM ── OWASP ZAP ──────────────────────────────────────────────────────────────
 echo [INFO]  OWASP ZAP note (optional):
 echo         Download from: https://www.zaproxy.org/download/
-echo         Then set zap_enabled=true in config\settings.json
+echo         Then enable ZAP active scanning in the System Settings UI.
 
 REM ── WhatWeb ────────────────────────────────────────────────────────────────
 echo [INFO]  WhatWeb note:

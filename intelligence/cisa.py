@@ -37,7 +37,7 @@ from tools.config_manager import BASE_DIR, init_directories
 from tools.db_manager import add_cve
 from tools.alert_engine import process_cve_alert
 
-logger = logging.getLogger("smp.update")
+logger = logging.getLogger("smp.cve")
 
 CISA_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "intel_cache.json")

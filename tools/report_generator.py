@@ -131,7 +131,7 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     html_paths = []
     pdf_paths = []
     
-    for r_type in ["executive", "technical", "compliance"]:
+    for r_type in ["executive", "technical", "compliance", "ecommerce", "financial", "healthcare"]:
         h_path = os.path.join(BASE_DIR, "reports", "html", f"report_{safe_name}_{r_type}_{timestamp}.html")
         try:
             generate_html_report(h_path, ctx, report_type=r_type)
@@ -508,8 +508,53 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         story.append(Paragraph("No CVE correlation matches found for detected technologies.", BODY))
     story.append(Spacer(1,12))
 
-    # ── S12: Risk Score ───────────────────────────────────────────────────────
-    story.append(section_header(12, "Risk Score & Scoring Breakdown"))
+    # ── S12: Shodan InternetDB ──────────────────────────────────────────────────
+    story.append(section_header(12, f"Shodan InternetDB Profiling — {len(c['shodan'])} findings"))
+    if c['shodan']:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['shodan']]
+        story.append(simple_table(["Severity","Title","Description"], rows, [80,160,280]))
+    else:
+        story.append(Paragraph("No Shodan profile found.", BODY))
+    story.append(Spacer(1,12))
+
+    # ── S13: Wayback Machine ──────────────────────────────────────────────────
+    story.append(section_header(13, f"Wayback Machine Archive Links — {len(c['wayback'])} links"))
+    if c['wayback']:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['wayback']]
+        story.append(simple_table(["Severity","URL","Description"], rows, [80,160,280]))
+    else:
+        story.append(Paragraph("No Wayback Machine archives found.", BODY))
+    story.append(Spacer(1,12))
+
+    # ── S14: CRT.sh ──────────────────────────────────────────────────
+    story.append(section_header(14, f"CRT.sh Transparency Subdomains — {len(c['crtsh'])} subdomains"))
+    if c['crtsh']:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['crtsh']]
+        story.append(simple_table(["Severity","Subdomain","Description"], rows, [80,160,280]))
+    else:
+        story.append(Paragraph("No CRT.sh subdomains found.", BODY))
+    story.append(Spacer(1,12))
+
+    # ── S15: HackerTarget ──────────────────────────────────────────────────
+    story.append(section_header(15, f"HackerTarget Reverse DNS — {len(c['ht_data'])} records"))
+    if c['ht_data']:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['ht_data']]
+        story.append(simple_table(["Severity","Record","Description"], rows, [80,160,280]))
+    else:
+        story.append(Paragraph("No HackerTarget records found.", BODY))
+    story.append(Spacer(1,12))
+
+    # ── S16: Whois ──────────────────────────────────────────────────
+    story.append(section_header(16, f"Whois Registry Info — {len(c['whois_data'])} records"))
+    if c['whois_data']:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['whois_data']]
+        story.append(simple_table(["Severity","Information","Description"], rows, [80,160,280]))
+    else:
+        story.append(Paragraph("No Whois information found.", BODY))
+    story.append(Spacer(1,12))
+
+    # ── S17: Risk Score ───────────────────────────────────────────────────────
+    story.append(section_header(17, "Risk Score & Scoring Breakdown"))
     if c["risk_data"]:
         import json as _json
         rd    = c["risk_data"]
@@ -541,8 +586,8 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         story.append(Paragraph("Risk score not available for this scan.", BODY))
     story.append(Spacer(1,12))
 
-    # ── S13: Recommendations ─────────────────────────────────────────────────
-    story.append(section_header(13, "Security Recommendations & Remediation Roadmap"))
+    # ── S18: Recommendations ─────────────────────────────────────────────────
+    story.append(section_header(18, "Security Recommendations & Remediation Roadmap"))
     recs = []
     if counts["Critical"]>0: recs.append("<b>CRITICAL — Immediately isolate:</b> Disable affected services, apply patches, block via firewall ACLs.")
     if counts["High"]>0:     recs.append("<b>HIGH — Within 24–72 hrs:</b> Emergency change window. Patch and harden configurations.")
@@ -563,8 +608,8 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         story += [rt, Spacer(1,6)]
     story.append(Spacer(1,12))
 
-    # ── S14: References ───────────────────────────────────────────────────────
-    story.append(section_header(14, "References & Citations"))
+    # ── S19: References ───────────────────────────────────────────────────────
+    story.append(section_header(19, "References & Citations"))
     refs = [
         ("CISA KEV",  "Known Exploited Vulnerabilities Catalog", "cisa.gov/kev"),
         ("NVD NIST",  "National Vulnerability Database (240,000+ CVEs)", "nvd.nist.gov"),
@@ -576,8 +621,8 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
     story += [simple_table(["Source","Description","URL"], refs, [110,240,170]),
               Spacer(1,12)]
 
-    # ── S15: Historical ───────────────────────────────────────────────────────
-    story.append(section_header(15, "Historical Comparison & Scan Timeline"))
+    # ── S20: Historical ───────────────────────────────────────────────────────
+    story.append(section_header(20, "Historical Comparison & Scan Timeline"))
     if c["previous_scan"]:
         story.append(Paragraph(
             f"Compared to previous scan on <b>{c['previous_scan']['start_time']}</b>. "

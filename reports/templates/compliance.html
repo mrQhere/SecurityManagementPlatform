@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance & Security Posture Report{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Compliance Overview</h2>
+    <p>This report highlights findings that map directly to compliance frameworks (e.g., PCI-DSS, HIPAA, SOC2), specifically focusing on transport security (SSL/TLS), patch management (CVEs), and misconfigurations.</p>
+</div>
+
+<!-- CVE CORRELATION -->
+<div class="card">
+    <h2>Known Vulnerabilities (CVEs)</h2>
+    <p>The following vulnerabilities correlate to the identified software and services running on the target infrastructure.</p>
+    
+    {% if cve_corr %}
+    <table>
+        <thead><tr><th>Risk</th><th>CVE ID / Title</th><th>EPSS / CVSS Details</th></tr></thead>
+        <tbody>
+            {% for f in cve_corr %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No known CVEs correlated to identified software components.</p>
+    {% endif %}
+</div>
+
+<!-- SSL / TLS -->
+<div class="card">
+    <h2>Transport Security (SSL/TLS)</h2>
+    <p>Evaluation of encryption in transit.</p>
+    
+    {% if ssl_f %}
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in ssl_f %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No SSL faults detected or SSL scan skipped.</p>
+    {% endif %}
+</div>
+
+<!-- MISCONFIGURATIONS -->
+<div class="card">
+    <h2>Configuration & Headers</h2>
+    <p>Analysis of HTTP security headers and exposure.</p>
+    
+    {% set config_findings = [] %}
+    {% for f in httpx %}
+        {% if f.severity == 'Info' or f.severity == 'Low' %}
+            {% set _ = config_findings.append(f) %}
+        {% endif %}
+    {% endfor %}
+    {% for f in nikto %}
+        {% if 'Header' in f.title or 'Config' in f.title %}
+            {% set _ = config_findings.append(f) %}
+        {% endif %}
+    {% endfor %}
+
+    {% if config_findings %}
+    <table>
+        <thead><tr><th>Risk</th><th>Finding</th><th>Source</th></tr></thead>
+        <tbody>
+            {% for f in config_findings %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td>{{ f.source_tool }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No major configuration or header faults detected.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

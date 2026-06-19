@@ -65,6 +65,7 @@ def setup_logging():
     scan_path = os.path.join(log_dir, "scan.log")
     update_path = os.path.join(log_dir, "update.log")
     error_path = os.path.join(log_dir, "error.log")
+    cve_path = os.path.join(log_dir, "cve.log")
     
     # Create formatters
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
@@ -106,6 +107,13 @@ def setup_logging():
     update_handler.setLevel(logging.INFO)
     update_handler.setFormatter(formatter)
     logger_update.addHandler(update_handler)
+    
+    # 6. CVE Log Handler (Only for smp.cve logger)
+    logger_cve = logging.getLogger("smp.cve")
+    cve_handler = RecreatingFileHandler(cve_path, encoding="utf-8")
+    cve_handler.setLevel(logging.INFO)
+    cve_handler.setFormatter(formatter)
+    logger_cve.addHandler(cve_handler)
     
     # Ensure standard library warnings are captured
     logging.captureWarnings(True)

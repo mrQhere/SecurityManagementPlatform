@@ -48,7 +48,7 @@ from intelligence.cisa import load_intel_cache, save_intel_cache
 from tools.db_manager import add_cve
 from tools.alert_engine import process_cve_alert
 
-logger = logging.getLogger("smp.update")
+logger = logging.getLogger("smp.cve")
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
@@ -159,13 +159,13 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
         if not cve_id:
             continue
 
-        # Reject entries older than 2018 (fast-skip)
+        # Reject entries older than 2020 (fast-skip)
         if cve_id.startswith("CVE-"):
             parts = cve_id.split("-")
             if len(parts) >= 2:
                 try:
                     year = int(parts[1])
-                    if year < 2018:
+                    if year < 2020:
                         continue
                 except ValueError:
                     pass
@@ -174,7 +174,7 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
         if pub_date:
             try:
                 year = int(pub_date[:4])
-                if year < 2018:
+                if year < 2020:
                     continue
             except ValueError:
                 pass

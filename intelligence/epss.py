@@ -33,7 +33,7 @@ import time
 import requests
 from tools.db_manager import get_db_connection
 
-logger = logging.getLogger("smp.update")
+logger = logging.getLogger("smp.cve")
 
 EPSS_API_URL = "https://api.first.org/data/v1/epss"
 

@@ -1047,3 +1047,29 @@ _next_url(resp) -> str                     # Parse Link header for pagination
 | 2026-06-18 | AI (authorised) | Raised CISA catalog skip threshold to require at least 100 entries in cisa.py to prevent empty checks |
 | 2026-06-18 | AI (authorised) | Reduced NVD sync page size to 500 in nvd.py to prevent 503 errors and timeouts |
 
+
+## [2026-06-18] Platform Enhancements
+- **CVE Alert Filtering**: Emails are now only sent if a new CVE matches a technology currently running on an actively monitored ('Enabled') target.
+- **Dedicated CVE Logging**: Separated CVE intelligence update errors to `logs/cve.log` using a new `smp.cve` logger.
+- **Global Concurrency Control**: The scan runner now limits maximum parallel active scans to 3 globally, preventing excessive network traffic.
+- **Scan Resumption**: Added `resume_interrupted_scans()` logic triggered on system boot to resume scans that didn't complete prior to a shutdown.
+- **ZAP API Control**: OWASP ZAP is now fully controllable via a toggle in the System Settings UI (disabled by default).
+- **Report Generator Expansion**: Integrated Shodan, Wayback Machine, CRT.sh, HackerTarget, and Whois registry info into the generated PDF and HTML reports.
+- **UI Redesign**: Overhauled PySide6 stylesheet to an auto-adapting Light/Dark theme with a sleek, professional iOS-inspired aesthetic.
+- **UI Performance & UX**: Eliminated GUI lag by implementing state-caching and state-hashing logic across the dashboard refresh cycles. Reversed log display order so newest logs appear at the top.
+- **Documentation**: Removed `way.md` from `.gitignore` and documented all recent changes.
+
+## [2026-06-19] UI Complete Ground-Up Redesign
+- **UI Rewrite**: Completely scrapped the old PySide6 stylesheet and dashboard layout. Rebuilt `ui/dashboard.py` from scratch with a genuine Apple-style light theme using the system's native color palette (#F2F2F7 backgrounds, #1C1C1E text, #007AFF accents, SF Pro typography).
+- **Sidebar Navigation**: Replaced the QListWidget sidebar with stateful QPushButton nav items that highlight the active page using `[active="true"]` property selectors — matching the macOS/iOS sidebar pattern.
+- **KPI Cards**: Redesigned as clean white cards with bold colored metrics (28px), matching Apple's dashboard card aesthetic.
+- **Settings Page**: Rebuilt as a scrollable form with proper label/field alignment, clear grouping, and pill-shaped inputs that glow blue on focus.
+- **Log Terminal**: The Audit Logs page now uses a dark-on-dark terminal QTextEdit (dark background, monospace font) with newest entries at the top, making it extremely readable.
+- **Performance**: All poll refresh functions now use state-hashing — the UI only redraws when backend data actually changes, eliminating all GUI stutter.
+- **Code Quality**: Introduced `_make_page`, `_make_card`, `_make_kpi`, `_item` helper methods to eliminate repetitive boilerplate and keep all pages consistent.
+
+## [2026-06-19] UI Fixes & CVE Log Viewer
+- **CVE Log Viewer**: Added a dedicated "CVE Log" tab inside the Audit Logs page that reads `logs/cve.log` in real-time. The tab shows CVE intelligence sync events (NVD, CISA, GitHub Advisory errors) separately from the master log, with a search filter. Newest entries appear at the top.
+- **Dashboard Refresh Button**: Added a manual "↻ Refresh" button in the Dashboard header that clears all caches and forces a full redraw of every widget immediately.
+- **Log Text Readability**: Fixed the QListWidget stylesheet — removed the hardcoded `color` rule from `QListWidget::item` which was overriding per-item `setForeground()` colours, making severity-coloured CVE and event items unreadable.
+- **Log Order**: Both master.log and cve.log now correctly display newest entries at the very top.

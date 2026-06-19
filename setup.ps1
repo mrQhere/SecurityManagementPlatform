@@ -140,6 +140,7 @@ Write-Host "  ┌─────────────────────
 Write-Host "  │ Nikto    → Best used via WSL2: sudo apt install nikto       │"
 Write-Host "  │ WhatWeb  → Best used via WSL2: sudo apt install whatweb     │"
 Write-Host "  │ OWASP ZAP→ https://www.zaproxy.org/download/               │"
+Write-Host "  │            Then enable it in the System Settings UI.        │"
 Write-Host "  └─────────────────────────────────────────────────────────────┘"
 
 # ── 7. Create run.bat ─────────────────────────────────────────────────────────

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Executive Summary Report{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Executive Overview</h2>
+    <p>This report provides a high-level summary of the security posture for <strong>{{ url }}</strong>. It is intended for management and stakeholders, focusing on overall risk metrics and critical vulnerabilities.</p>
+    
+    <div class="counts-grid">
+        <div class="count-box critical">
+            <div class="num" style="color: var(--crit)">{{ counts.Critical }}</div>
+            <div>Critical Issues</div>
+        </div>
+        <div class="count-box high">
+            <div class="num" style="color: var(--high)">{{ counts.High }}</div>
+            <div>High Issues</div>
+        </div>
+        <div class="count-box medium">
+            <div class="num" style="color: var(--med)">{{ counts.Medium }}</div>
+            <div>Medium Issues</div>
+        </div>
+        <div class="count-box low">
+            <div class="num" style="color: var(--low)">{{ counts.Low }}</div>
+            <div>Low Issues</div>
+        </div>
+    </div>
+</div>
+
+{% if findings %}
+<div class="card">
+    <h2>Critical & High Risk Findings</h2>
+    <p>The following issues require immediate remediation attention to protect the business.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Risk Level</th>
+                <th>Vulnerability Title</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in findings %}
+                {% if f.severity in ['Critical', 'High'] %}
+                <tr>
+                    <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                    <td>{{ f.title }}</td>
+                    <td>{{ f.source_tool }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <h2>Findings Summary</h2>
+    <p>No critical or high-risk vulnerabilities were identified during this assessment.</p>
+</div>
+{% endif %}
+
+{% endblock %}

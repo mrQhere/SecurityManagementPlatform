@@ -312,7 +312,7 @@ fi
 if ! command -v zaproxy &>/dev/null; then
     info "OWASP ZAP not detected (OPTIONAL – active scanning)."
     info "Download from: https://www.zaproxy.org/download/"
-    info "Then set zap_enabled=true in config/settings.json"
+    info "Then enable ZAP active scanning in the System Settings UI."
 fi
 
 # ── 10. Create run.sh ─────────────────────────────────────────────────────────

@@ -498,13 +498,20 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None)
         conn.close()
 
 
-def get_cves(limit=100):
-    """Retrieve threat intelligence feed list."""
+def get_cves(search_query="", limit=100):
+    """Retrieve threat intelligence feed list with optional search."""
     conn = get_db_connection()
-    rows = conn.execute(
-        "SELECT * FROM cves ORDER BY id DESC LIMIT ?",
-        (limit,)
-    ).fetchall()
+    if search_query:
+        wildcard_q = f"%{search_query}%"
+        rows = conn.execute(
+            "SELECT * FROM cves WHERE cve LIKE ? OR description LIKE ? ORDER BY id DESC LIMIT ?",
+            (wildcard_q, wildcard_q, limit)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM cves ORDER BY id DESC LIMIT ?",
+            (limit,)
+        ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

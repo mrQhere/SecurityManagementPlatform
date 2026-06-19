@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}E-Commerce Security & PCI-DSS Risk Report{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>E-Commerce & PCI-DSS Security Overview</h2>
+    <p>This report evaluates the security posture of the e-commerce application at <strong>{{ url }}</strong>. It focuses on identifying risks related to payment gateways, customer data exposure, Cross-Site Scripting (XSS), and alignment with PCI-DSS compliance requirements.</p>
+    
+    <div class="counts-grid">
+        <div class="count-box critical">
+            <div class="num" style="color: var(--crit)">{{ counts.Critical }}</div>
+            <div>Critical Issues</div>
+        </div>
+        <div class="count-box high">
+            <div class="num" style="color: var(--high)">{{ counts.High }}</div>
+            <div>High Issues</div>
+        </div>
+        <div class="count-box medium">
+            <div class="num" style="color: var(--med)">{{ counts.Medium }}</div>
+            <div>Medium Issues</div>
+        </div>
+        <div class="count-box low">
+            <div class="num" style="color: var(--low)">{{ counts.Low }}</div>
+            <div>Low Issues</div>
+        </div>
+    </div>
+</div>
+
+{% if findings %}
+<div class="card">
+    <h2>E-Commerce Risk Findings</h2>
+    <p>The following vulnerabilities could allow attackers to intercept payment data, hijack customer sessions, or compromise the integrity of the storefront.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Severity</th>
+                <th>Vulnerability Title</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in findings %}
+                <tr>
+                    <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                    <td>{{ f.title }}</td>
+                    <td>{{ f.source_tool }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <h2>Findings Summary</h2>
+    <p>No vulnerabilities were identified during this assessment. The payment flows and customer data appear secure against automated scanning.</p>
+</div>
+{% endif %}
+{% endblock %}

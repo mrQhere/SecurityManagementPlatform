@@ -58,6 +58,13 @@ def main():
     # 3. Initialize SQLite Database
     init_db()
 
+    # 3.5 Resume Interrupted Scans
+    try:
+        from scanners.scan_runner import resume_interrupted_scans
+        resume_interrupted_scans()
+    except Exception as e:
+        logger.error(f"Failed to resume interrupted scans: {e}")
+
     # 4. Auto-check and install required tools (runs in background thread)
     import threading
     def _install_tools():
@@ -77,8 +84,32 @@ def main():
     # 6. Boot PySide6 GUI QApplication
     app = QApplication(sys.argv)
 
+    # ── Force light theme regardless of OS dark-mode setting ──────────────────
+    # This ensures the app always renders as light, readable, and consistent.
+    app.setStyle("Fusion")
+    from PySide6.QtGui import QPalette, QColor
+    palette = QPalette()
+    palette.setColor(QPalette.Window,          QColor("#F2F2F7"))
+    palette.setColor(QPalette.WindowText,      QColor("#1C1C1E"))
+    palette.setColor(QPalette.Base,            QColor("#FFFFFF"))
+    palette.setColor(QPalette.AlternateBase,   QColor("#F9F9FB"))
+    palette.setColor(QPalette.ToolTipBase,     QColor("#FFFFFF"))
+    palette.setColor(QPalette.ToolTipText,     QColor("#1C1C1E"))
+    palette.setColor(QPalette.Text,            QColor("#1C1C1E"))
+    palette.setColor(QPalette.Button,          QColor("#F2F2F7"))
+    palette.setColor(QPalette.ButtonText,      QColor("#1C1C1E"))
+    palette.setColor(QPalette.BrightText,      QColor("#FF3B30"))
+    palette.setColor(QPalette.Link,            QColor("#007AFF"))
+    palette.setColor(QPalette.Highlight,       QColor("#007AFF"))
+    palette.setColor(QPalette.HighlightedText, QColor("#FFFFFF"))
+    palette.setColor(QPalette.Mid,             QColor("#C7C7CC"))
+    palette.setColor(QPalette.Shadow,          QColor("#E5E5EA"))
+    app.setPalette(palette)
+    # ─────────────────────────────────────────────────────────────────────────
+
     # Register clean shutdown callback
     app.aboutToQuit.connect(on_quit)
+
 
     window = DashboardWindow()
     window.show()
