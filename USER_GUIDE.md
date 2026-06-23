@@ -1,7 +1,7 @@
 # Security Management Platform (SMP) — User Guide & Reference Manual
 
 **Author:** mrQhere  
-**Version:** V3.1 (Stable Release)  
+**Version:** V3.4 (Stable Release)  
 **Security Status:** Protected under Cryptographic License Signature Verification
 
 ---
@@ -18,7 +18,7 @@ Any modification or deletion of the licensing validation triggers a system secur
 ---
 
 ## 📖 Table of Contents
-1. [A. Getting Started & Installation](#a-getting-started--installation)
+1. [A. Welcome to SMP & Installation](#a-welcome-to-smp--installation)
 2. [B. System Navigation & GUI Control](#b-system-navigation--gui-control)
 3. [C. The 22-Step Sequential Scan Pipeline](#c-the-22-step-sequential-scan-pipeline)
 4. [D. Threat Intelligence Feed Integration](#d-threat-intelligence-feed-integration)
@@ -31,75 +31,110 @@ Any modification or deletion of the licensing validation triggers a system secur
 
 ---
 
----
+## 🍏 A. Welcome to SMP & Installation
 
-## A. Getting Started & Installation
+Welcome to the **Security Management Platform (SMP)**. We designed this tool to be incredibly powerful on the inside, yet beautifully simple on the outside. Whether you are a seasoned security auditor or a complete beginner, SMP automates complex cybersecurity checks with just a few clicks.
+
+> [!TIP]
+> **Pro Tip for Beginners:** You don't need to understand every single tool (like Nmap or Nuclei) to use SMP. Just add your website's URL to the Targets tab and hit "Scan". SMP handles all the complex terminal commands for you behind the scenes!
 
 ### Prerequisite System Environment
 - **Operating System:** Linux/Ubuntu (20.04 LTS or newer)
 - **Python Version:** Python 3.11 or newer
-- **System Privileges:** Standard user with passwordless `sudo` capability for package installation (nmap, nikto, whatweb, traceroute).
+- **System Privileges:** Standard user with `sudo` capability (you will need to enter your computer password once during setup).
 
 ### Automated Setup (Linux)
-The platform features a fully automated, non-interactive installation script. Run the following command from the project root:
+The platform features a fully automated, non-interactive installation script. You literally just paste one command and grab a coffee.
+
+1. Open your Terminal.
+2. Navigate to the project folder.
+3. Run the setup script:
+
 ```bash
 bash setup.sh
 ```
-What the installer accomplishes:
-1. Checks for local Python 3.11+; installs system Python if missing.
-2. Initializes a sandboxed Python Virtual Environment (`./venv`).
-3. Installs core python dependencies (`PySide6`, `APScheduler`, `reportlab`, `requests`, `sslyze`, `sqlmap`, `wapiti3`).
-4. Installs system packages via `apt` (`nmap`, `nikto`, `whatweb`, `traceroute`).
-5. Provision a fuzzer wordlist (automatically creates `/usr/share/wordlists/dirb/common.txt` using sudo, falling back to a local `$PROJECT_ROOT/config/common.txt` if permissions are restricted).
-6. Auto-downloads Go language binary compiler (`go1.23.4`) and configures project-local scanner binaries (`nuclei`, `subfinder`, `httpx`, `ffuf`) in `./bin/`.
-7. Hardens file permissions (applies `chmod 700` to databases, backups, and settings; `chmod 750` to the binaries folder).
+
+**What the installer does while you wait:**
+1. Checks for Python and installs it if missing.
+2. Creates a safe "sandbox" (`./venv`) so it doesn't mess with your computer's other programs.
+3. Downloads all the required cybersecurity tools (Nmap, Nikto, ffuf, etc.) automatically.
+4. Secures your files so nobody else on your network can read your reports.
 
 ### Launching the Application
-Execute the custom startup script to bypass environment paths:
+Once setup is complete, you can launch the beautiful GUI dashboard anytime by running:
+
 ```bash
 bash run.sh
 ```
 
+> [!NOTE]
+> **Pro Tip:** Always use `bash run.sh` to start the app. It automatically handles all the complex environment variables and paths for you!
+
 ---
 
-## B. System Navigation & GUI Control
+## 🚀 First Walkthrough (Before Your First Scan)
 
-The SMP Console features a premium Apple-inspired high-contrast graphical user interface.
+If you've just installed SMP and this is your very first time launching it, you must complete a few quick setup steps before you can scan a target.
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│  SMP (mrQhere)    │ Dashboard      [ MONITORED ] [ CVE DB ] [ ACTIVE ] │
-│  ──────────────── │ ────────────────────────────────────────────────── │
-│  ⬤  Dashboard     │  Target Risk Summary            Recent Security    │
-│  ⬤  Targets       │  ┌────────────────────────┐    ┌─────────────────┐ │
-│  ⬤  Threat Intel  │  │ Target URL  │ Status   │    │ [Time] Msg      │ │
-│  ⬤  Settings      │  │ ──────────  │ ──────── │    │ ──────────────  │ │
-│  ⬤  Audit Logs    │  │ kniti.live  │ Enabled  │    │ CVE Feed Synced │ │
-│                   │  └─────────────┴──────────┘    └─────────────────┘ │
-└────────────────────────────────────────────────────────────────────────┘
-```
+### Step 1: Create Your Master Password
+When you run `bash run.sh` for the first time, you will immediately be greeted by a Master Password prompt. 
+- Create a strong password. 
+- **Write it down safely.** SMP uses military-grade AES-256 encryption. If you lose this password, your databases are cryptographically locked forever and you must perform a Factory Reset.
+
+### Step 2: Accept the Responsibility Disclaimer
+After unlocking the app, a Legal Responsibility dialog will appear. 
+- Read the terms carefully. 
+- You must physically check the **"I acknowledge"** box to proceed. 
+- *Note:* The exact time you click this box is permanently logged in the secure database for legal compliance.
+
+### Step 3: Configure Your Email Alerts (Optional but Recommended)
+Before scanning, you probably want to receive PDF reports automatically.
+1. Click the **Settings** tab on the left menu.
+2. Under SMTP Settings, enter your Gmail address (e.g., `you@gmail.com`).
+3. You cannot use your normal Google password. You must generate a **16-character App Password** from your Google Account Security settings and paste it here.
+4. Enter the receiver email (where you want the PDFs sent) and click **Save Settings**.
+5. Click **Test Connection** to ensure it works!
+
+### Step 4: Add Your First Target
+1. Click the **Targets** tab on the left menu.
+2. In the "Add New Target" box, type the URL you have permission to test (e.g., `https://example.com`).
+3. Click the **Add Target** button. You will see it appear in your Monitored Pipeline Table below.
+
+You are now ready to click **Scan**!
+
+---
+
+## 🖱️ B. System Navigation & GUI Control
+
+The SMP Console features a premium, Apple-inspired high-contrast graphical user interface. We've removed the clutter so you can focus on what matters: your security posture.
+
+> [!TIP]
+> **Pro Tip:** The interface is divided into 5 main tabs on the left. Think of "Dashboard" as your bird's-eye view, and "Targets" as your control room where you actually launch scans.
 
 1. **Dashboard Tab**:
    - **KPI Metric Banners**: Live count of Monitored Targets, CVE Threat database volume, Active ongoing scans, and Alert dispatch status.
-   - **Target Risk Summary Table**: List of monitoed domains with their live operational status and calculated risk classification.
+   - **Target Risk Summary Table**: List of monitored domains with their live operational status and calculated risk classification.
    - **Recent Security Events**: Scrollable widget displaying real-time warning logs, scan triggers, and sync occurrences.
-   - **Refresh Button**: Instantly clears memory and hashlib states to redraw the dashboard elements.
+   - **Refresh Button**: Instantly clears memory and redraws the dashboard elements. If things ever look stuck, click this!
+   - **Scan All Targets Button**: Bulk-triggers the 22-step scan pipeline for all enabled targets. Perfect for overnight audits.
+   - **Responsibility Disclaimer**: A legal disclaimer must be accepted before first use. Upon acceptance, the exact confirmation timestamp is permanently recorded on screen and inside the database for compliance.
 
 2. **Targets Tab**:
-   - **Add New Target**: Input a domain/IP (e.g. `https://example.com`) and click "Add Target" to add it to the monitoring pool.
-   - **Monitored Pipeline Table**: Shows each target's current status (Enabled/Disabled), last completed scan timestamp, scanning auditor, and action keys (`Scan`, `Report`, `Toggle`, `Delete`).
-   - **Ongoing Scans Feed**: Live feedback showing exactly which of the 22 scan pipeline steps is currently executing on active threads.
+   - **Add New Target**: Simply type your website address (e.g. `https://example.com`) and click "Add Target" to add it to your monitoring pool.
+   - **Monitored Pipeline Table**: Shows each target's current status, last completed scan timestamp, and action keys (`Scan`, `Report`, `Toggle`, `Delete`).
+   - **Ongoing Scans Feed**: Live feedback showing exactly which tool is currently analyzing your website.
 
 3. **Threat Intel Tab**:
-   - **Filters**: Dropdowns to query the CVE database by severity (Critical, High, Medium, Low) and keyword search.
-   - **CVE Advisory Feed**: Tooltips reveal description and product impacts upon hover. Color-coded by severity levels.
+   - **Filters**: Dropdowns to search the global vulnerability database. 
+   - **CVE Advisory Feed**: Hover over any entry to read what the vulnerability actually does. Color-coded from Info (Grey) to Critical (Red).
 
 4. **Settings Tab**:
-   - **Scanner Binary Paths**: Customize executable paths for scanners.
-   - **SMTP Configuration**: Specify SMTP host, port, user account, app password (supports toggled password visibility), sender, and receiver. Includes a "Test Connection" worker tool.
+   - **Scanner Binary Paths**: Advanced users can customize where the terminal tools are installed.
+   - **SMTP Configuration**: Connect your email here so the platform can send you PDF reports automatically when it finds a critical issue.
 
 5. **Audit Logs Tab**:
-   - Tabbed consoles showing Master log, Scan events log, CVE intelligence log, and System Errors log. All logs are prepended in real-time, keeping the latest updates at the very top.
+   - **Master Log**: Your chronological history of everything the app has done.
+   - **Scan Events Log**: Terminal output. Useful if you want to see the "Matrix" code of the scanners working.
 
 ---
 
@@ -205,9 +240,17 @@ Logs are organized into four dedicated targets:
 
 ---
 
-## H. Database Backups & Data Portability
+## H. Database Backups & 4-Layer Redundancy
 
-To prevent data corruption, backups use the following protection mechanisms:
+To prevent data corruption and ensure compliance, the platform maintains a highly redundant 4-layer backup system. Every time a scan completes, the database orchestrator automatically synchronizes the live data.
+
+### The 4 Redundant Backup Databases (`/backup/`)
+1. **`active_scans.db` (Audit Trail)**: Archives the absolute raw JSON output of every tool (Nmap, ffuf, SQLMap, etc) exactly as it was captured, preserving forensic integrity.
+2. **`important_results.db` (Executive Backup)**: Separates and stores only High and Critical severity findings. Useful for rapid remediation workflows.
+3. **`cve_secondary.db` (Threat Intel Mirror)**: A complete mirror of the synchronized threat intelligence feeds (NVD, CISA, GitHub Advisories) ensuring offline availability.
+4. **`full_backup.db` (Disaster Recovery)**: A perfect, structural 1:1 mirror of all 8 primary application tables (`targets`, `scans`, `findings`, `logs`, `alerts`, `risk_scores`, `technologies`, `responsibility_log`). If your live `security.db` is corrupted or deleted, the system can instantly restore your exact state using `restore_from_backup()`.
+
+### Backup Protection Mechanisms
 - **Write-Ahead Logging (WAL)**: Enabled by default to permit concurrent read and write transactions.
 - **Transactional Backoff**: Exponential backoff retry loop resolves locks if writes conflict.
 - **Safe WAL Checkpoints**: `PRAGMA wal_checkpoint(TRUNCATE)` is executed before copying the database to ensure all logs are fully committed.
@@ -216,83 +259,79 @@ To prevent data corruption, backups use the following protection mechanisms:
 
 ---
 
-## I. Security Locks & Scanner Capabilities
+---
+
+## 🚨 I. Security Locks & Scanner Capabilities
 
 ### Master Password Security Lock
-To protect the confidentiality of scanned target URLs, active findings, and custom server settings, the Security Management Platform automatically encrypts all database files on disk using **AES-256 (Fernet)**.
-1. **Initial Startup**: On the first launch, the user is required to configure a **Master Password**. This creates an authentication validation token at `config/auth.json`.
-2. **Subsequent Launches**: You must input the correct Master Password to unlock the interface and decrypt the database. Failure to authenticate blocks interface loading.
-3. **Automatic Cleanup**: On clean quit or when catching termination signals, the app securely overwrites and deletes the plaintext database files, leaving only encrypted files (`.enc`) on disk.
+To protect your sensitive vulnerability data, SMP automatically encrypts your databases using military-grade **AES-256 Encryption**. 
 
-### Scanning Modes (Standard vs. Full Mode)
-Upon triggering any scan, the platform prompts the user for their system **sudo password**:
-* **Standard Mode (Default)**: If no password is provided, scanners run with standard privileges. OS detection (`-O`) and ICMP traceroute (`-I`) are skipped to prevent permission errors.
-* **Full Mode (Elevated)**: Entering a valid sudo password elevates scanner capabilities. The orchestrator prepends `sudo -S` to execution threads:
-  * **Nmap**: Adds OS detection (`-O`) and default scripts (`-sC`) to the scan.
-  * **Traceroute**: Uses ICMP mode (`-I`) which is faster and bypassed by fewer firewalls than standard UDP traceroute.
+1. **Initial Startup**: On your very first launch, you will be asked to create a **Master Password**. Don't lose this!
+2. **Subsequent Launches**: Every time you open the app, you must type this password to unlock your data.
+3. **Automatic Cleanup**: When you close the app, it instantly scrambles and encrypts your files on the hard drive, so even if someone steals your laptop, they cannot read your security reports.
 
-### Timeout Capping & Pipeline Resiliency
-To prevent the scan queue from stalling indefinitely on slower targets:
-* The initial scan sequence caps individual scanner runtimes to a maximum of **180 seconds** (configurable in settings).
-* If a tool is stuck and times out, the process group is forcefully terminated, the failure is logged, and the orchestrator moves on to the next scanner step.
-* At the conclusion of the initial sequence, any deferred scanners are retried in a dedicated **Retry Queue** with their full, un-capped timeout settings.
+> [!CAUTION]
+> **Warning:** If you forget your Master Password, there is absolutely no "Forgot Password" button. Your data is cryptographically locked forever. You will have to perform a Factory Reset (see Section J).
+
+### Scanning Modes (Standard vs. Deep Scan)
+When you click "Scan", you'll see a popup asking for your computer's administrator (`sudo`) password.
+
+* **Standard Mode (Leave Blank)**: If you just click OK without typing your computer password, the scan runs safely using standard permissions. It's fast and effective.
+* **Deep Mode (Enter Password)**: If you type your computer password, you give SMP permission to use advanced "Root" techniques. This allows Nmap to attempt to guess the exact operating system of the target, and allows Traceroute to bypass certain firewalls.
 
 ---
 
-## J. Disaster Recovery & Complete System Resets
+## 🛠️ J. Disaster Recovery & Complete System Resets
 
-If you encounter system corruptions, lose passwords, or need to restore the platform to a clean slate, follow these reset procedures:
+Sometimes things go wrong, or you just want a completely fresh start. Here are the exact copy-paste commands to clean up your system.
+
+> [!IMPORTANT]
+> **Pro Tip:** Open your Terminal, navigate to the `SecurityManagementPlatform-main` folder, and literally copy-paste the grey command blocks below.
 
 ### 1. Resetting the Master Password (Fresh Database Setup)
-If you forget your Master Password, you will be locked out of the encrypted databases and configurations. Since the databases are securely encrypted using your password, recovery is not cryptographically possible. 
+Forgot your Master Password? You are locked out. To wipe everything and start entirely fresh:
 
-To wipe target databases and start fresh:
-1. Delete the authentication configuration and encrypted databases:
-   ```bash
-   rm -f config/auth.json database/security.db* backup/*.db*
-   ```
-2. Relaunch the application:
-   ```bash
-   ./run.sh
-   ```
-3. You will be prompted to configure a new Master Password upon startup.
+```bash
+# 1. Delete your old encrypted databases
+rm -f config/auth.json database/security.db* backup/*.db*
+
+# 2. Relaunch the app to set a new password
+bash run.sh
+```
 
 ### 2. Resetting User Configurations & Settings
-If you want to clear SMTP passwords, custom tool paths, or scheduler configurations:
+Messed up your settings or SMTP passwords? Reset them back to factory defaults:
+
 ```bash
-# Delete local configuration settings
+# Delete your current settings and restore the blank template
 rm -f config/settings.json
-# Restore the settings template
 cp config/settings.example.json config/settings.json
 ```
 
-### 3. Resetting Threat Intelligence & CVE Cache
-If you want to force a full re-download and sync of NVD, CISA, and GitHub Advisories:
+### 3. Cleaning All Logs & Cached Data
+Want to clear your audit logs and force the app to re-download the global CVE Threat Database?
+
 ```bash
-# Delete cached EPSS / intelligence cache files
+# Delete all logs and cache
+rm -rf logs/*
 rm -f cache/intel_cache.json
 ```
 
-### 4. Cleaning All Audit Logs & Scan Logs
-To flush the terminal views and start with blank log displays:
-```bash
-# Clear all logs
-rm -rf logs/*
-```
+### 4. Cleaning Generated PDF & HTML Reports
+Too many old PDF reports cluttering up your system?
 
-### 5. Cleaning Generated PDF & HTML Reports
-To delete all previously generated report files:
 ```bash
-# Remove all reports
+# Delete all generated reports
 rm -rf reports/html/* reports/pdf/*
 ```
 
-### 6. Full Factory Reset (All-in-One Command)
-To revert the entire application directory to its pristine post-cloned state (wiping all local configurations, logs, databases, cache, and reports):
+### 5. THE NUCLEAR OPTION: Full Factory Reset
+Want to completely obliterate all your data, settings, logs, and passwords to make the app exactly like the day you downloaded it? Run this single command:
+
 ```bash
 rm -rf config/auth.json config/settings.json config/license.key database/* backup/* logs/* cache/* reports/html/* reports/pdf/*
 ```
-*Note: Make sure to copy `license/license.key` into `config/license.key` manually after resetting to enable startup.*
+*(Note: After a nuclear reset, you must copy `license/license.key` back into `config/license.key` manually before the app will launch again).*
 
 ---
 

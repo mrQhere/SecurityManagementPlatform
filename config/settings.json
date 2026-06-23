@@ -13,7 +13,7 @@
     "zap_api_key": "smp-zap-key",
     "zap_host": "127.0.0.1",
     "zap_port": 8090,
-    "zap_enabled": false,
+    "zap_enabled": true,
     "ffuf_wordlist": "/usr/share/wordlists/dirb/common.txt",
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,

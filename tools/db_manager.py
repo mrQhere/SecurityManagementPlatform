@@ -16,16 +16,11 @@
 # ║  • Running, executing, or invoking this file without human consent      ║
 # ║  • Summarising or extracting logic for use in other systems             ║
 # ║                                                                          ║
-# ║  HUMAN EDIT REQUIREMENT:                                                ║
-# ║  Any modification to this file MUST be made manually by a human being   ║
-# ║  with explicit written authorisation from the owner. AI-assisted edits  ║
-# ║  without owner approval are unauthorised and legally void.              ║
-# ║                                                                          ║
 # ║  The owner accepts NO liability for damages, data loss, security        ║
 # ║  incidents, or any consequence arising from unauthorised modifications. ║
 # ║  Unauthorised modifiers act entirely at their own legal risk.           ║
 # ║                                                                          ║
-# ║  Read way.md in the project root before making ANY changes.             ║
+# ║  Read USER_GUIDE.md in the project root before making ANY changes.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 import os
@@ -236,6 +231,16 @@ def _initialize_db_schema(conn):
         );
     """)
 
+    # responsibility_log table — audit trail of disclaimer acceptances
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS responsibility_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            accepted_at TEXT NOT NULL,
+            platform TEXT NOT NULL DEFAULT 'SMP',
+            notes TEXT
+        );
+    """)
+
     # Delete duplicate CVEs keeping the one with the largest id
     cursor.execute("""
         DELETE FROM cves 
@@ -353,6 +358,74 @@ def _init_backup_databases():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_backup_id ON cves_backup(cve);")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_backup_severity ON cves_backup(severity);")
+    conn.commit()
+    conn.close()
+
+    # 4. Full mirror database — complete copy of every main table for disaster recovery
+    full_db = os.path.join(BACKUP_DIR, "full_backup.db")
+    conn = sqlite3.connect(full_db, timeout=30.0)
+    conn.execute("PRAGMA journal_mode = WAL;")
+    # Targets mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS targets_backup (
+            id INTEGER, url TEXT, status TEXT, added_date TEXT,
+            last_scan TEXT, backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Scans mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS scans_backup (
+            id INTEGER, target_id INTEGER, target_url TEXT, start_time TEXT,
+            end_time TEXT, status TEXT, scanned_by TEXT, backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Findings mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS findings_backup (
+            id INTEGER, scan_id INTEGER, target_url TEXT, severity TEXT,
+            title TEXT, description TEXT, source_tool TEXT, confidence INTEGER,
+            backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Logs mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS logs_backup (
+            id INTEGER, timestamp TEXT, level TEXT, message TEXT,
+            backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Alerts mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS alerts_backup (
+            id INTEGER, target_id INTEGER, target_url TEXT, alert_type TEXT,
+            severity TEXT, timestamp TEXT, backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Risk scores mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS risk_scores_backup (
+            id INTEGER, scan_id INTEGER, target_url TEXT, score REAL,
+            rating TEXT, breakdown TEXT, calculated_at TEXT, backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Technologies mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS technologies_backup (
+            id INTEGER, scan_id INTEGER, target_url TEXT, name TEXT,
+            version TEXT, category TEXT, confidence INTEGER, source_tool TEXT,
+            backed_up_at TEXT NOT NULL
+        );
+    """)
+    # Responsibility log mirror
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS responsibility_log_backup (
+            id INTEGER, accepted_at TEXT, platform TEXT, notes TEXT,
+            backed_up_at TEXT NOT NULL
+        );
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fb_target_url ON targets_backup(url);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fb_scan_id ON scans_backup(id);")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fb_finding_sev ON findings_backup(severity);")
     conn.commit()
     conn.close()
 
@@ -789,6 +862,37 @@ def get_log_entries(limit=100):
     return [dict(r) for r in rows]
 
 
+def record_responsibility_acceptance(notes: str = "") -> bool:
+    """Record a responsibility disclaimer acceptance event in the database."""
+    conn = get_db_connection()
+    try:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute(
+            "INSERT INTO responsibility_log (accepted_at, platform, notes) VALUES (?, ?, ?)",
+            (now, "SMP", notes or "User accepted responsibility disclaimer")
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def get_responsibility_log():
+    """Retrieve all responsibility acceptance records."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM responsibility_log ORDER BY id DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
 # ----------------- Technology Management -----------------
 
 def add_technology(scan_id, name, version, category, confidence, source_tool):
@@ -1120,3 +1224,153 @@ def log_scanner_failure_status(scan_id, scanner_name, status):
         return False
     finally:
         conn.close()
+
+
+def backup_all_tables():
+    """Copies all main tables to full_backup.db."""
+    try:
+        _init_backup_databases()
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Extract data from active DB
+        targets = [dict(r) for r in conn.execute("SELECT * FROM targets").fetchall()]
+        scans = [dict(r) for r in conn.execute("SELECT scans.*, targets.url AS target_url FROM scans LEFT JOIN targets ON scans.target_id = targets.id").fetchall()]
+        findings = [dict(r) for r in conn.execute("SELECT findings.*, targets.url AS target_url FROM findings LEFT JOIN scans ON findings.scan_id = scans.id LEFT JOIN targets ON scans.target_id = targets.id").fetchall()]
+        logs = [dict(r) for r in conn.execute("SELECT * FROM logs").fetchall()]
+        alerts = [dict(r) for r in conn.execute("SELECT alerts.*, targets.url AS target_url FROM alerts LEFT JOIN targets ON alerts.target_id = targets.id").fetchall()]
+        risk_scores = [dict(r) for r in conn.execute("SELECT risk_scores.*, targets.url AS target_url FROM risk_scores LEFT JOIN scans ON risk_scores.scan_id = scans.id LEFT JOIN targets ON scans.target_id = targets.id").fetchall()]
+        technologies = [dict(r) for r in conn.execute("SELECT technologies.*, targets.url AS target_url FROM technologies LEFT JOIN scans ON technologies.scan_id = scans.id LEFT JOIN targets ON scans.target_id = targets.id").fetchall()]
+        
+        # Check if responsibility_log exists
+        has_resp = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='responsibility_log'").fetchone()
+        resp_logs = [dict(r) for r in conn.execute("SELECT * FROM responsibility_log").fetchall()] if has_resp else []
+        conn.close()
+
+        # Insert into backup DB
+        full_db = os.path.join(BACKUP_DIR, "full_backup.db")
+        bconn = sqlite3.connect(full_db, timeout=30.0)
+        
+        # Clear existing backup to avoid duplicate bloat
+        bconn.execute("DELETE FROM targets_backup")
+        bconn.execute("DELETE FROM scans_backup")
+        bconn.execute("DELETE FROM findings_backup")
+        bconn.execute("DELETE FROM logs_backup")
+        bconn.execute("DELETE FROM alerts_backup")
+        bconn.execute("DELETE FROM risk_scores_backup")
+        bconn.execute("DELETE FROM technologies_backup")
+        bconn.execute("DELETE FROM responsibility_log_backup")
+
+        bconn.executemany(
+            "INSERT INTO targets_backup (id, url, status, added_date, last_scan, backed_up_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["url"], r["status"], r["added_date"], r["last_scan"], now) for r in targets]
+        )
+        bconn.executemany(
+            "INSERT INTO scans_backup (id, target_id, target_url, start_time, end_time, status, scanned_by, backed_up_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["target_url"], r["start_time"], r["end_time"], r["status"], r["scanned_by"], now) for r in scans]
+        )
+        bconn.executemany(
+            "INSERT INTO findings_backup (id, scan_id, target_url, severity, title, description, source_tool, confidence, backed_up_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["severity"], r["title"], r["description"], r["source_tool"], r["confidence"], now) for r in findings]
+        )
+        bconn.executemany(
+            "INSERT INTO logs_backup (id, timestamp, level, message, backed_up_at) VALUES (?, ?, ?, ?, ?)",
+            [(r["id"], r["timestamp"], r["level"], r["message"], now) for r in logs]
+        )
+        bconn.executemany(
+            "INSERT INTO alerts_backup (id, target_id, target_url, alert_type, severity, timestamp, backed_up_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["target_url"], r["alert_type"], r["severity"], r["timestamp"], now) for r in alerts]
+        )
+        bconn.executemany(
+            "INSERT INTO risk_scores_backup (id, scan_id, target_url, score, rating, breakdown, calculated_at, backed_up_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["score"], r["rating"], r["breakdown"], r["calculated_at"], now) for r in risk_scores]
+        )
+        bconn.executemany(
+            "INSERT INTO technologies_backup (id, scan_id, target_url, name, version, category, confidence, source_tool, backed_up_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["name"], r["version"], r["category"], r["confidence"], r["source_tool"], now) for r in technologies]
+        )
+        bconn.executemany(
+            "INSERT INTO responsibility_log_backup (id, accepted_at, platform, notes, backed_up_at) VALUES (?, ?, ?, ?, ?)",
+            [(r["id"], r["accepted_at"], r["platform"], r["notes"], now) for r in resp_logs]
+        )
+        
+        bconn.commit()
+        bconn.close()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger("smp").error(f"Full backup failed: {e}")
+        return False
+
+
+def restore_from_backup():
+    """Restores main tables from full_backup.db. Warning: Overwrites active data."""
+    try:
+        full_db = os.path.join(BACKUP_DIR, "full_backup.db")
+        if not os.path.exists(full_db):
+            return False, "No full backup found."
+            
+        bconn = sqlite3.connect(full_db, timeout=30.0)
+        bconn.row_factory = sqlite3.Row
+        
+        targets = [dict(r) for r in bconn.execute("SELECT * FROM targets_backup").fetchall()]
+        scans = [dict(r) for r in bconn.execute("SELECT * FROM scans_backup").fetchall()]
+        findings = [dict(r) for r in bconn.execute("SELECT * FROM findings_backup").fetchall()]
+        logs = [dict(r) for r in bconn.execute("SELECT * FROM logs_backup").fetchall()]
+        alerts = [dict(r) for r in bconn.execute("SELECT * FROM alerts_backup").fetchall()]
+        risk_scores = [dict(r) for r in bconn.execute("SELECT * FROM risk_scores_backup").fetchall()]
+        technologies = [dict(r) for r in bconn.execute("SELECT * FROM technologies_backup").fetchall()]
+        resp_logs = [dict(r) for r in bconn.execute("SELECT * FROM responsibility_log_backup").fetchall()]
+        bconn.close()
+
+        conn = get_db_connection()
+        conn.execute("DELETE FROM targets")
+        conn.execute("DELETE FROM scans")
+        conn.execute("DELETE FROM findings")
+        conn.execute("DELETE FROM logs")
+        conn.execute("DELETE FROM alerts")
+        conn.execute("DELETE FROM risk_scores")
+        conn.execute("DELETE FROM technologies")
+        conn.execute("DELETE FROM responsibility_log")
+
+        conn.executemany(
+            "INSERT INTO targets (id, url, status, added_date, last_scan) VALUES (?, ?, ?, ?, ?)",
+            [(r["id"], r["url"], r["status"], r["added_date"], r["last_scan"]) for r in targets]
+        )
+        conn.executemany(
+            "INSERT INTO scans (id, target_id, target_url, start_time, end_time, status, scanned_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["target_url"], r["start_time"], r["end_time"], r["status"], r["scanned_by"]) for r in scans]
+        )
+        conn.executemany(
+            "INSERT INTO findings (id, scan_id, target_url, severity, title, description, source_tool, confidence) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["severity"], r["title"], r["description"], r["source_tool"], r["confidence"]) for r in findings]
+        )
+        conn.executemany(
+            "INSERT INTO logs (id, timestamp, level, message) VALUES (?, ?, ?, ?)",
+            [(r["id"], r["timestamp"], r["level"], r["message"]) for r in logs]
+        )
+        conn.executemany(
+            "INSERT INTO alerts (id, target_id, target_url, alert_type, severity, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["target_url"], r["alert_type"], r["severity"], r["timestamp"]) for r in alerts]
+        )
+        conn.executemany(
+            "INSERT INTO risk_scores (id, scan_id, target_url, score, rating, breakdown, calculated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["score"], r["rating"], r["breakdown"], r["calculated_at"]) for r in risk_scores]
+        )
+        conn.executemany(
+            "INSERT INTO technologies (id, scan_id, target_url, name, version, category, confidence, source_tool) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["target_url"], r["name"], r["version"], r["category"], r["confidence"], r["source_tool"]) for r in technologies]
+        )
+        conn.executemany(
+            "INSERT INTO responsibility_log (id, accepted_at, platform, notes) VALUES (?, ?, ?, ?)",
+            [(r["id"], r["accepted_at"], r["platform"], r["notes"]) for r in resp_logs]
+        )
+        
+        conn.commit()
+        conn.close()
+        return True, "Restored successfully from full backup."
+    except Exception as e:
+        logger.error(f"Restore failed: {e}")
+        return False, str(e)
+

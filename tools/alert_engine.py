@@ -16,16 +16,11 @@
 # ║  • Running, executing, or invoking this file without human consent      ║
 # ║  • Summarising or extracting logic for use in other systems             ║
 # ║                                                                          ║
-# ║  HUMAN EDIT REQUIREMENT:                                                ║
-# ║  Any modification to this file MUST be made manually by a human being   ║
-# ║  with explicit written authorisation from the owner. AI-assisted edits  ║
-# ║  without owner approval are unauthorised and legally void.              ║
-# ║                                                                          ║
 # ║  The owner accepts NO liability for damages, data loss, security        ║
 # ║  incidents, or any consequence arising from unauthorised modifications. ║
 # ║  Unauthorised modifiers act entirely at their own legal risk.           ║
 # ║                                                                          ║
-# ║  Read way.md in the project root before making ANY changes.             ║
+# ║  Read USER_GUIDE.md in the project root before making ANY changes.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 import os
@@ -232,13 +227,6 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None):
                 err_log_stream.write(f"[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
         return False
 
-    except Exception as e:
-        err_msg = f"SMTP Failed: {e}"
-        if err_msg not in _logged_alerts:
-            logger.error(err_msg)
-            add_log_entry("ERROR", err_msg)
-            _logged_alerts.add(err_msg)
-        return False
     except smtplib.SMTPConnectError as e:
         err_msg = f"SMTP Failed: Cannot connect to {smtp_host}:{smtp_port} — {e}"
         if err_msg not in _logged_alerts:

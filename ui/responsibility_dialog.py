@@ -1,7 +1,5 @@
-import os
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QCheckBox, QPushButton, QMessageBox
 from PySide6.QtCore import Qt
-from .theme import apply_theme
 from tools.responsibility_manager import load_responsibility_flag, set_responsibility_flag
 
 class ResponsibilityDialog(QDialog):
@@ -12,18 +10,40 @@ class ResponsibilityDialog(QDialog):
         self.setFixedSize(500, 250)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
 
-        # Simple stylesheet for consistency (will be overridden by theme)
+        # Dark minimalist style
         self.setStyleSheet("""
-            QDialog { background-color: #FFFFFF; }
-            QLabel { color: #1C1C1E; font-size: 13px; }
-            QPushButton { background-color: #007AFF; color: #FFF; border: none; border-radius: 8px; padding: 8px 16px; }
-            QPushButton:hover { background-color: #0071EB; }
+            QDialog {
+                background-color: #0D0D0D;
+                color: #CCCCCC;
+                font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+            }
+            QLabel { color: #AAAAAA; font-size: 13px; background: transparent; }
+            QCheckBox { color: #CCCCCC; font-size: 13px; spacing: 10px; }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border: 1.5px solid #555555;
+                background-color: #111111;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #888888;
+                background-color: #1A1A1A;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #D8D8D8;
+                border: 2px solid #BBBBBB;
+            }
+            QPushButton {
+                background-color: #1E1E1E;
+                color: #DDDDDD;
+                border: 1px solid #333333;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            QPushButton:hover { background-color: #282828; color: #FFFFFF; border-color: #555555; }
         """)
-        try:
-            apply_theme(self, dark_mode=False)
-        except Exception as e:
-            # Non‑critical – UI will still work
-            pass
 
         self._setup_ui()
 
@@ -43,6 +63,12 @@ class ResponsibilityDialog(QDialog):
 
         self.chk_accept = QCheckBox("I have read and accept the responsibility disclaimer.")
         layout.addWidget(self.chk_accept)
+
+        from datetime import datetime
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.lbl_timestamp = QLabel(f"Confirmation timestamp: {now}")
+        self.lbl_timestamp.setStyleSheet("color: #777777; font-size: 11px;")
+        layout.addWidget(self.lbl_timestamp)
 
         btn_layout = QVBoxLayout()
         self.btn_ok = QPushButton("Continue")

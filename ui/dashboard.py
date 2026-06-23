@@ -16,16 +16,11 @@
 # ║  • Running, executing, or invoking this file without human consent      ║
 # ║  • Summarising or extracting logic for use in other systems             ║
 # ║                                                                          ║
-# ║  HUMAN EDIT REQUIREMENT:                                                ║
-# ║  Any modification to this file MUST be made manually by a human being   ║
-# ║  with explicit written authorisation from the owner. AI-assisted edits  ║
-# ║  without owner approval are unauthorised and legally void.              ║
-# ║                                                                          ║
 # ║  The owner accepts NO liability for damages, data loss, security        ║
 # ║  incidents, or any consequence arising from unauthorised modifications. ║
 # ║  Unauthorised modifiers act entirely at their own legal risk.           ║
 # ║                                                                          ║
-# ║  Read way.md in the project root before making ANY changes.             ║
+# ║  Read USER_GUIDE.md in the project root before making ANY changes.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 import os
@@ -109,8 +104,8 @@ def get_latest_scan_operator_for_target(target_id):
 APPLE_STYLESHEET = """
 /* ── Root ── */
 QMainWindow, QWidget {
-    background-color: #F2F2F7;
-    color: #1C1C1E;
+    background-color: #0D0D0D;
+    color: #E8E8E8;
     font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
     border: none;
@@ -119,91 +114,93 @@ QMainWindow, QWidget {
 
 /* ── Sidebar ── */
 QFrame#sidebar {
-    background-color: #FFFFFF;
-    border-right: 1px solid #E5E5EA;
+    background-color: #111111;
+    border-right: 1px solid #222222;
 }
 
 QLabel#brand_label {
-    color: #1C1C1E;
-    font-size: 17px;
+    color: #FFFFFF;
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: -0.4px;
+    letter-spacing: 0.5px;
     padding: 0px 20px;
 }
 
 QLabel#brand_sub {
-    color: #48484A;
-    font-size: 11px;
-    letter-spacing: 0.5px;
+    color: #555555;
+    font-size: 10px;
+    letter-spacing: 1.5px;
     padding: 0px 20px 16px 20px;
 }
 
 QPushButton#nav_btn {
     background-color: transparent;
-    color: #3C3C43;
+    color: #888888;
     border: none;
-    border-radius: 10px;
-    padding: 11px 14px;
-    font-size: 14px;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
     font-weight: 500;
     text-align: left;
 }
 QPushButton#nav_btn:hover {
-    background-color: #F2F2F7;
-    color: #1C1C1E;
+    background-color: #1A1A1A;
+    color: #CCCCCC;
 }
 QPushButton#nav_btn[active="true"] {
-    background-color: #EAF1FF;
-    color: #0056B3;
+    background-color: #1E1E1E;
+    color: #FFFFFF;
     font-weight: 600;
+    border-left: 2px solid #FFFFFF;
 }
 
 /* ── Content Area ── */
 QFrame#content_area {
-    background-color: #F2F2F7;
+    background-color: #0D0D0D;
 }
 
 /* ── Page Title ── */
 QLabel#page_title {
-    color: #1C1C1E;
-    font-size: 28px;
+    color: #FFFFFF;
+    font-size: 24px;
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
     padding: 4px 0px;
 }
 QLabel#page_subtitle {
-    color: #48484A;
-    font-size: 13px;
+    color: #555555;
+    font-size: 12px;
     padding: 0px 0px 8px 0px;
+    letter-spacing: 0.2px;
 }
 
 /* ── Cards ── */
 QFrame#card {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 16px;
+    background-color: #141414;
+    border: 1px solid #222222;
+    border-radius: 10px;
 }
 QFrame#card_highlight {
-    background-color: #FFFFFF;
-    border: 1.5px solid #007AFF;
-    border-radius: 16px;
+    background-color: #141414;
+    border: 1px solid #444444;
+    border-radius: 10px;
 }
 QFrame#kpi_card {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 16px;
+    background-color: #141414;
+    border: 1px solid #222222;
+    border-radius: 10px;
 }
 
 /* ── Group Boxes ── */
 QGroupBox {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 16px;
+    background-color: #141414;
+    border: 1px solid #222222;
+    border-radius: 10px;
     margin-top: 20px;
     padding: 20px 16px 16px 16px;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
-    color: #1C1C1E;
+    color: #AAAAAA;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -211,321 +208,345 @@ QGroupBox::title {
     left: 16px;
     top: 8px;
     padding: 0 8px;
-    color: #1C1C1E;
-    font-size: 15px;
-    font-weight: 600;
+    color: #888888;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 /* ── Buttons ── */
 QPushButton {
-    background-color: #007AFF;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 10px;
-    padding: 9px 18px;
-    font-size: 14px;
-    font-weight: 600;
+    background-color: #1E1E1E;
+    color: #DDDDDD;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
     min-height: 20px;
 }
 QPushButton:hover {
-    background-color: #0071EB;
+    background-color: #282828;
+    border-color: #444444;
+    color: #FFFFFF;
 }
 QPushButton:pressed {
-    background-color: #005FCC;
+    background-color: #111111;
 }
 QPushButton:disabled {
-    background-color: #E5E5EA;
-    color: #C7C7CC;
+    background-color: #161616;
+    color: #333333;
+    border-color: #222222;
 }
 QPushButton#btn_secondary {
-    background-color: #F2F2F7;
-    color: #0056B3;
-    border: 1px solid #C7C7CC;
+    background-color: transparent;
+    color: #888888;
+    border: 1px solid #2A2A2A;
 }
 QPushButton#btn_secondary:hover {
-    background-color: #E5E5EA;
+    background-color: #1A1A1A;
+    color: #CCCCCC;
+    border-color: #333333;
 }
 QPushButton#btn_danger {
-    background-color: #FF3B30;
-    color: #FFFFFF;
+    background-color: #2A0D0D;
+    color: #FF6B6B;
+    border: 1px solid #3D1515;
 }
 QPushButton#btn_danger:hover {
-    background-color: #E0342A;
+    background-color: #3D1515;
+    color: #FF4444;
 }
 QPushButton#btn_success {
-    background-color: #34C759;
-    color: #FFFFFF;
+    background-color: #0D2A15;
+    color: #5ADB7E;
+    border: 1px solid #153D22;
 }
 QPushButton#btn_success:hover {
-    background-color: #2BB14F;
+    background-color: #153D22;
+    color: #44FF77;
 }
 QPushButton#btn_warning {
-    background-color: #FF9500;
-    color: #FFFFFF;
+    background-color: #2A1D00;
+    color: #FFAA44;
+    border: 1px solid #3D2B00;
 }
 QPushButton#btn_small {
     padding: 4px 10px;
-    border-radius: 7px;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     min-height: 14px;
 }
 
 /* ── Inputs ── */
 QLineEdit {
-    background-color: #FFFFFF;
-    border: 1.5px solid #E5E5EA;
-    border-radius: 10px;
-    padding: 9px 12px;
-    color: #1C1C1E;
-    font-size: 14px;
-    selection-background-color: #007AFF;
+    background-color: #111111;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #E0E0E0;
+    font-size: 13px;
+    selection-background-color: #444444;
 }
 QLineEdit:focus {
-    border: 1.5px solid #007AFF;
+    border: 1px solid #555555;
+    background-color: #161616;
 }
 QLineEdit::placeholder {
-    color: #55555A;
+    color: #333333;
 }
 
 QComboBox {
-    background-color: #FFFFFF;
-    border: 1.5px solid #E5E5EA;
-    border-radius: 10px;
-    padding: 9px 12px;
-    color: #1C1C1E;
-    font-size: 14px;
+    background-color: #111111;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #E0E0E0;
+    font-size: 13px;
     min-width: 120px;
 }
 QComboBox:focus {
-    border: 1.5px solid #007AFF;
+    border: 1px solid #555555;
 }
 QComboBox::drop-down {
     border: none;
     width: 24px;
 }
 QComboBox QAbstractItemView {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 10px;
-    selection-background-color: #EAF1FF;
-    selection-color: #007AFF;
+    background-color: #141414;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    selection-background-color: #2A2A2A;
+    selection-color: #FFFFFF;
     padding: 4px;
+    color: #E0E0E0;
 }
 
 QCheckBox {
-    color: #1C1C1E;
-    font-size: 14px;
+    color: #AAAAAA;
+    font-size: 13px;
     spacing: 8px;
 }
 QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
-    border-radius: 5px;
-    border: 1.5px solid #C7C7CC;
-    background-color: #FFFFFF;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #333333;
+    background-color: #111111;
 }
 QCheckBox::indicator:checked {
-    background-color: #007AFF;
-    border-color: #007AFF;
+    background-color: #444444;
+    border-color: #666666;
 }
 
 /* ── Tables ── */
 QTableWidget {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 14px;
-    gridline-color: #F2F2F7;
-    selection-background-color: #EAF1FF;
-    selection-color: #1C1C1E;
-    alternate-background-color: #F9F9FB;
+    background-color: #111111;
+    border: 1px solid #222222;
+    border-radius: 8px;
+    gridline-color: #1A1A1A;
+    selection-background-color: #222222;
+    selection-color: #FFFFFF;
+    alternate-background-color: #131313;
     font-size: 13px;
-    color: #1C1C1E;
+    color: #CCCCCC;
 }
 QTableWidget::item {
     padding: 6px 10px;
     border: none;
 }
 QTableWidget::item:selected {
-    background-color: #EAF1FF;
-    color: #1C1C1E;
+    background-color: #222222;
+    color: #FFFFFF;
 }
 QHeaderView {
     background-color: transparent;
 }
 QHeaderView::section {
-    background-color: #F2F2F7;
-    color: #3A3A3C;
+    background-color: #0D0D0D;
+    color: #555555;
     padding: 10px 10px;
     border: none;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    border-bottom: 1px solid #1E1E1E;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
     text-transform: uppercase;
 }
 QHeaderView::section:first {
-    border-top-left-radius: 13px;
+    border-top-left-radius: 7px;
 }
 QHeaderView::section:last {
-    border-top-right-radius: 13px;
+    border-top-right-radius: 7px;
 }
 
 /* ── Lists ── */
 QListWidget {
-    background-color: #FFFFFF;
-    border: 1px solid #E5E5EA;
-    border-radius: 14px;
-    padding: 6px;
+    background-color: #111111;
+    border: 1px solid #222222;
+    border-radius: 8px;
+    padding: 4px;
     font-size: 13px;
+    color: #CCCCCC;
 }
 QListWidget::item {
-    padding: 10px 12px;
-    border-radius: 8px;
-    border-bottom: 1px solid #F2F2F7;
-    /* Do NOT set color here — let setForeground() handle per-item color */
+    padding: 9px 12px;
+    border-radius: 4px;
+    border-bottom: 1px solid #1A1A1A;
+    color: #CCCCCC;
 }
 QListWidget::item:last {
     border-bottom: none;
 }
 QListWidget::item:hover {
-    background-color: #F2F2F7;
+    background-color: #1A1A1A;
 }
 QListWidget::item:selected {
-    background-color: #EAF1FF;
+    background-color: #222222;
+    color: #FFFFFF;
 }
 
 /* ── Text Areas ── */
 QTextEdit {
-    background-color: #1C1C1E;
-    border: none;
-    border-radius: 14px;
-    font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+    background-color: #0A0A0A;
+    border: 1px solid #1E1E1E;
+    border-radius: 8px;
+    font-family: "Menlo", "Monaco", "Courier New", monospace;
     font-size: 12px;
-    color: #F2F2F7;
-    padding: 16px;
+    color: #CCCCCC;
+    padding: 14px;
     line-height: 1.6;
-    selection-background-color: #0071EB;
+    selection-background-color: #333333;
 }
 
 /* ── Scroll Bars ── */
 QScrollBar:vertical {
     border: none;
     background: transparent;
-    width: 8px;
+    width: 6px;
     margin: 0;
 }
 QScrollBar::handle:vertical {
-    background: #C7C7CC;
+    background: #2A2A2A;
     min-height: 32px;
-    border-radius: 4px;
+    border-radius: 3px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #AEAEB2;
+    background: #383838;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar:horizontal {
     border: none;
     background: transparent;
-    height: 8px;
+    height: 6px;
     margin: 0;
 }
 QScrollBar::handle:horizontal {
-    background: #C7C7CC;
+    background: #2A2A2A;
     min-width: 32px;
-    border-radius: 4px;
+    border-radius: 3px;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 
 /* ── Splitter ── */
 QSplitter::handle {
-    background: #E5E5EA;
+    background: #1E1E1E;
     width: 1px;
     height: 1px;
 }
 
 /* ── Form Layout Labels ── */
 QLabel#form_label {
-    color: #1C1C1E;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    color: #888888;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
 }
 
-/* ── Settings form label (explicit dark for readability) ── */
+/* ── All labels default ── */
 QLabel {
-    color: #1C1C1E;
+    color: #CCCCCC;
+    background: transparent;
 }
 
-/* ── Small buttons — always readable ── */
+/* ── Small buttons ── */
 QPushButton#btn_small {
     padding: 4px 10px;
-    border-radius: 7px;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     min-height: 14px;
-    background-color: #E5E5EA;
-    color: #1C1C1E;
-    border: 1px solid #C7C7CC;
+    background-color: #1A1A1A;
+    color: #AAAAAA;
+    border: 1px solid #2A2A2A;
 }
 QPushButton#btn_small:hover {
-    background-color: #D1D1D6;
-}
-QPushButton#btn_small[objectName="btn_danger"] {
-    background-color: #FF3B30;
-    color: #FFFFFF;
-    border: none;
+    background-color: #222222;
+    color: #DDDDDD;
 }
 
 /* ── Status Badges ── */
 QLabel#badge_green {
-    color: #0F5132;
-    background-color: #D1E7DD;
-    border-radius: 6px;
+    color: #5ADB7E;
+    background-color: #0D2018;
+    border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 QLabel#badge_red {
-    color: #842029;
-    background-color: #F8D7DA;
-    border-radius: 6px;
+    color: #FF6B6B;
+    background-color: #2A0D0D;
+    border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 QLabel#badge_orange {
-    color: #853000;
-    background-color: #FFE0B2;
-    border-radius: 6px;
+    color: #FFAA44;
+    background-color: #2A1800;
+    border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 QLabel#badge_blue {
-    color: #084298;
-    background-color: #CFE2FF;
-    border-radius: 6px;
+    color: #88BBFF;
+    background-color: #0D1A2A;
+    border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 QLabel#badge_gray {
-    color: #212529;
-    background-color: #E2E3E5;
-    border-radius: 6px;
+    color: #888888;
+    background-color: #1A1A1A;
+    border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 /* ── Divider ── */
 QFrame#divider {
-    background-color: #E5E5EA;
+    background-color: #1E1E1E;
     max-height: 1px;
     min-height: 1px;
 }
 
 /* ── Message Box ── */
 QMessageBox {
-    background-color: #FFFFFF;
+    background-color: #141414;
+    color: #CCCCCC;
+}
+QMessageBox QLabel {
+    color: #CCCCCC;
 }
 """
 
@@ -538,13 +559,7 @@ class DashboardWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Security Management Platform")
         self.setStyleSheet(APPLE_STYLESHEET)
-        # Apply modern glassmorphism theme (dark mode enabled by default)
-        try:
-            from .theme import apply_theme
-            apply_theme(self, dark_mode=True)
-        except Exception as e:
-            logger.warning(f"Theme application failed: {e}")
-        # Set window dimensions (original behavior)
+        # Set window dimensions
         self.setMinimumSize(1200, 800)
         self.resize(1400, 860)
 
@@ -612,12 +627,12 @@ class DashboardWindow(QMainWindow):
         # Brand — no borders, clean text only
         brand = QLabel("SMP")
         brand.setObjectName("brand_label")
-        brand.setStyleSheet("color: #1C1C1E; font-size: 18px; font-weight: 700; letter-spacing: -0.4px; padding: 0 20px; border: none; background: transparent;")
+        brand.setStyleSheet("color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; padding: 0 20px; border: none; background: transparent;")
         layout.addWidget(brand)
 
         brand_sub = QLabel("SECURITY PLATFORM")
         brand_sub.setObjectName("brand_sub")
-        brand_sub.setStyleSheet("color: #8E8E93; font-size: 10px; letter-spacing: 1px; padding: 0 20px 14px 20px; border: none; background: transparent;")
+        brand_sub.setStyleSheet("color: #444444; font-size: 10px; letter-spacing: 1.5px; padding: 0 20px 14px 20px; border: none; background: transparent;")
         layout.addWidget(brand_sub)
 
         # Divider
@@ -648,7 +663,7 @@ class DashboardWindow(QMainWindow):
         layout.addStretch()
 
         # Version label
-        ver = QLabel("v2.0 • SMP Console")
+        ver = QLabel("v3.4 Stable • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -679,6 +694,13 @@ class DashboardWindow(QMainWindow):
         btn_refresh.setToolTip("Restart the entire application to recover from a stuck state")
         btn_refresh.clicked.connect(self._restart_application)
         hrow.addWidget(btn_refresh)
+        
+        btn_scan_all = QPushButton("▶  Scan All Targets")
+        btn_scan_all.setObjectName("btn_primary")
+        btn_scan_all.setToolTip("Trigger a manual scan for all enabled targets")
+        btn_scan_all.clicked.connect(self._scan_all_targets)
+        hrow.addWidget(btn_scan_all)
+        
         layout.addLayout(hrow)
 
         # KPI Row
@@ -719,7 +741,24 @@ class DashboardWindow(QMainWindow):
 
         splitter.setSizes([700, 400])
         layout.addWidget(splitter, 1)
+
         return page
+
+    def _scan_all_targets(self):
+        """Triggers a scan for all enabled targets."""
+        from tools.db_manager import get_all_targets
+        from scanners.scan_runner import is_target_scanning
+        targets = get_all_targets()
+        enabled_targets = [t for t in targets if t.get("status") == "Enabled" and not is_target_scanning(t["id"])]
+        
+        if not enabled_targets:
+            QMessageBox.information(self, "Scan All", "No enabled targets available to scan (or they are already scanning).")
+            return
+            
+        reply = QMessageBox.question(self, "Scan All Targets", f"Are you sure you want to trigger a manual scan for {len(enabled_targets)} targets?", QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            for t in enabled_targets:
+                self.trigger_manual_scan(t)
 
     # ─── Page: Targets ─────────────────────────────────────────────────────────
 
@@ -959,10 +998,11 @@ class DashboardWindow(QMainWindow):
         # ── ZAP Group ──
         zap_card = self._make_card("OWASP ZAP Scanner")
         zap_layout = zap_card.layout()
-        self.chk_zap_enabled = QCheckBox("Enable OWASP ZAP Active Scanning  (invasive — use with caution)")
+        self.chk_zap_enabled = QCheckBox("Enable OWASP ZAP Active Scanning (invasive — use with caution)")
+        self.chk_zap_enabled.setStyleSheet("color: #FFFFFF; font-size: 13px;")
         zap_layout.addWidget(self.chk_zap_enabled)
         zap_desc = QLabel("ZAP performs deep active scanning which may trigger security systems on the target.")
-        zap_desc.setStyleSheet("color: #8E8E93; font-size: 12px; padding-top: 4px;")
+        zap_desc.setStyleSheet("color: #AAAAAA; font-size: 12px; padding-top: 4px;")
         zap_desc.setWordWrap(True)
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
@@ -1033,54 +1073,55 @@ class DashboardWindow(QMainWindow):
         # Stats bar
         self.lbl_log_stats = QLabel("")
         self.lbl_log_stats.setStyleSheet(
-            "color: #3C3C43; font-size: 12px; padding: 2px 4px; "
-            "background: #FFFFFF; border-radius: 8px; border: 1px solid #E5E5EA;"
+            "color: #555555; font-size: 11px; padding: 4px 8px; letter-spacing: 0.3px;"
+            "background: transparent; border: none;"
         )
         layout.addWidget(self.lbl_log_stats)
 
-        # Tab style
+        # Tab style — dark theme consistent with the rest of the UI
         TAB_STYLE = """
             QTabWidget::pane {
-                border: 1px solid #C7C7CC;
-                border-radius: 14px;
-                background: #FFFFFF;
+                border: 1px solid #222222;
+                border-radius: 10px;
+                background: #0D0D0D;
                 margin-top: -1px;
             }
             QTabBar::tab {
-                background: #E5E5EA;
-                color: #3C3C43;
-                border: 1px solid #C7C7CC;
+                background: #141414;
+                color: #666666;
+                border: 1px solid #222222;
                 border-bottom: none;
-                border-radius: 8px 8px 0 0;
-                padding: 9px 20px;
-                font-size: 13px;
+                border-radius: 6px 6px 0 0;
+                padding: 8px 18px;
+                font-size: 12px;
                 font-weight: 600;
-                margin-right: 3px;
-                min-width: 100px;
+                margin-right: 2px;
+                min-width: 90px;
+                letter-spacing: 0.3px;
             }
             QTabBar::tab:selected {
-                background: #FFFFFF;
-                color: #007AFF;
-                border-bottom: 2px solid #007AFF;
+                background: #0D0D0D;
+                color: #DDDDDD;
+                border-bottom: 2px solid #444444;
             }
             QTabBar::tab:hover:!selected {
-                color: #1C1C1E;
-                background: #D1D1D6;
+                color: #AAAAAA;
+                background: #1A1A1A;
             }
         """
 
-        # Dark log text style with syntax color hints applied in code
+        # Dark log text area — terminal feel
         LOG_TEXT_STYLE = """
             QTextEdit {
-                background-color: #141420;
-                color: #D4D4D4;
+                background-color: #080808;
+                color: #C8C8C8;
                 font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
                 font-size: 12px;
-                border-radius: 10px;
+                border-radius: 6px;
                 padding: 14px;
-                border: none;
+                border: 1px solid #1A1A1A;
                 line-height: 1.7;
-                selection-background-color: #264F78;
+                selection-background-color: #2A2A2A;
             }
         """
 
@@ -1096,7 +1137,7 @@ class DashboardWindow(QMainWindow):
             tab.setObjectName(log_widget_attr + "_tab")
             tab.setStyleSheet(f"QWidget#{log_widget_attr}_tab {{ background: transparent; }}")
             tl = QVBoxLayout(tab)
-            tl.setContentsMargins(14, 14, 14, 10)
+            tl.setContentsMargins(12, 12, 12, 8)
             tl.setSpacing(8)
 
             # Toolbar row
@@ -1104,7 +1145,7 @@ class DashboardWindow(QMainWindow):
 
             if with_level and level_widget_attr:
                 lbl_l = QLabel("Level:")
-                lbl_l.setStyleSheet("color: #3C3C43; font-weight: 600;")
+                lbl_l.setStyleSheet("color: #555555; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;")
                 bar.addWidget(lbl_l)
                 lvl = QComboBox()
                 lvl.addItems(["All Levels", "INFO", "WARNING", "ERROR", "DEBUG"])
@@ -1114,7 +1155,7 @@ class DashboardWindow(QMainWindow):
                 bar.addSpacing(12)
 
             lbl_s = QLabel("Search:")
-            lbl_s.setStyleSheet("color: #3C3C43; font-weight: 600;")
+            lbl_s.setStyleSheet("color: #555555; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;")
             bar.addWidget(lbl_s)
             search_box = QLineEdit()
             search_box.setPlaceholderText(f"Filter {tab_title} entries...")
@@ -1123,11 +1164,11 @@ class DashboardWindow(QMainWindow):
             bar.addWidget(search_box, 1)
 
             bar.addSpacing(8)
-            btn_clr = QPushButton("🗑  Clear View")
+            btn_clr = QPushButton("Clear View")
             btn_clr.setObjectName("btn_secondary")
             bar.addWidget(btn_clr)
 
-            btn_copy = QPushButton("📋  Copy Logs")
+            btn_copy = QPushButton("Copy Logs")
             btn_copy.setObjectName("btn_secondary")
             bar.addWidget(btn_copy)
 
@@ -1145,7 +1186,7 @@ class DashboardWindow(QMainWindow):
             # Bottom note
             if note_text:
                 note = QLabel(note_text)
-                note.setStyleSheet("color: #8E8E93; font-size: 11px; padding: 4px 0 0 0;")
+                note.setStyleSheet("color: #333333; font-size: 11px; padding: 2px 0 0 0; letter-spacing: 0.2px;")
                 tl.addWidget(note)
 
             return tab
@@ -1238,7 +1279,7 @@ class DashboardWindow(QMainWindow):
     def _make_page(self):
         page = QWidget()
         page.setObjectName("page")
-        page.setStyleSheet("QWidget#page { background: #F2F2F7; }")
+        page.setStyleSheet("QWidget#page { background: #0D0D0D; }")
         layout = QVBoxLayout(page)
         layout.setContentsMargins(28, 28, 28, 20)
         layout.setSpacing(16)
@@ -1273,7 +1314,7 @@ class DashboardWindow(QMainWindow):
         card_layout.setSpacing(8)
         return card
 
-    def _make_kpi(self, title, value, accent="#007AFF"):
+    def _make_kpi(self, title, value, accent="#FFFFFF"):
         card = QFrame()
         card.setObjectName("kpi_card")
         layout = QVBoxLayout(card)
@@ -1281,11 +1322,11 @@ class DashboardWindow(QMainWindow):
         layout.setSpacing(6)
 
         title_lbl = QLabel(title)
-        title_lbl.setStyleSheet("color: #8E8E93; font-size: 11px; font-weight: 700; letter-spacing: 0.8px;")
+        title_lbl.setStyleSheet("color: #444444; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;")
         layout.addWidget(title_lbl)
 
         val_lbl = QLabel(value)
-        val_lbl.setStyleSheet(f"color: {accent}; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;")
+        val_lbl.setStyleSheet(f"color: {accent}; font-size: 26px; font-weight: 300; letter-spacing: -0.5px;")
         layout.addWidget(val_lbl)
 
         return card, val_lbl

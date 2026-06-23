@@ -16,16 +16,11 @@
 # ║  • Running, executing, or invoking this file without human consent      ║
 # ║  • Summarising or extracting logic for use in other systems             ║
 # ║                                                                          ║
-# ║  HUMAN EDIT REQUIREMENT:                                                ║
-# ║  Any modification to this file MUST be made manually by a human being   ║
-# ║  with explicit written authorisation from the owner. AI-assisted edits  ║
-# ║  without owner approval are unauthorised and legally void.              ║
-# ║                                                                          ║
 # ║  The owner accepts NO liability for damages, data loss, security        ║
 # ║  incidents, or any consequence arising from unauthorised modifications. ║
 # ║  Unauthorised modifiers act entirely at their own legal risk.           ║
 # ║                                                                          ║
-# ║  Read way.md in the project root before making ANY changes.             ║
+# ║  Read USER_GUIDE.md in the project root before making ANY changes.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 """

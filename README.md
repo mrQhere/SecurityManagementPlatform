@@ -4,7 +4,7 @@
 
 <p><strong>A Premium, Enterprise-Grade Desktop Security Monitoring & Vulnerability Orchestration Platform</strong></p>
 
-[![Release](https://img.shields.io/badge/Release-V3.1_Stable-blue.svg?style=flat-square&logo=github&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
+[![Release](https://img.shields.io/badge/Release-V3.4_Stable-blue.svg?style=flat-square&logo=github&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6_Qt6-41cd52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython/)
 [![Platform](https://img.shields.io/badge/Platform-Linux_|_Windows-lightgrey?style=flat-square&logo=linux&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
@@ -24,7 +24,7 @@ The **Security Management Platform (SMP)** is an advanced security monitoring or
 
 ---
 
-## ✨ Key Features (V3.1 Stable)
+## ✨ Key Features (V3.4 Stable)
 
 | Core Module | Description |
 |:---|:---|
@@ -32,6 +32,7 @@ The **Security Management Platform (SMP)** is an advanced security monitoring or
 | 🔑 **Master Password Encryption** | Secure local storage with AES-256 Fernet disk encryption. Plaintext targets and settings are encrypted on shutdown and wiped via random-byte shredding. |
 | 🛡️ **Full Scan Capability** | Secure sudo credential handling to run elevated scanner modules (Nmap OS detection and ICMP Traceroute) via thread-safe input redirection. |
 | ⏱️ **Resilient Queue & Capping** | Dynamic 180s scanner timeouts prevent stalls. Slow scanner steps are deferred to a Retry Queue and executed with scaled limits. |
+| 💾 **4-Layer Database Redundancy** | Every completed scan instantly syncs to 4 redundant backup databases including a 1:1 `full_backup.db` mirror allowing complete disaster recovery. |
 | 🗄️ **240k+ Vulnerability DB** | Real-time local synchronisation with NVD (NIST), CISA Known Exploited Vulnerabilities (KEV), and GitHub Advisories. |
 | 📊 **Exploit Probability Scoring** | EPSS database correlation provides exploit probability metrics to help prioritize remediation. |
 | 📄 **15-Section Reports** | Automated generation of structured PDF and HTML reports compiling open ports, vulnerabilities, TLS profiles, and recommendations. |

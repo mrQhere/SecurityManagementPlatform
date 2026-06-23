@@ -16,16 +16,11 @@
 # ║  • Running, executing, or invoking this file without human consent      ║
 # ║  • Summarising or extracting logic for use in other systems             ║
 # ║                                                                          ║
-# ║  HUMAN EDIT REQUIREMENT:                                                ║
-# ║  Any modification to this file MUST be made manually by a human being   ║
-# ║  with explicit written authorisation from the owner. AI-assisted edits  ║
-# ║  without owner approval are unauthorised and legally void.              ║
-# ║                                                                          ║
 # ║  The owner accepts NO liability for damages, data loss, security        ║
 # ║  incidents, or any consequence arising from unauthorised modifications. ║
 # ║  Unauthorised modifiers act entirely at their own legal risk.           ║
 # ║                                                                          ║
-# ║  Read way.md in the project root before making ANY changes.             ║
+# ║  Read USER_GUIDE.md in the project root before making ANY changes.      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 import subprocess
@@ -35,6 +30,14 @@ from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
+
+# Lazy import to avoid circular dependency — scan_runner imports traceroute
+def _get_sudo_password():
+    try:
+        from scanners.scan_runner import get_sudo_password
+        return get_sudo_password()
+    except Exception:
+        return None
 
 def extract_host_from_url(url):
     try:
@@ -61,9 +64,8 @@ def run_traceroute(url):
     
     logger.info(f"Traceroute Started: Tracing path to {host}")
     add_log_entry("INFO", f"Traceroute Started: Tracing path to {host}")
-    
-    from scanners.scan_runner import get_sudo_password
-    sudo_pass = get_sudo_password()
+
+    sudo_pass = _get_sudo_password()
 
     cmd = [bin_path, "-n"]
     if sudo_pass:
