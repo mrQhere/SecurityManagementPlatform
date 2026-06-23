@@ -50,6 +50,9 @@ bash setup.sh
 cp config/settings.example.json config/settings.json
 # Edit config/settings.json with your SMTP credentials and preferences
 
+# Copy the public license key to local config folder
+cp license/license.key config/license.key
+
 # Launch the application
 bash run.sh
 ```
@@ -183,12 +186,15 @@ SecurityManagementPlatform/
 ├── setup.sh / setup.bat       # One-click installers
 ├── run.sh / run.bat           # Launchers
 ├── requirements.txt           # Python dependencies
-├── way.md                     # Master reference documentation
-├── handoff.md                 # Developer handoff guide
+├── way.md                     # Developer reference log (gitignored — personal only)
+│
+├── license/
+│   └── license.key            # Public license signature file
 │
 ├── config/
 │   ├── settings.example.json  # ← Copy to settings.json and fill in your details
-│   └── settings.json          # Runtime config (gitignored — never commit)
+│   ├── settings.json          # Runtime settings config (gitignored — never commit)
+│   └── license.key            # Local active license key (gitignored — never commit)
 │
 ├── scanners/                  # Individual tool wrapper modules
 ├── intelligence/              # CVE feed sync modules
@@ -201,7 +207,8 @@ SecurityManagementPlatform/
 ## 🔐 Security & Privacy
 
 - `config/settings.json` is in `.gitignore` — your credentials **never** leave your machine
-- The SQLite database (`database/security.db`) is gitignored — scan data is local-only
+- `config/license.key` is in `.gitignore` — your local active license files are never committed
+- The SQLite databases (`database/security.db` and backup databases) are stored local-only and fully encrypted on disk using AES-256 Fernet encryption, requiring your Master Password to decrypt at runtime.
 - All logs and generated reports are gitignored
 - No telemetry, no analytics, no external data sharing
 
