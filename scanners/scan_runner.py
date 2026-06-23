@@ -307,11 +307,17 @@ def _save_nmap_findings(scan_id, nmap_results):
     if not nmap_results:
         return
     for port in nmap_results:
-        title = f"Open Port {port['port']}/{port['protocol']} ({port['service']})"
+        port_num = port.get('port', 'N/A')
+        proto = port.get('protocol', 'tcp')
+        service = port.get('service', 'unknown')
+        version = port.get('version', '')
+        state = port.get('state', 'open')
+        
+        title = f"Open Port {port_num}/{proto} ({service})"
         desc = (
-            f"Service: {port['service']}\n"
-            f"Version: {port['version']}\n"
-            f"State:   {port['state']}"
+            f"Service: {service}\n"
+            f"Version: {version}\n"
+            f"State:   {state}"
         )
         add_finding(scan_id=scan_id, severity="Info", title=title,
                     description=desc, source_tool="Nmap", confidence=95)

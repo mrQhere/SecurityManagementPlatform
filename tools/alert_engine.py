@@ -182,6 +182,7 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None):
     smtp_pass    = settings.get("smtp_pass", "")
     sender       = settings.get("smtp_sender", "") or smtp_user
     receiver_raw = settings.get("smtp_receiver", "")
+    receivers    = [r.strip() for r in receiver_raw.split(",") if r.strip()]
     smtp_ssl     = settings.get("smtp_ssl", False)
     smtp_servers = [
         {"host": smtp_host, "port": smtp_port, "ssl": smtp_ssl},
@@ -237,7 +238,6 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None):
             logger.error(err_msg)
             add_log_entry("ERROR", err_msg)
             _logged_alerts.add(err_msg)
-        return Falsegged_alerts.add(err_msg)
         return False
     except smtplib.SMTPConnectError as e:
         err_msg = f"SMTP Failed: Cannot connect to {smtp_host}:{smtp_port} — {e}"

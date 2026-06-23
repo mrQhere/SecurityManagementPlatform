@@ -54,6 +54,7 @@ def run_traceroute(url):
     Runs traceroute against the target.
     Returns a list of finding dicts.
     """
+    findings = []
     host = extract_host_from_url(url)
     settings = load_settings()
     bin_path = settings.get("traceroute_path", "traceroute")
