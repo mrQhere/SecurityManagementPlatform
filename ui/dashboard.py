@@ -537,9 +537,16 @@ class DashboardWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Security Management Platform")
+        self.setStyleSheet(APPLE_STYLESHEET)
+        # Apply modern glassmorphism theme (dark mode enabled by default)
+        try:
+            from .theme import apply_theme
+            apply_theme(self, dark_mode=True)
+        except Exception as e:
+            logger.warning(f"Theme application failed: {e}")
+        # Set window dimensions (original behavior)
         self.setMinimumSize(1200, 800)
         self.resize(1400, 860)
-        self.setStyleSheet(APPLE_STYLESHEET)
 
         self._cache_kpis = None
         self._cache_targets_hash = None

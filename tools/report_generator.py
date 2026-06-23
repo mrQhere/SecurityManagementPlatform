@@ -690,3 +690,17 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
     story.append(simple_table(["Tool","Findings","Status"], timeline_rows, [200,160,160]))
 
     doc.build(story)
+
+    # Attempt WeasyPrint conversion for higher‑fidelity PDF
+    try:
+        from weasyprint import HTML
+        html_dir = os.path.dirname(filepath)
+        html_name = os.path.splitext(os.path.basename(filepath))[0] + ".html"
+        html_path = os.path.join(html_dir, html_name)
+        if os.path.exists(html_path):
+            HTML(html_path).write_pdf(filepath)
+            logger.info(f"WeasyPrint PDF conversion succeeded: {filepath}")
+        else:
+            logger.warning(f"HTML source not found for PDF conversion: {html_path}")
+    except Exception as e:
+        logger.warning(f"WeasyPrint not available or conversion failed: {e}")

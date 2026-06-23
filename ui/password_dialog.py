@@ -12,7 +12,8 @@ Password Dialog — GUI popup prompting for Master Password initialization or va
 """
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
-from PySide6.QtCore import Qt
+import logging
+logger = logging.getLogger('smp')
 from tools.encryption_manager import has_password_set, setup_password, verify_password, decrypt_databases
 
 class PasswordDialog(QDialog):
@@ -25,47 +26,19 @@ class PasswordDialog(QDialog):
         self.setFixedSize(400, 200 if not is_setup else 250)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
         
-        # Style sheet matching standard Fusion theme
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #FFFFFF;
-            }
-            QLabel {
-                color: #1C1C1E;
-                font-size: 13px;
-                font-weight: 500;
-            }
-            QLineEdit {
-                border: 1.5px solid #E5E5EA;
-                border-radius: 10px;
-                padding: 9px 12px;
-                color: #1C1C1E;
-                font-size: 14px;
-            }
-            QLineEdit:focus {
-                border: 1.5px solid #007AFF;
-            }
-            QPushButton {
-                background-color: #007AFF;
-                color: #FFFFFF;
-                border: none;
-                border-radius: 10px;
-                padding: 9px 18px;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #0071EB;
-            }
-            QPushButton#btn_cancel {
-                background-color: #F2F2F7;
-                color: #FF3B30;
-                border: 1px solid #E5E5EA;
-            }
-            QPushButton#btn_cancel:hover {
-                background-color: #E5E5EA;
-            }
-        """)
+        # Apply glassmorphism theme (light mode for dialog)
+        try:
+            from .theme import apply_theme
+            apply_theme(self, dark_mode=False)
+        except Exception as e:
+            logger.warning(f"Theme application failed: {e}")
+        # Ensure user has accepted responsibility disclaimer before proceeding
+        from .responsibility_dialog import ResponsibilityDialog
+        if not load_responsibility_flag():
+            dlg = ResponsibilityDialog(self)
+            if dlg.exec() != QDialog.Accepted:
+                self.reject()
+                return
         
         self._setup_ui()
         
