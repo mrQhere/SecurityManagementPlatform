@@ -56,8 +56,11 @@ def run_wapiti_scan(url):
     with tempfile.TemporaryDirectory() as tmpdir:
         output_file = os.path.join(tmpdir, "wapiti_report.json")
         
-        # Intense scan: remove --max-scan-time and --max-parameters
-        cmd = [wapiti_bin, "-u", url, "-f", "json", "-o", output_file, "--flush-session"]
+        # Deep scan: --level 2 activates form parameter injection (deeper coverage)
+        # --max-links-per-page 50: follow more links for comprehensive crawling
+        # --flush-session: always start fresh
+        cmd = [wapiti_bin, "-u", url, "-f", "json", "-o", output_file,
+               "--flush-session", "--level", "2", "--max-links-per-page", "50"]
         
         try:
             process = subprocess.Popen(

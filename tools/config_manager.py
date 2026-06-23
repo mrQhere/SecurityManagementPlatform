@@ -49,6 +49,7 @@ REQUIRED_FOLDERS = [
     os.path.join(BASE_DIR, "reports", "pdf"),
     os.path.join(BASE_DIR, "config"),
     os.path.join(BASE_DIR, "cache"),
+    os.path.join(BASE_DIR, "backup"),
     os.path.join(BASE_DIR, "scanners"),
     os.path.join(BASE_DIR, "intelligence"),
     os.path.join(BASE_DIR, "ui"),
@@ -86,7 +87,8 @@ DEFAULT_SETTINGS = {
     # Scheduling
     "scan_schedule_hour": 2,
     "scan_schedule_minute": 0,
-    "intel_sync_interval_hours": 1
+    "intel_sync_interval_hours": 1,
+    "scanner_timeout_seconds": 180
 }
 
 def init_directories():

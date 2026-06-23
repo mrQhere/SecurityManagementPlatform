@@ -32,7 +32,14 @@ success() { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()     { echo -e "${RED}[ERROR]${NC} $*"; }   # non-fatal, no exit
 
-SETUP_ERRORS=()   # collect non-fatal errors to display at end
+SYSTEM_ERRORS=()   # collect non-fatal errors to display at end
+
+# ── CPU Architecture Validation ──
+_arch=$(uname -m)
+if [ "$_arch" != "x86_64" ] && [ "$_arch" != "aarch64" ]; then
+    warn "Target architecture mismatch warning: CPU architecture '$_arch' is non-standard. The system has only been verified on x86_64 and aarch64."
+    SYSTEM_ERRORS+=("Architecture mismatch/warning: $_arch is non-standard")
+fi
 
 echo ""
 echo -e "  ${BOLD}╔══════════════════════════════════════════════════╗${NC}"
@@ -95,7 +102,7 @@ success "Core Python packages installed."
 info "Installing PySide6 (Qt6 GUI – this may take a while)..."
 "$VENV_PIP" install --quiet PySide6 2>/dev/null \
     && success "PySide6 installed." \
-    || { err "PySide6 install failed. Try: $VENV_PIP install PySide6"; SETUP_ERRORS+=("PySide6 install failed"); }
+    || { err "PySide6 install failed. Try: $VENV_PIP install PySide6"; SYSTEM_ERRORS+=("PySide6 install failed"); }
 
 # Scanners (pip-installable)
 info "Installing scanner packages (sqlmap, wapiti3)..."
@@ -173,7 +180,7 @@ else
         sudo rm -rf "$GO_INSTALL_DIR/go"
         sudo tar -C "$GO_INSTALL_DIR" -xzf "$TMP_GO" 2>/dev/null \
             && success "Go ${GO_VERSION} installed to $GO_INSTALL_DIR/go" \
-            || { err "Go extraction failed."; SETUP_ERRORS+=("Go extraction failed"); }
+            || { err "Go extraction failed."; SYSTEM_ERRORS+=("Go extraction failed"); }
         rm -f "$TMP_GO"
 
         GO_BIN="$GO_INSTALL_DIR/go/bin/go"
@@ -190,7 +197,7 @@ else
     else
         err "Could not download Go (no curl/wget or no network). Go tools will be downloaded as pre-built binaries instead."
         GO_BIN=""
-        SETUP_ERRORS+=("Go auto-download failed – pre-built binaries used as fallback")
+        SYSTEM_ERRORS+=("Go auto-download failed – pre-built binaries used as fallback")
     fi
 fi
 
@@ -296,7 +303,7 @@ for tool in "nuclei" "subfinder" "httpx" "ffuf"; do
     if [ "$installed" = false ]; then
         info "go install unavailable/failed for $tool. Using pre-built binary..."
         _download_binary "$tool" "${PREBUILT_URLS[$tool]}" \
-            || { warn "$tool could not be installed. Scan step will be skipped."; SETUP_ERRORS+=("$tool install failed"); }
+            || { warn "$tool could not be installed. Scan step will be skipped."; SYSTEM_ERRORS+=("$tool install failed"); }
     fi
 done
 
@@ -315,6 +322,114 @@ if ! command -v zaproxy &>/dev/null; then
     info "Then enable ZAP active scanning in the System Settings UI."
 fi
 
+# ── 9.5 Wordlist Provisioning ───────────────────────────────────────────────
+info "Provisioning wordlist..."
+WORDLIST_PATH="/usr/share/wordlists/dirb/common.txt"
+WORDLIST_DIR="/usr/share/wordlists/dirb"
+LOCAL_WORDLIST_DIR="$SCRIPT_DIR/config"
+LOCAL_WORDLIST_PATH="$LOCAL_WORDLIST_DIR/common.txt"
+
+WORDLIST_CONTENT=$(cat << 'EOF'
+admin
+login
+dashboard
+panel
+wp-admin
+api
+config
+backup
+uploads
+static
+assets
+images
+files
+docs
+test
+dev
+staging
+phpmyadmin
+db
+database
+.git
+.env
+robots.txt
+sitemap.xml
+wp-config.php
+config.php
+web.config
+server-status
+server-info
+console
+manager
+administrator
+user
+users
+account
+accounts
+register
+signup
+signin
+logout
+profile
+settings
+setup
+install
+update
+upgrade
+download
+export
+import
+cgi-bin
+scripts
+js
+css
+src
+include
+includes
+lib
+libs
+vendor
+node_modules
+tmp
+temp
+log
+logs
+EOF
+)
+
+if [ -f "$WORDLIST_PATH" ]; then
+    success "Wordlist already exists at $WORDLIST_PATH"
+else
+    info "System wordlist missing at $WORDLIST_PATH. Attempting to create it..."
+    if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && echo "$WORDLIST_CONTENT" | sudo tee "$WORDLIST_PATH" >/dev/null; then
+        success "Wordlist successfully installed at $WORDLIST_PATH"
+    else
+        warn "Could not write to $WORDLIST_PATH (permissions/sudo unavailable). Generating local fallback wordlist..."
+        mkdir -p "$LOCAL_WORDLIST_DIR"
+        if echo "$WORDLIST_CONTENT" > "$LOCAL_WORDLIST_PATH"; then
+            success "Local fallback wordlist compiled at $LOCAL_WORDLIST_PATH"
+            SETTINGS_FILE="$SCRIPT_DIR/config/settings.json"
+            mkdir -p "$SCRIPT_DIR/config"
+            if [ ! -f "$SETTINGS_FILE" ]; then
+                cat > "$SETTINGS_FILE" << EOF
+{
+    "ffuf_wordlist": "$LOCAL_WORDLIST_PATH"
+}
+EOF
+            else
+                if "$VENV_PYTHON" -c "import json; f='$SETTINGS_FILE'; d=json.load(open(f)) if open(f).read().strip() else {}; d['ffuf_wordlist']='$LOCAL_WORDLIST_PATH'; json.dump(d,open(f,'w'),indent=4)" 2>/dev/null; then
+                    success "Updated settings.json to use local wordlist path."
+                else
+                    sed -i "s|\"/usr/share/wordlists/dirb/common.txt\"|\"$LOCAL_WORDLIST_PATH\"|g" "$SETTINGS_FILE" 2>/dev/null
+                fi
+            fi
+        else
+            err "Failed to write local fallback wordlist."
+            SYSTEM_ERRORS+=("Failed to create fallback wordlist")
+        fi
+    fi
+fi
+
 # ── 10. Create run.sh ─────────────────────────────────────────────────────────
 cat > "$SCRIPT_DIR/run.sh" << 'RUNEOF'
 #!/usr/bin/env bash
@@ -327,10 +442,27 @@ RUNEOF
 chmod +x "$SCRIPT_DIR/run.sh"
 success "Created run.sh"
 
+# ── 10.5 Apply File Permissions Restrictions ─────────────────────────────────
+info "Applying file permission restrictions..."
+chmod 700 "$SCRIPT_DIR/config" 2>/dev/null
+chmod 700 "$SCRIPT_DIR/database" 2>/dev/null
+if [ -f "$SCRIPT_DIR/database/security.db" ]; then
+    chmod 600 "$SCRIPT_DIR/database/security.db" 2>/dev/null
+fi
+chmod 700 "$SCRIPT_DIR/logs" 2>/dev/null
+chmod 700 "$SCRIPT_DIR/backup" 2>/dev/null
+chmod 700 "$SCRIPT_DIR/cache" 2>/dev/null
+
+if [ -d "$BIN_DIR" ]; then
+    chmod 750 "$BIN_DIR" 2>/dev/null
+    find "$BIN_DIR" -type f -exec chmod 750 {} + 2>/dev/null
+fi
+success "Permissions hardened successfully."
+
 # ── 11. Summary ───────────────────────────────────────────────────────────────
 echo ""
 echo -e "  ${BOLD}╔══════════════════════════════════════════════════╗${NC}"
-if [ ${#SETUP_ERRORS[@]} -eq 0 ]; then
+if [ ${#SYSTEM_ERRORS[@]} -eq 0 ]; then
     echo -e "  ${BOLD}║  ✅  Setup Complete! All tools installed.         ║${NC}"
 else
     echo -e "  ${BOLD}║  ⚠️   Setup Complete with warnings (see above).   ║${NC}"
@@ -338,10 +470,10 @@ fi
 echo -e "  ${BOLD}║  Run the app:  bash run.sh                       ║${NC}"
 echo -e "  ${BOLD}╚══════════════════════════════════════════════════╝${NC}"
 
-if [ ${#SETUP_ERRORS[@]} -gt 0 ]; then
+if [ ${#SYSTEM_ERRORS[@]} -gt 0 ]; then
     echo ""
     echo -e "  ${YELLOW}Non-fatal setup issues:${NC}"
-    for e in "${SETUP_ERRORS[@]}"; do
+    for e in "${SYSTEM_ERRORS[@]}"; do
         echo -e "    ${YELLOW}→${NC} $e"
     done
 fi

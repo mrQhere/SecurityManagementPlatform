@@ -39,7 +39,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nmap to run before forcefully killing it
-NMAP_TIMEOUT = 7200
+NMAP_TIMEOUT = 14400
 
 def extract_host_from_url(url):
     """Extract host name or IP address from a URL to pass to Nmap."""
@@ -71,19 +71,37 @@ def run_nmap_scan(url):
     logger.info(f"Nmap Started: Scanning host {host}")
     add_log_entry("INFO", f"Nmap Started: Scanning host {host}")
     
-    # Intense but slow scan: removed -F (fast), added -T2 (polite) and low rate limit
-    cmd = [nmap_bin, "-sV", "-T2", "--max-rate", "10", "-oX", "-", host]
+    # Deep thorough scan:
+    # -sV: version detection, --version-intensity 9: maximum version detection effort
+    # -sC: default scripts (safe but comprehensive: banners, version info, etc.)
+    # -T3: normal timing (balanced speed vs. accuracy)
+    # -p 1-10000: scan the 10000 most common ports (covers most real-world services)
+    # --max-rate 50: moderate rate limit to avoid triggering IDS while remaining effective
+    # --script=vuln: run vulnerability detection scripts (identifies known CVEs on services)
+    from scanners.scan_runner import get_sudo_password
+    sudo_pass = get_sudo_password()
+
+    cmd = [nmap_bin, "-sV", "--version-intensity", "9", "-sC", "-T3",
+           "-p", "1-10000", "--max-rate", "50",
+           "--script=vuln,banner,default"]
+    
+    if sudo_pass:
+        cmd = ["sudo", "-S"] + cmd + ["-O"]
+        
+    cmd += ["-oX", "-", host]
     
     try:
         process = subprocess.Popen(
             cmd,
+            stdin=subprocess.PIPE if sudo_pass else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             shell=False  # Always False – cmd is a list, avoids shell injection
         )
         try:
-            stdout, stderr = process.communicate(timeout=NMAP_TIMEOUT)
+            input_data = f"{sudo_pass}\n" if sudo_pass else None
+            stdout, stderr = process.communicate(input=input_data, timeout=NMAP_TIMEOUT)
         except subprocess.TimeoutExpired:
             process.kill()
             stdout, stderr = process.communicate()

@@ -61,15 +61,19 @@ def run_traceroute(url):
     logger.info(f"Traceroute Started: Tracing path to {host}")
     add_log_entry("INFO", f"Traceroute Started: Tracing path to {host}")
     
-    findings = []
-    # Use default UDP traceroute (no -I flag). -I (ICMP) requires root/CAP_NET_RAW
-    # which causes permission errors when running as a normal user.
-    # -n skips reverse DNS lookups to speed up the trace.
-    cmd = [bin_path, "-n", host]
+    from scanners.scan_runner import get_sudo_password
+    sudo_pass = get_sudo_password()
+
+    cmd = [bin_path, "-n"]
+    if sudo_pass:
+        cmd += ["-I"]
+        cmd = ["sudo", "-S"] + cmd
+    cmd += [host]
     
     try:
         process = subprocess.Popen(
             cmd,
+            stdin=subprocess.PIPE if sudo_pass else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -77,7 +81,8 @@ def run_traceroute(url):
         )
         
         # Traceroute can take a minute if many hops drop
-        stdout, stderr = process.communicate(timeout=120)
+        input_data = f"{sudo_pass}\n" if sudo_pass else None
+        stdout, stderr = process.communicate(input=input_data, timeout=120)
         
         if stdout.strip():
             findings.append({

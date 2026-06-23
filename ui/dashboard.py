@@ -40,8 +40,25 @@ from PySide6.QtWidgets import (
     QSplitter, QFrame, QStackedWidget, QFormLayout, QCheckBox, QComboBox,
     QScrollArea, QSizePolicy, QSpacerItem
 )
-from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QFont, QColor, QBrush, QPalette, QFontDatabase
+from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QThread, Signal
+from PySide6.QtGui import QFont, QColor, QBrush, QPalette, QFontDatabase, QTextCursor
+import hashlib
+
+class WorkerThread(QThread):
+    finished_signal = Signal(object)
+
+    def __init__(self, target_func, *args, **kwargs):
+        super().__init__()
+        self.target_func = target_func
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        try:
+            res = self.target_func(*self.args, **self.kwargs)
+            self.finished_signal.emit((True, res))
+        except Exception as e:
+            self.finished_signal.emit((False, e))
 
 from tools.db_manager import (
     get_targets, add_target, delete_target, set_target_status,
@@ -115,7 +132,7 @@ QLabel#brand_label {
 }
 
 QLabel#brand_sub {
-    color: #8E8E93;
+    color: #48484A;
     font-size: 11px;
     letter-spacing: 0.5px;
     padding: 0px 20px 16px 20px;
@@ -137,7 +154,7 @@ QPushButton#nav_btn:hover {
 }
 QPushButton#nav_btn[active="true"] {
     background-color: #EAF1FF;
-    color: #007AFF;
+    color: #0056B3;
     font-weight: 600;
 }
 
@@ -155,7 +172,7 @@ QLabel#page_title {
     padding: 4px 0px;
 }
 QLabel#page_subtitle {
-    color: #8E8E93;
+    color: #48484A;
     font-size: 13px;
     padding: 0px 0px 8px 0px;
 }
@@ -222,7 +239,7 @@ QPushButton:disabled {
 }
 QPushButton#btn_secondary {
     background-color: #F2F2F7;
-    color: #007AFF;
+    color: #0056B3;
     border: 1px solid #C7C7CC;
 }
 QPushButton#btn_secondary:hover {
@@ -267,7 +284,7 @@ QLineEdit:focus {
     border: 1.5px solid #007AFF;
 }
 QLineEdit::placeholder {
-    color: #C7C7CC;
+    color: #55555A;
 }
 
 QComboBox {
@@ -337,7 +354,7 @@ QHeaderView {
 }
 QHeaderView::section {
     background-color: #F2F2F7;
-    color: #8E8E93;
+    color: #3A3A3C;
     padding: 10px 10px;
     border: none;
     font-size: 12px;
@@ -427,48 +444,72 @@ QSplitter::handle {
 
 /* ── Form Layout Labels ── */
 QLabel#form_label {
-    color: #8E8E93;
+    color: #1C1C1E;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.3px;
 }
 
+/* ── Settings form label (explicit dark for readability) ── */
+QLabel {
+    color: #1C1C1E;
+}
+
+/* ── Small buttons — always readable ── */
+QPushButton#btn_small {
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    min-height: 14px;
+    background-color: #E5E5EA;
+    color: #1C1C1E;
+    border: 1px solid #C7C7CC;
+}
+QPushButton#btn_small:hover {
+    background-color: #D1D1D6;
+}
+QPushButton#btn_small[objectName="btn_danger"] {
+    background-color: #FF3B30;
+    color: #FFFFFF;
+    border: none;
+}
+
 /* ── Status Badges ── */
 QLabel#badge_green {
-    color: #34C759;
-    background-color: #E8F9EE;
+    color: #0F5132;
+    background-color: #D1E7DD;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 600;
 }
 QLabel#badge_red {
-    color: #FF3B30;
-    background-color: #FFEBEA;
+    color: #842029;
+    background-color: #F8D7DA;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 600;
 }
 QLabel#badge_orange {
-    color: #FF9500;
-    background-color: #FFF4E5;
+    color: #853000;
+    background-color: #FFE0B2;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 600;
 }
 QLabel#badge_blue {
-    color: #007AFF;
-    background-color: #EAF1FF;
+    color: #084298;
+    background-color: #CFE2FF;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 600;
 }
 QLabel#badge_gray {
-    color: #8E8E93;
-    background-color: #F2F2F7;
+    color: #212529;
+    background-color: #E2E3E5;
     border-radius: 6px;
     padding: 2px 8px;
     font-size: 12px;
@@ -747,22 +788,35 @@ class DashboardWindow(QMainWindow):
 
         # Stats strip
         self.lbl_stats = QLabel("Loading CVE stats...")
-        self.lbl_stats.setStyleSheet("color: #8E8E93; font-size: 13px; padding: 0px 2px 6px 2px;")
+        self.lbl_stats.setStyleSheet("color: #3C3C43; font-size: 13px; padding: 0px 2px 6px 2px; font-weight: 500;")
         layout.addWidget(self.lbl_stats)
 
         # Filter bar
-        filter_card = self._make_card("")
-        filter_card.setMaximumHeight(70)
-        fl = filter_card.layout()
+        filter_card = QFrame()
+        filter_card.setObjectName("card")
+        fl = QVBoxLayout(filter_card)
+        fl.setContentsMargins(16, 12, 16, 12)
+        fl.setSpacing(8)
+        filter_card.setFixedHeight(60)
         filter_row = QHBoxLayout()
-        self.txt_intel_search = QLineEdit()
-        self.txt_intel_search.setPlaceholderText("Search CVE ID or description...")
-        self.txt_intel_search.textChanged.connect(self.refresh_intel_feed)
+
+        filter_lbl = QLabel("Severity:")
+        filter_lbl.setStyleSheet("color: #3C3C43; font-weight: 600; font-size: 13px;")
         self.cmb_intel_severity = QComboBox()
         self.cmb_intel_severity.addItems(["All Severities", "Critical", "High", "Medium", "Low", "Info"])
-        self.cmb_intel_severity.currentTextChanged.connect(self.refresh_intel_feed)
-        filter_row.addWidget(QLabel("Filter:"))
+        self.cmb_intel_severity.currentTextChanged.connect(self._on_intel_filter_changed)
+
+        search_lbl = QLabel("Search:")
+        search_lbl.setStyleSheet("color: #3C3C43; font-weight: 600; font-size: 13px;")
+        self.txt_intel_search = QLineEdit()
+        self.txt_intel_search.setPlaceholderText("Search CVE ID, keyword, or description...")
+        self.txt_intel_search.textChanged.connect(self._on_intel_filter_changed)
+        self.txt_intel_search.returnPressed.connect(self._on_intel_filter_changed)
+
+        filter_row.addWidget(filter_lbl)
         filter_row.addWidget(self.cmb_intel_severity)
+        filter_row.addSpacing(12)
+        filter_row.addWidget(search_lbl)
         filter_row.addWidget(self.txt_intel_search, 1)
         fl.addLayout(filter_row)
         layout.addWidget(filter_card)
@@ -771,11 +825,17 @@ class DashboardWindow(QMainWindow):
         list_card = self._make_card("CVE Feed")
         list_layout = list_card.layout()
         self.lst_intel = QListWidget()
+        self.lst_intel.setFont(QFont("Menlo", 11))
         self.lst_intel.itemDoubleClicked.connect(self.show_cve_detail)
         list_layout.addWidget(self.lst_intel)
         layout.addWidget(list_card, 1)
 
         return page
+
+    def _on_intel_filter_changed(self):
+        """Force CVE list refresh bypassing cache when filter changes."""
+        self._cache_intel_hash = None
+        self.refresh_intel_feed()
 
     # ─── Page: Settings ────────────────────────────────────────────────────────
 
@@ -789,7 +849,8 @@ class DashboardWindow(QMainWindow):
         scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
 
         scroll_content = QWidget()
-        scroll_content.setStyleSheet("background: transparent;")
+        scroll_content.setObjectName("scroll_content")
+        scroll_content.setStyleSheet("QWidget#scroll_content { background: transparent; }")
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setSpacing(16)
         scroll_layout.setContentsMargins(0, 0, 8, 0)
@@ -899,6 +960,33 @@ class DashboardWindow(QMainWindow):
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
 
+        # ── Backup & Raw Data Group ──
+        backup_card = self._make_card("Backup & Raw Data Download")
+        backup_layout = backup_card.layout()
+
+        backup_desc = QLabel(
+            "Three backup databases are maintained automatically:\n"
+            "  •  active_scans.db — all raw scan results\n"
+            "  •  important_results.db — High/Critical findings only\n"
+            "  •  cve_secondary.db — CVE database backup\n\n"
+            "Download as ZIP to export raw data for offline analysis."
+        )
+        backup_desc.setStyleSheet("color: #8E8E93; font-size: 12px; padding: 4px 0;")
+        backup_desc.setWordWrap(True)
+        backup_layout.addWidget(backup_desc)
+
+        backup_btn_row = QHBoxLayout()
+        backup_btn_row.addStretch()
+        self.btn_backup_cve = QPushButton("⮦  Backup CVE Database")
+        self.btn_backup_cve.setObjectName("btn_secondary")
+        self.btn_backup_cve.clicked.connect(self._backup_cve_db)
+        self.btn_download_backup = QPushButton("⭳  Download Raw Data ZIP")
+        self.btn_download_backup.clicked.connect(self._download_backup_zip)
+        backup_btn_row.addWidget(self.btn_backup_cve)
+        backup_btn_row.addWidget(self.btn_download_backup)
+        backup_layout.addLayout(backup_btn_row)
+        scroll_layout.addWidget(backup_card)
+
         scroll_layout.addStretch()
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area, 1)
@@ -908,37 +996,60 @@ class DashboardWindow(QMainWindow):
     # ─── Page: Logs ────────────────────────────────────────────────────────────
 
     def _build_logs_page(self):
+        from PySide6.QtWidgets import QTabWidget, QToolButton
         page, layout = self._make_page()
 
+        # Header row
         hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Audit Logs", "System and scanner activity trail")
+        self._add_page_header_inline(hrow, "Audit Logs", "Real-time system, scanner & CVE activity trail")
         hrow.addStretch()
-        btn_refresh_logs = QPushButton("↻  Refresh Logs")
+
+        self._log_autoscroll = True
+        self.btn_autoscroll = QPushButton("⬇  Auto-scroll ON")
+        self.btn_autoscroll.setObjectName("btn_secondary")
+        self.btn_autoscroll.setCheckable(True)
+        self.btn_autoscroll.setChecked(True)
+        self.btn_autoscroll.clicked.connect(self._toggle_autoscroll)
+        hrow.addWidget(self.btn_autoscroll)
+
+        btn_export = QPushButton("⭳  Export Logs")
+        btn_export.setObjectName("btn_secondary")
+        btn_export.clicked.connect(self._export_logs)
+        hrow.addWidget(btn_export)
+
+        btn_refresh_logs = QPushButton("↻  Refresh")
         btn_refresh_logs.setObjectName("btn_secondary")
         btn_refresh_logs.clicked.connect(self._invalidate_all_log_caches)
         hrow.addWidget(btn_refresh_logs)
         layout.addLayout(hrow)
 
-        from PySide6.QtWidgets import QTabWidget
+        # Stats bar
+        self.lbl_log_stats = QLabel("")
+        self.lbl_log_stats.setStyleSheet(
+            "color: #3C3C43; font-size: 12px; padding: 2px 4px; "
+            "background: #FFFFFF; border-radius: 8px; border: 1px solid #E5E5EA;"
+        )
+        layout.addWidget(self.lbl_log_stats)
 
+        # Tab style
         TAB_STYLE = """
             QTabWidget::pane {
-                border: 1px solid #E5E5EA;
+                border: 1px solid #C7C7CC;
                 border-radius: 14px;
                 background: #FFFFFF;
                 margin-top: -1px;
             }
             QTabBar::tab {
-                background: #F2F2F7;
-                color: #8E8E93;
-                border: 1px solid #E5E5EA;
+                background: #E5E5EA;
+                color: #3C3C43;
+                border: 1px solid #C7C7CC;
                 border-bottom: none;
                 border-radius: 8px 8px 0 0;
-                padding: 8px 18px;
+                padding: 9px 20px;
                 font-size: 13px;
                 font-weight: 600;
-                margin-right: 4px;
-                min-width: 90px;
+                margin-right: 3px;
+                min-width: 100px;
             }
             QTabBar::tab:selected {
                 background: #FFFFFF;
@@ -947,209 +1058,180 @@ class DashboardWindow(QMainWindow):
             }
             QTabBar::tab:hover:!selected {
                 color: #1C1C1E;
-                background: #E5E5EA;
+                background: #D1D1D6;
+            }
+        """
+
+        # Dark log text style with syntax color hints applied in code
+        LOG_TEXT_STYLE = """
+            QTextEdit {
+                background-color: #141420;
+                color: #D4D4D4;
+                font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+                font-size: 12px;
+                border-radius: 10px;
+                padding: 14px;
+                border: none;
+                line-height: 1.7;
+                selection-background-color: #264F78;
             }
         """
 
         tabs = QTabWidget()
         tabs.setStyleSheet(TAB_STYLE)
+        tabs.currentChanged.connect(self._on_log_tab_changed)
+        self._current_log_tab = 0
 
-        LOG_TEXT_STYLE = """
-            QTextEdit {
-                background-color: #1A1A2E;
-                color: #E0E0E0;
-                font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-                font-size: 12px;
-                border-radius: 10px;
-                padding: 12px;
-                border: none;
-                selection-background-color: #007AFF;
-            }
-        """
-
-        def _make_log_tab(title, search_attr, log_attr, invalidate_fn, label_note=""):
+        # ── Helper: build a log tab ──────────────────────────────────────────
+        def _make_log_tab(tab_title, log_widget_attr, search_attr, level_widget_attr,
+                          invalidate_fn, note_text="", with_level=False):
             tab = QWidget()
-            tab.setStyleSheet("background: transparent;")
+            tab.setObjectName(log_widget_attr + "_tab")
+            tab.setStyleSheet(f"QWidget#{log_widget_attr}_tab {{ background: transparent; }}")
             tl = QVBoxLayout(tab)
-            tl.setContentsMargins(12, 12, 12, 12)
+            tl.setContentsMargins(14, 14, 14, 10)
             tl.setSpacing(8)
 
-            fr = QHBoxLayout()
-            fr.addWidget(QLabel("Level:") if "level_combo" not in search_attr else QLabel("Search:"))
+            # Toolbar row
+            bar = QHBoxLayout()
 
-            if "level_combo" in search_attr:
-                # Simple search only
-                search_box = QLineEdit()
-                search_box.setPlaceholderText(f"Filter {title} entries...")
-                search_box.setFixedWidth(280)
-                search_box.textChanged.connect(invalidate_fn)
-                setattr(self, search_attr, search_box)
-                fr.addWidget(search_box)
-            else:
-                # Level + search
+            if with_level and level_widget_attr:
+                lbl_l = QLabel("Level:")
+                lbl_l.setStyleSheet("color: #3C3C43; font-weight: 600;")
+                bar.addWidget(lbl_l)
                 lvl = QComboBox()
-                lvl.addItems(["All Levels", "INFO", "WARNING", "ERROR"])
+                lvl.addItems(["All Levels", "INFO", "WARNING", "ERROR", "DEBUG"])
                 lvl.currentTextChanged.connect(invalidate_fn)
-                setattr(self, search_attr + "_level", lvl)
-                fr.addWidget(lvl)
-                fr.addSpacing(8)
-                fr.addWidget(QLabel("Search:"))
-                search_box = QLineEdit()
-                search_box.setPlaceholderText(f"Filter {title} entries...")
-                search_box.setFixedWidth(220)
-                search_box.textChanged.connect(invalidate_fn)
-                setattr(self, search_attr, search_box)
-                fr.addWidget(search_box)
+                setattr(self, level_widget_attr, lvl)
+                bar.addWidget(lvl)
+                bar.addSpacing(12)
 
-            fr.addStretch()
-            btn_clr = QPushButton("Clear")
+            lbl_s = QLabel("Search:")
+            lbl_s.setStyleSheet("color: #3C3C43; font-weight: 600;")
+            bar.addWidget(lbl_s)
+            search_box = QLineEdit()
+            search_box.setPlaceholderText(f"Filter {tab_title} entries...")
+            search_box.textChanged.connect(invalidate_fn)
+            setattr(self, search_attr, search_box)
+            bar.addWidget(search_box, 1)
+
+            bar.addSpacing(8)
+            btn_clr = QPushButton("🗑  Clear View")
             btn_clr.setObjectName("btn_secondary")
-            txt_ref = [None]  # will be set below
-            fr.addWidget(btn_clr)
-            tl.addLayout(fr)
+            bar.addWidget(btn_clr)
+
+            btn_copy = QPushButton("📋  Copy Logs")
+            btn_copy.setObjectName("btn_secondary")
+            bar.addWidget(btn_copy)
+
+            tl.addLayout(bar)
 
             te = QTextEdit()
             te.setReadOnly(True)
-            te.setFont(QFont("Menlo", 11))
+            te.setFont(QFont("Menlo", 12))
             te.setStyleSheet(LOG_TEXT_STYLE)
-            setattr(self, log_attr, te)
-            txt_ref[0] = te
+            setattr(self, log_widget_attr, te)
             btn_clr.clicked.connect(lambda _, w=te: w.clear())
+            btn_copy.clicked.connect(lambda _, w=te: QApplication.clipboard().setText(w.toPlainText()))
             tl.addWidget(te, 1)
 
-            if label_note:
-                note = QLabel(label_note)
-                note.setStyleSheet("color: #8E8E93; font-size: 11px; padding: 2px 0 0 2px;")
+            # Bottom note
+            if note_text:
+                note = QLabel(note_text)
+                note.setStyleSheet("color: #8E8E93; font-size: 11px; padding: 4px 0 0 0;")
                 tl.addWidget(note)
 
             return tab
 
-        # Tab 1 – Master (all events, level + search)
-        self.cmb_log_level = QComboBox()
-        self.cmb_log_level.addItems(["All Levels", "INFO", "WARNING", "ERROR"])
-        self.cmb_log_level.currentTextChanged.connect(self._invalidate_log_cache)
-        self.txt_log_search = QLineEdit()
-        self.txt_log_search.setPlaceholderText("Filter master log...")
-        self.txt_log_search.setFixedWidth(220)
-        self.txt_log_search.textChanged.connect(self._invalidate_log_cache)
-        self.txt_logs = QTextEdit()
-        self.txt_logs.setReadOnly(True)
-        self.txt_logs.setFont(QFont("Menlo", 11))
-        self.txt_logs.setStyleSheet(LOG_TEXT_STYLE)
-
-        tab_master = QWidget()
-        tab_master.setStyleSheet("background: transparent;")
-        ml = QVBoxLayout(tab_master)
-        ml.setContentsMargins(12, 12, 12, 12)
-        ml.setSpacing(8)
-        mfr = QHBoxLayout()
-        mfr.addWidget(QLabel("Level:"))
-        mfr.addWidget(self.cmb_log_level)
-        mfr.addSpacing(8)
-        mfr.addWidget(QLabel("Search:"))
-        mfr.addWidget(self.txt_log_search)
-        mfr.addStretch()
-        btn_clr_m = QPushButton("Clear")
-        btn_clr_m.setObjectName("btn_secondary")
-        btn_clr_m.clicked.connect(lambda: self.txt_logs.clear())
-        mfr.addWidget(btn_clr_m)
-        ml.addLayout(mfr)
-        ml.addWidget(self.txt_logs, 1)
+        # ── Tab 1: Master ──────────────────────────────────────────────────
+        tab_master = _make_log_tab(
+            tab_title="master log",
+            log_widget_attr="txt_logs",
+            search_attr="txt_log_search",
+            level_widget_attr="cmb_log_level",
+            invalidate_fn=self._invalidate_log_cache,
+            note_text="  All system events — sorted newest-first",
+            with_level=True
+        )
         tabs.addTab(tab_master, "📋  Master")
 
-        # Tab 2 – Scan log (search only)
-        self.txt_scan_log_search = QLineEdit()
-        self.txt_scan_log_search.setPlaceholderText("Filter scan log...")
-        self.txt_scan_log = QTextEdit()
-        self.txt_scan_log.setReadOnly(True)
-        self.txt_scan_log.setFont(QFont("Menlo", 11))
-        self.txt_scan_log.setStyleSheet(LOG_TEXT_STYLE)
-        tab_scan = QWidget()
-        tab_scan.setStyleSheet("background: transparent;")
-        sl = QVBoxLayout(tab_scan)
-        sl.setContentsMargins(12, 12, 12, 12)
-        sl.setSpacing(8)
-        sfr = QHBoxLayout()
-        sfr.addWidget(QLabel("Search:"))
-        sfr.addWidget(self.txt_scan_log_search)
-        self.txt_scan_log_search.textChanged.connect(self._invalidate_scan_log_cache)
-        sfr.addStretch()
-        btn_clr_s = QPushButton("Clear")
-        btn_clr_s.setObjectName("btn_secondary")
-        btn_clr_s.clicked.connect(lambda: self.txt_scan_log.clear())
-        sfr.addWidget(btn_clr_s)
-        sl.addLayout(sfr)
-        sl.addWidget(self.txt_scan_log, 1)
-        scan_note = QLabel("↑  Scanner pipeline events — Nmap, Nuclei, ffuf, Nikto, ZAP, HTTPx")
-        scan_note.setStyleSheet("color: #8E8E93; font-size: 11px; padding: 2px 0 0 2px;")
-        sl.addWidget(scan_note)
+        # ── Tab 2: Scan ────────────────────────────────────────────────────
+        tab_scan = _make_log_tab(
+            tab_title="scan log",
+            log_widget_attr="txt_scan_log",
+            search_attr="txt_scan_log_search",
+            level_widget_attr="cmb_scan_log_level",
+            invalidate_fn=self._invalidate_scan_log_cache,
+            note_text="  Scanner pipeline events — HTTPx, Nmap, Nuclei, Nikto, ffuf, CORS, Headers, CMS, SQLMap...",
+            with_level=True
+        )
         tabs.addTab(tab_scan, "🔍  Scan")
 
-        # Tab 3 – CVE log (search only)
-        self.txt_cve_log_search = QLineEdit()
-        self.txt_cve_log_search.setPlaceholderText("Filter CVE log...")
-        self.txt_cve_logs = QTextEdit()
-        self.txt_cve_logs.setReadOnly(True)
-        self.txt_cve_logs.setFont(QFont("Menlo", 11))
-        self.txt_cve_logs.setStyleSheet(LOG_TEXT_STYLE)
-        tab_cve = QWidget()
-        tab_cve.setStyleSheet("background: transparent;")
-        cl = QVBoxLayout(tab_cve)
-        cl.setContentsMargins(12, 12, 12, 12)
-        cl.setSpacing(8)
-        cfr = QHBoxLayout()
-        cfr.addWidget(QLabel("Search:"))
-        cfr.addWidget(self.txt_cve_log_search)
-        self.txt_cve_log_search.textChanged.connect(self._invalidate_cve_log_cache)
-        cfr.addStretch()
-        btn_clr_c = QPushButton("Clear")
-        btn_clr_c.setObjectName("btn_secondary")
-        btn_clr_c.clicked.connect(lambda: self.txt_cve_logs.clear())
-        cfr.addWidget(btn_clr_c)
-        cl.addLayout(cfr)
-        cl.addWidget(self.txt_cve_logs, 1)
-        cve_note = QLabel("↑  CVE intel sync — NVD, CISA KEV, GitHub Advisories, EPSS")
-        cve_note.setStyleSheet("color: #8E8E93; font-size: 11px; padding: 2px 0 0 2px;")
-        cl.addWidget(cve_note)
-        tabs.addTab(tab_cve, "🛡  CVE")
+        # ── Tab 3: CVE Intel ───────────────────────────────────────────────
+        tab_cve = _make_log_tab(
+            tab_title="CVE intel log",
+            log_widget_attr="txt_cve_logs",
+            search_attr="txt_cve_log_search",
+            level_widget_attr="cmb_cve_log_level",
+            invalidate_fn=self._invalidate_cve_log_cache,
+            note_text="  CVE intel sync — NVD, CISA KEV, GitHub Advisories, EPSS",
+            with_level=True
+        )
+        tabs.addTab(tab_cve, "🛡  CVE Intel")
 
-        # Tab 4 – Error log (search only)
-        self.txt_error_log_search = QLineEdit()
-        self.txt_error_log_search.setPlaceholderText("Filter errors...")
-        self.txt_error_logs = QTextEdit()
-        self.txt_error_logs.setReadOnly(True)
-        self.txt_error_logs.setFont(QFont("Menlo", 11))
-        self.txt_error_logs.setStyleSheet(LOG_TEXT_STYLE)
-        tab_err = QWidget()
-        tab_err.setStyleSheet("background: transparent;")
-        el = QVBoxLayout(tab_err)
-        el.setContentsMargins(12, 12, 12, 12)
-        el.setSpacing(8)
-        efr = QHBoxLayout()
-        efr.addWidget(QLabel("Search:"))
-        efr.addWidget(self.txt_error_log_search)
-        self.txt_error_log_search.textChanged.connect(self._invalidate_error_log_cache)
-        efr.addStretch()
-        btn_clr_e = QPushButton("Clear")
-        btn_clr_e.setObjectName("btn_secondary")
-        btn_clr_e.clicked.connect(lambda: self.txt_error_logs.clear())
-        efr.addWidget(btn_clr_e)
-        el.addLayout(efr)
-        el.addWidget(self.txt_error_logs, 1)
-        err_note = QLabel("↑  ERROR and CRITICAL level events across all subsystems")
-        err_note.setStyleSheet("color: #FF3B30; font-size: 11px; padding: 2px 0 0 2px;")
-        el.addWidget(err_note)
+        # ── Tab 4: Errors ──────────────────────────────────────────────────
+        tab_err = _make_log_tab(
+            tab_title="error log",
+            log_widget_attr="txt_error_logs",
+            search_attr="txt_error_log_search",
+            level_widget_attr="cmb_error_log_level",
+            invalidate_fn=self._invalidate_error_log_cache,
+            note_text="  ERROR and CRITICAL level events across all subsystems",
+            with_level=True
+        )
         tabs.addTab(tab_err, "⚠  Errors")
 
         layout.addWidget(tabs, 1)
         return page
+
+    def _toggle_autoscroll(self, checked):
+        self._log_autoscroll = checked
+        self.btn_autoscroll.setText("⬇  Auto-scroll ON" if checked else "⬇  Auto-scroll OFF")
+
+    def _on_log_tab_changed(self, idx):
+        self._current_log_tab = idx
+        self._invalidate_all_log_caches()
+
+    def _export_logs(self):
+        from PySide6.QtWidgets import QFileDialog
+        from tools.config_manager import BASE_DIR
+        import zipfile
+        log_files = {
+            "master.log": os.path.join(BASE_DIR, "logs", "master.log"),
+            "scan.log": os.path.join(BASE_DIR, "logs", "scan.log"),
+            "cve.log": os.path.join(BASE_DIR, "logs", "cve.log"),
+            "error.log": os.path.join(BASE_DIR, "logs", "error.log"),
+        }
+        default = os.path.join(os.path.expanduser("~"), "smp_logs.zip")
+        path, _ = QFileDialog.getSaveFileName(self, "Export Logs", default, "ZIP Archive (*.zip)")
+        if not path:
+            return
+        try:
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for name, fpath in log_files.items():
+                    if os.path.exists(fpath):
+                        zf.write(fpath, name)
+            QMessageBox.information(self, "Export Complete", f"Logs exported to:\n{path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Export Failed", str(e))
 
 
     # ─── UI Helpers ────────────────────────────────────────────────────────────
 
     def _make_page(self):
         page = QWidget()
-        page.setStyleSheet("background: #F2F2F7;")
+        page.setObjectName("page")
+        page.setStyleSheet("QWidget#page { background: #F2F2F7; }")
         layout = QVBoxLayout(page)
         layout.setContentsMargins(28, 28, 28, 20)
         layout.setSpacing(16)
@@ -1291,15 +1373,19 @@ class DashboardWindow(QMainWindow):
         from tools.tool_installer import check_and_install_all
         self.btn_check_tools.setEnabled(False)
         self.btn_check_tools.setText("Checking…")
-        QApplication.processEvents()
-        try:
-            check_and_install_all(auto_install=True)
-            QMessageBox.information(self, "Tools Check Complete", "Dependencies and tools have been verified. Check the Audit Logs for detailed output.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred while checking tools: {e}")
-        finally:
+        self.tools_worker = WorkerThread(check_and_install_all, auto_install=True)
+
+        def _done(result_tuple):
+            success, err = result_tuple
             self.btn_check_tools.setEnabled(True)
             self.btn_check_tools.setText("Check Dependencies & Tools")
+            if success:
+                QMessageBox.information(self, "Tools Check Complete", "Dependencies and tools have been verified. Check the Audit Logs for detailed output.")
+            else:
+                QMessageBox.critical(self, "Error", f"An error occurred while checking tools: {err}")
+
+        self.tools_worker.finished_signal.connect(_done)
+        self.tools_worker.start()
 
     def test_smtp_connection(self):
         host = self.txt_smtp_host.text().strip()
@@ -1334,25 +1420,25 @@ class DashboardWindow(QMainWindow):
         self.lbl_smtp_status.setText("Connecting to SMTP server…")
         self.lbl_smtp_status.setStyleSheet("color: #FF9500; font-weight: 600; font-size: 13px;")
 
-        def run_test():
-            from tools.alert_engine import test_smtp_connection as _test_conn
-            success, message = _test_conn()
+        from tools.alert_engine import test_smtp_connection as _test_conn
+        self.smtp_worker = WorkerThread(_test_conn)
 
-            def test_done():
-                self.btn_test_smtp.setEnabled(True)
-                self.btn_test_smtp.setText("Test Connection")
-                if success:
-                    self.lbl_smtp_status.setText("✓  Test email sent successfully!")
-                    self.lbl_smtp_status.setStyleSheet("color: #34C759; font-weight: 600; font-size: 13px;")
-                    QMessageBox.information(self, "Test Success", f"Connected successfully!\n\n{message}")
-                else:
-                    self.lbl_smtp_status.setText("✗  Test failed — check Audit Logs for details.")
-                    self.lbl_smtp_status.setStyleSheet("color: #FF3B30; font-weight: 600; font-size: 13px;")
-                    QMessageBox.critical(self, "Test Failed", f"SMTP connection failed:\n\n{message}")
+        def test_done(result_tuple):
+            success, val = result_tuple
+            self.btn_test_smtp.setEnabled(True)
+            self.btn_test_smtp.setText("Test Connection")
+            if success and isinstance(val, tuple) and val[0]:
+                self.lbl_smtp_status.setText("✓  Test email sent successfully!")
+                self.lbl_smtp_status.setStyleSheet("color: #34C759; font-weight: 600; font-size: 13px;")
+                QMessageBox.information(self, "Test Success", f"Connected successfully!\n\n{val[1]}")
+            else:
+                msg = val[1] if (success and isinstance(val, tuple)) else str(val)
+                self.lbl_smtp_status.setText("✗  Test failed — check Audit Logs for details.")
+                self.lbl_smtp_status.setStyleSheet("color: #FF3B30; font-weight: 600; font-size: 13px;")
+                QMessageBox.critical(self, "Test Failed", f"SMTP connection failed:\n\n{msg}")
 
-            QTimer.singleShot(0, test_done)
-
-        threading.Thread(target=run_test, daemon=True).start()
+        self.smtp_worker.finished_signal.connect(test_done)
+        self.smtp_worker.start()
 
 
     def _invalidate_log_cache(self):
@@ -1436,7 +1522,7 @@ class DashboardWindow(QMainWindow):
         active  = get_active_scans()
         settings = load_settings()
 
-        kpi_hash = hash(str((len(targets), stats.get("total", 0), len(active), bool(settings.get("smtp_user")))))
+        kpi_hash = hashlib.md5(str((len(targets), stats.get("total", 0), len(active), bool(settings.get("smtp_user")))).encode('utf-8')).hexdigest()
         if self._cache_kpis == kpi_hash:
             return
         self._cache_kpis = kpi_hash
@@ -1460,7 +1546,7 @@ class DashboardWindow(QMainWindow):
 
     def refresh_targets(self):
         targets = get_targets()
-        t_hash = hash(str(targets))
+        t_hash = hashlib.md5(str(targets).encode('utf-8')).hexdigest()
         if self._cache_targets_hash == t_hash:
             return
         self._cache_targets_hash = t_hash
@@ -1493,7 +1579,8 @@ class DashboardWindow(QMainWindow):
 
             # Action buttons
             actions_w = QWidget()
-            actions_w.setStyleSheet("background: transparent;")
+            actions_w.setObjectName("actions_w")
+            actions_w.setStyleSheet("QWidget#actions_w { background: transparent; }")
             actions_layout = QHBoxLayout(actions_w)
             actions_layout.setContentsMargins(4, 2, 4, 2)
             actions_layout.setSpacing(4)
@@ -1553,32 +1640,47 @@ class DashboardWindow(QMainWindow):
 
     def refresh_ongoing_scans(self):
         active = get_active_scans()
-        s_hash = hash(str(active))
+        s_hash = hashlib.md5(str(active).encode('utf-8')).hexdigest()
         if self._cache_scans_hash == s_hash:
             return
         self._cache_scans_hash = s_hash
 
         self.lst_scans.clear()
         if not active:
-            item = QListWidgetItem("No scans currently running.")
+            item = QListWidgetItem("  No scans currently running.")
             item.setForeground(QBrush(QColor("#8E8E93")))
             self.lst_scans.addItem(item)
             return
 
+        # Full 22-step pipeline status map
         status_map = {
-            "Running HTTPx":      "⬤  HTTPx probe (1/9)",
-            "Running WhatWeb":    "⬤  WhatWeb fingerprinting (2/9)",
-            "Running Subfinder":  "⬤  Subfinder DNS discovery (3/9)",
-            "Running Nmap":       "⬤  Nmap port scan (4/9)",
-            "Running SSL Scan":   "⬤  SSL/TLS scan (5/9)",
-            "Running Nikto":      "⬤  Nikto web scan (6/9)",
-            "Running Nuclei":     "⬤  Nuclei template scan (7/9)",
-            "Running ffuf":       "⬤  ffuf directory fuzzing (8/9)",
-            "Running ZAP":        "⬤  OWASP ZAP active scan (9/9)",
-            "Correlating CVEs":   "◌  Correlating CVE intel",
-            "Report Pending":     "◌  Generating reports",
-            "Completed":          "✓  Completed",
-            "Failed":             "✗  Failed",
+            "Running HTTPx":            "⬤  [1/22] HTTPx — HTTP probe",
+            "Running WhatWeb":          "⬤  [2/22] WhatWeb — fingerprinting",
+            "Running Subfinder":        "⬤  [3/22] Subfinder — subdomain discovery",
+            "Running CRT.sh":           "⬤  [4/22] CRT.sh — certificate transparency",
+            "Running HackerTarget":     "⬤  [5/22] HackerTarget — reverse DNS",
+            "Running Whois":            "⬤  [6/22] Whois — registry info",
+            "Running Wayback Machine":  "⬤  [7/22] Wayback Machine — historical URLs",
+            "Running Traceroute":       "⬤  [8/22] Traceroute — network path",
+            "Running Nmap":             "⬤  [9/22] Nmap — port & service scan",
+            "Running SSL Scan":         "⬤  [10/22] SSL Scanner — TLS/certificate",
+            "Running Security Headers": "⬤  [11/22] Security Headers — HTTP headers",
+            "Running Robots.txt":       "⬤  [12/22] Robots.txt — sitemap analysis",
+            "Running CORS":             "⬤  [13/22] CORS — misconfiguration check",
+            "Running CMS Scanner":      "⬤  [14/22] CMS Scanner — platform detection",
+            "Running Nikto":            "⬤  [15/22] Nikto — web vulnerability scan",
+            "Running Nuclei":           "⬤  [16/22] Nuclei — template-based scan",
+            "Running ffuf":             "⬤  [17/22] ffuf — directory fuzzing",
+            "Running Open Redirect":    "⬤  [18/22] Open Redirect — parameter check",
+            "Running Tech Fingerprint": "⬤  [19/22] Tech Fingerprint — deep analysis",
+            "Running Wapiti":           "⬤  [20/22] Wapiti — OWASP web scan",
+            "Running SQLMap":           "⬤  [21/22] SQLMap — SQL injection",
+            "Running Shodan":           "⬤  [22/22] Shodan — passive profiling",
+            "Running ZAP":              "⬤  [ZAP] OWASP ZAP — active scan",
+            "Correlating CVEs":         "◌  CVE Correlation — intel matching",
+            "Report Pending":           "◌  Report Generation",
+            "Completed":                "✓  Completed",
+            "Failed":                   "✗  Failed",
         }
         for scan in active:
             dur_str = "00:00:00"
@@ -1591,9 +1693,11 @@ class DashboardWindow(QMainWindow):
             except Exception:
                 pass
             prog = status_map.get(scan["status"], f"⬤  {scan['status']}")
-            text = f"{scan['url']}   {prog}   {dur_str}"
+            text = f"{scan['url']}   {prog}   [{dur_str}]"
             item = QListWidgetItem(text)
-            item.setForeground(QBrush(QColor("#007AFF" if "Running" in prog else "#FF9500")))
+            color = "#007AFF" if "Running" in prog else "#FF9500" if "◌" in prog else "#34C759"
+            item.setForeground(QBrush(QColor(color)))
+            item.setFont(QFont("Menlo", 11))
             self.lst_scans.addItem(item)
 
     def refresh_intel_feed(self):
@@ -1605,8 +1709,8 @@ class DashboardWindow(QMainWindow):
         search = self.txt_intel_search.text().lower().strip()
         sel_sev = self.cmb_intel_severity.currentText()
 
-        cves = get_cves(search_query=search, limit=500)
-        i_hash = hash(str(cves))
+        cves = get_cves(search_query=search, limit=500, severity_filter=sel_sev)
+        i_hash = hashlib.md5(str(cves).encode('utf-8')).hexdigest()
         if self._cache_intel_hash == i_hash:
             return
         self._cache_intel_hash = i_hash
@@ -1618,23 +1722,32 @@ class DashboardWindow(QMainWindow):
             self.lst_intel.addItem(item)
             return
 
-
         sev_colors = {
             "Critical": "#FF3B30", "High": "#FF9500",
             "Medium": "#FFCC00",  "Low": "#007AFF", "Info": "#8E8E93"
         }
         count = 0
         for cve in cves:
-            sev, cve_id, desc = cve["severity"], cve["cve"], cve["description"]
+            sev, cve_id = cve["severity"], cve["cve"]
+            title = cve.get("title") or cve.get("description", "Advisory")
+            title = title.split("\n")[0][:100] if title else "Advisory"
+            cvss = cve.get("cvss_score")
+            cvss_str = f"  CVSS:{cvss:.1f}" if cvss else ""
             if sel_sev != "All Severities" and sev.lower() != sel_sev.lower():
                 continue
-            title = desc.split("\n")[0] if desc else "Advisory"
-            item = QListWidgetItem(f"[{sev}]  {cve_id}  —  {title}")
-            item.setToolTip(desc)
+            item_text = f"[{sev}]{cvss_str}  {cve_id}  —  {title}"
+            item = QListWidgetItem(item_text)
+            # Tooltip shows full description
+            desc = cve.get("description", "") or ""
+            affected = cve.get("affected_products", "") or ""
+            tooltip = f"{cve_id}\n\nDescription:\n{desc[:800]}"
+            if affected:
+                tooltip += f"\n\nAffected Products:\n{affected[:400]}"
+            item.setToolTip(tooltip)
             item.setForeground(QBrush(QColor(sev_colors.get(sev, "#8E8E93"))))
             self.lst_intel.addItem(item)
             count += 1
-            if count >= 100:
+            if count >= 200:
                 break
 
     def refresh_master_log(self):
@@ -1685,28 +1798,41 @@ class DashboardWindow(QMainWindow):
                 filtered.append(line)
 
             log_text = "".join(filtered)
-            if self.txt_logs.toPlainText() != log_text:
+            current_text = self.txt_logs.toPlainText()
+            if not current_text or len(filtered) < 10:
                 self.txt_logs.setPlainText(log_text)
+            else:
+                current_lines = set(current_text.splitlines()[:1000])
+                new_lines = []
+                for line in filtered:
+                    line_stripped = line.rstrip('\r\n')
+                    if line_stripped and line_stripped not in current_lines:
+                        new_lines.append(line)
+                if new_lines:
+                    cursor = self.txt_logs.textCursor()
+                    cursor.movePosition(QTextCursor.Start)
+                    self.txt_logs.setTextCursor(cursor)
+                    self.txt_logs.insertPlainText("".join(new_lines))
 
         except Exception as e:
             self.txt_logs.setPlainText(f"Error reading log: {e}")
 
     def refresh_cve_log(self):
         """Read logs/cve.log and display in the CVE Log tab (newest first)."""
-        self._display_log_file("cve.log", "txt_cve_logs", "txt_cve_log_search", "_cache_cve_log_mtime",
+        self._display_log_file("cve.log", "txt_cve_logs", "txt_cve_log_search", "cmb_cve_log_level", "_cache_cve_log_mtime",
                                "No CVE log yet. CVE events appear after the first intelligence sync.")
 
     def refresh_scan_log(self):
         """Read logs/scan.log and display in the Scan Log tab (newest first)."""
-        self._display_log_file("scan.log", "txt_scan_log", "txt_scan_log_search", "_cache_scan_log_mtime",
+        self._display_log_file("scan.log", "txt_scan_log", "txt_scan_log_search", "cmb_scan_log_level", "_cache_scan_log_mtime",
                                "No scan log yet. Scan events appear after the first scan runs.")
 
     def refresh_error_log(self):
         """Read logs/error.log and display in the Error Log tab (newest first)."""
-        self._display_log_file("error.log", "txt_error_logs", "txt_error_log_search", "_cache_error_log_mtime",
+        self._display_log_file("error.log", "txt_error_logs", "txt_error_log_search", "cmb_error_log_level", "_cache_error_log_mtime",
                                "No errors logged yet.")
 
-    def _display_log_file(self, filename, widget_attr, search_attr, cache_attr, empty_msg):
+    def _display_log_file(self, filename, widget_attr, search_attr, level_widget_attr, cache_attr, empty_msg):
         """Generic helper: read a log file and show it newest-first in a QTextEdit."""
         widget = getattr(self, widget_attr, None)
         if widget is None:
@@ -1726,21 +1852,40 @@ class DashboardWindow(QMainWindow):
                 lines = f.readlines()[-800:]
             lines.reverse()  # newest at top
 
+            # Level filter
+            level_widget = getattr(self, level_widget_attr, None)
+            level_filter = level_widget.currentText() if level_widget else "All Levels"
+            if level_filter != "All Levels":
+                lines = [l for l in lines if f"[{level_filter}]" in l]
+
+            # Search text filter
             search_widget = getattr(self, search_attr, None)
             search_text = search_widget.text().lower().strip() if search_widget else ""
             if search_text:
                 lines = [l for l in lines if search_text in l.lower()]
 
             log_text = "".join(lines)
-            if widget.toPlainText() != log_text:
+            current_text = widget.toPlainText()
+            if not current_text or len(lines) < 10:
                 widget.setPlainText(log_text)
+            else:
+                current_lines = set(current_text.splitlines()[:1000])
+                new_lines = []
+                for line in lines:
+                    line_stripped = line.rstrip('\r\n')
+                    if line_stripped and line_stripped not in current_lines:
+                        new_lines.append(line)
+                if new_lines:
+                    cursor = widget.textCursor()
+                    cursor.movePosition(QTextCursor.Start)
+                    widget.setTextCursor(cursor)
+                    widget.insertPlainText("".join(new_lines))
         except Exception as e:
             widget.setPlainText(f"Error reading {filename}: {e}")
 
     def refresh_updates_errors(self):
-
         logs = get_log_entries(limit=100)
-        u_hash = hash(str(logs))
+        u_hash = hashlib.md5(str(logs).encode('utf-8')).hexdigest()
         if self._cache_updates_hash == u_hash:
             return
         self._cache_updates_hash = u_hash
@@ -1815,8 +1960,47 @@ class DashboardWindow(QMainWindow):
             self.poll_updates()
 
     def trigger_manual_scan(self, target):
+        from PySide6.QtWidgets import QInputDialog, QLineEdit
+        sudo_password, ok = QInputDialog.getText(
+            self, 
+            "Scan Elevation Mode", 
+            "Enter system sudo password to run in Full Mode (elevated rights)\nor leave blank / click Cancel for Standard Mode (no root):",
+            QLineEdit.EchoMode.Password
+        )
+        
+        verified_sudo_password = None
+        if ok and sudo_password.strip():
+            import subprocess
+            try:
+                proc = subprocess.Popen(
+                    ["sudo", "-S", "id"], 
+                    stdin=subprocess.PIPE, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE, 
+                    text=True
+                )
+                stdout, stderr = proc.communicate(input=f"{sudo_password}\n", timeout=5)
+                if proc.returncode == 0:
+                    verified_sudo_password = sudo_password
+                    logger.info("Scan Elevation: Sudo password verified. Scan running in Full Mode.")
+                else:
+                    reply = QMessageBox.question(
+                        self, 
+                        "Invalid Password", 
+                        "Sudo password verification failed.\nWould you like to run the scan in Standard Mode instead?",
+                        QMessageBox.Yes | QMessageBox.No, 
+                        QMessageBox.Yes
+                    )
+                    if reply == QMessageBox.No:
+                        logger.info("Scan cancelled due to invalid sudo password.")
+                        return
+                    else:
+                        logger.info("Scan Elevation: Sudo verification failed. Falling back to Standard Mode.")
+            except Exception as e:
+                logger.error(f"Sudo verification error: {e}")
+        
         from scanners.scan_runner import start_scan_for_target
-        success = start_scan_for_target(target)
+        success = start_scan_for_target(target, sudo_password=verified_sudo_password)
         if success:
             logger.info(f"Scan Triggered: {target['url']}")
             self._cache_targets_hash = None
@@ -1830,7 +2014,19 @@ class DashboardWindow(QMainWindow):
         if hasattr(self, "btn_cve_sync"):
             self.btn_cve_sync.setEnabled(False)
             self.btn_cve_sync.setText("Syncing…")
-        threading.Thread(target=self._run_async_intel_sync, daemon=True).start()
+
+        self.intel_worker = WorkerThread(self._run_async_intel_sync)
+
+        def sync_done(result_tuple):
+            self._enable_sync_button()
+            success, val = result_tuple
+            if not success or not val:
+                logger.warning("Threat Intel sync completed with errors.")
+            else:
+                logger.info("CVE Feed Synced successfully.")
+
+        self.intel_worker.finished_signal.connect(sync_done)
+        self.intel_worker.start()
 
     def _run_async_intel_sync(self):
         logger.info("Scheduler Triggered: Intelligence feed sync requested manually.")
@@ -1846,13 +2042,7 @@ class DashboardWindow(QMainWindow):
             except Exception as e:
                 logger.error(f"{name} sync failed: {e}")
                 success = False
-
-        if success:
-            logger.info("CVE Feed Synced successfully.")
-        else:
-            logger.warning("Threat Intel sync completed with errors.")
-
-        QTimer.singleShot(0, self._enable_sync_button)
+        return success
 
     def _enable_sync_button(self):
         self.btn_sync.setEnabled(True)
@@ -1883,3 +2073,58 @@ class DashboardWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to open report: {e}")
             QMessageBox.critical(self, "Error", f"Failed to open report: {e}")
+
+    def _backup_cve_db(self):
+        """Sync CVE data to cve_secondary.db backup."""
+        self.btn_backup_cve.setEnabled(False)
+        self.btn_backup_cve.setText("Backing up…")
+
+        from tools.db_manager import backup_cve_database
+        self.backup_worker = WorkerThread(backup_cve_database)
+
+        def _done(result_tuple):
+            success, ok = result_tuple
+            self.btn_backup_cve.setEnabled(True)
+            self.btn_backup_cve.setText("⮦  Backup CVE Database")
+            if success and ok:
+                QMessageBox.information(self, "Backup Complete",
+                    "CVE database backed up to backup/cve_secondary.db")
+            else:
+                QMessageBox.warning(self, "Backup Failed",
+                    "CVE backup encountered an error. Check Audit Logs.")
+
+        self.backup_worker.finished_signal.connect(_done)
+        self.backup_worker.start()
+
+    def _download_backup_zip(self):
+        """Export all backup databases as a ZIP file."""
+        from PySide6.QtWidgets import QFileDialog
+        from tools.config_manager import BASE_DIR
+        from tools.db_manager import export_raw_scans_as_zip
+
+        default_path = os.path.join(os.path.expanduser("~"), "smp_backup.zip")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Backup ZIP", default_path, "ZIP Archive (*.zip)"
+        )
+        if not path:
+            return
+
+        self.btn_download_backup.setEnabled(False)
+        self.btn_download_backup.setText("Exporting…")
+
+        self.export_worker = WorkerThread(export_raw_scans_as_zip, path)
+
+        def _done(result_tuple):
+            success, ok = result_tuple
+            self.btn_download_backup.setEnabled(True)
+            self.btn_download_backup.setText("⭳  Download Raw Data ZIP")
+            if success and ok:
+                QMessageBox.information(self, "Export Complete",
+                    f"Raw data exported to:\n{path}")
+            else:
+                QMessageBox.warning(self, "Export Failed",
+                    "ZIP export encountered an error. Check Audit Logs.")
+
+        self.export_worker.finished_signal.connect(_done)
+        self.export_worker.start()
+

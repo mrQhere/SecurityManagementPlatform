@@ -182,9 +182,21 @@ def _build_context(scan_id, target, findings, previous_scan,
     crtsh     = by_tool("CRT.sh")
     ht_data   = by_tool("HackerTarget")
     whois_data= by_tool("Whois")
+
+    # Missing tools
+    httpx     = by_tool("HTTPx")
+    subfinder = by_tool("Subfinder")
+    headers   = by_tool("Security Headers")
+    robots    = by_tool("Robots.txt")
+    cors      = by_tool("CORS")
+    cms       = by_tool("CMS Scanner")
+    redirect  = by_tool("Open Redirect")
+    tech_fp   = by_tool("Tech Fingerprint")
+    zap       = by_tool("ZAP")
     
     known_tools = ("Nmap","Nuclei","Nikto","ffuf","Wapiti","SQLMap","SSL","Traceroute","CVE Correlation",
-                   "Shodan","Wayback Machine","CRT.sh","HackerTarget","Whois")
+                   "Shodan","Wayback Machine","CRT.sh","HackerTarget","Whois",
+                   "HTTPx", "Subfinder", "Security Headers", "Robots.txt", "CORS", "CMS Scanner", "Open Redirect", "Tech Fingerprint", "ZAP")
     other     = [f for f in findings if f.get("source_tool") not in known_tools]
 
     counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
@@ -193,14 +205,29 @@ def _build_context(scan_id, target, findings, previous_scan,
         if s in counts:
             counts[s] += 1
 
+    confirmed = nuclei + nikto + ffuf + wapiti + sqlmap + redirect + zap
+    likely = cve_corr
+    potential = nmap + ssl_f + headers + cors + robots + cms + tech_fp
+    info_tools = ("Traceroute", "Shodan", "Wayback Machine", "CRT.sh", "HackerTarget", "Whois", "Subfinder", "HTTPx")
+    informational = [f for f in findings if f.get("source_tool") in info_tools] + other
+
+    classification_counts = {
+        "Confirmed Vulnerability": len(confirmed),
+        "Likely Vulnerability": len(likely),
+        "Potential Exposure": len(potential),
+        "Informational Observation": len(informational)
+    }
+
     return dict(
         url=url, scan_time=scan_time, scanned_by=scanned_by,
         findings=findings, nmap=nmap, nuclei=nuclei, nikto=nikto,
         ffuf=ffuf, wapiti=wapiti, sqlmap=sqlmap, ssl_f=ssl_f,
         tracert=tracert, cve_corr=cve_corr, other=other,
         shodan=shodan, wayback=wayback, crtsh=crtsh, ht_data=ht_data, whois_data=whois_data,
+        httpx=httpx, subfinder=subfinder, headers=headers, robots=robots, cors=cors, cms=cms, redirect=redirect, tech_fp=tech_fp, zap=zap,
         technologies=technologies, risk_data=risk_data,
         previous_scan=previous_scan, counts=counts,
+        classification_counts=classification_counts,
         total=len(findings),
     )
 
@@ -365,13 +392,37 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
         ("GRID",(0,0),(-1,-1),0.5,LGRAY),
     ]))
-    story += [st, Spacer(1,10),
+    
+    cl_counts = c.get("classification_counts", {})
+    class_data = [["Confirmed","Likely","Potential","Informational"],
+                [str(cl_counts.get("Confirmed Vulnerability", 0)),
+                 str(cl_counts.get("Likely Vulnerability", 0)),
+                 str(cl_counts.get("Potential Exposure", 0)),
+                 str(cl_counts.get("Informational Observation", 0))]]
+    
+    st2 = Table(class_data, colWidths=[130]*4)
+    st2.setStyle(TableStyle([
+        ("ALIGN",   (0,0),(-1,-1),"CENTER"),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),10),
+        ("FONTNAME",(0,1),(-1,1),"Helvetica-Bold"),
+        ("FONTSIZE",(0,1),(-1,1),20),
+        ("BACKGROUND",(0,1),(0,1),C_CRIT),("TEXTCOLOR",(0,1),(0,1),WHITE),
+        ("BACKGROUND",(1,1),(1,1),C_HIGH),("TEXTCOLOR",(1,1),(1,1),WHITE),
+        ("BACKGROUND",(2,1),(2,1),C_MED), ("TEXTCOLOR",(2,1),(2,1),DARK),
+        ("BACKGROUND",(3,1),(3,1),C_INFO),("TEXTCOLOR",(3,1),(3,1),WHITE),
+        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
+        ("GRID",(0,0),(-1,-1),0.5,LGRAY),
+    ]))
+
+    story += [st, Spacer(1,10), st2, Spacer(1,10),
               Paragraph(f"Full assessment of <b>{c['url']}</b> on {c['scan_time']}. "
-                        f"Total findings: <b>{c['total']}</b> — {counts['Critical']} Critical, "
-                        f"{counts['High']} High, {counts['Medium']} Medium, "
-                        f"{counts['Low']} Low, {counts['Info']} Info. "
-                        f"{len(c['nmap'])} open ports, {len(c['ffuf'])} directories, "
-                        f"{len(c['cve_corr'])} CVE matches.", BODY),
+                        f"Total findings: <b>{c['total']}</b>.<br/>"
+                        f"<b>Classification Model Mapping:</b><br/>"
+                        f"- Confirmed Vulnerabilities: {cl_counts.get('Confirmed Vulnerability', 0)}<br/>"
+                        f"- Likely Vulnerabilities: {cl_counts.get('Likely Vulnerability', 0)}<br/>"
+                        f"- Potential Exposures: {cl_counts.get('Potential Exposure', 0)}<br/>"
+                        f"- Informational Observations: {cl_counts.get('Informational Observation', 0)}", BODY),
               Spacer(1,12)]
 
     # ── S2: Scope & Auth ────────────────────────────────────────────────────
@@ -470,8 +521,8 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         story.append(Paragraph("No directories or sensitive files discovered.", BODY))
     story.append(Spacer(1,12))
 
-    # ── S9: Nuclei + Nikto ───────────────────────────────────────────────────
-    vuln_f = c["nuclei"] + c["nikto"]
+    # ── S9: Web Vulnerability Findings ───────────────────────────────────────
+    vuln_f = c["nuclei"] + c["nikto"] + c.get("httpx", []) + c.get("headers", []) + c.get("robots", []) + c.get("cors", []) + c.get("cms", []) + c.get("redirect", []) + c.get("tech_fp", []) + c.get("zap", [])
     story.append(section_header(9, f"Web Vulnerability Findings — {len(vuln_f)} found"))
     if vuln_f:
         rows = [(f.get("severity","Info"), f.get("title",""),
@@ -526,13 +577,14 @@ def generate_pdf_report(filepath, ctx, report_type="technical"):
         story.append(Paragraph("No Wayback Machine archives found.", BODY))
     story.append(Spacer(1,12))
 
-    # ── S14: CRT.sh ──────────────────────────────────────────────────
-    story.append(section_header(14, f"CRT.sh Transparency Subdomains — {len(c['crtsh'])} subdomains"))
-    if c['crtsh']:
-        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in c['crtsh']]
-        story.append(simple_table(["Severity","Subdomain","Description"], rows, [80,160,280]))
+    # ── S14: Subdomain Discovery ───────────────────────────────────────
+    subdomains = c.get("subfinder", []) + c["crtsh"]
+    story.append(section_header(14, f"Subdomain Discovery — {len(subdomains)} subdomains"))
+    if subdomains:
+        rows = [(f.get("severity","Info"), f.get("title",""), f.get("description","")[:120].replace('\n', ' ')) for f in subdomains]
+        story.append(simple_table(["Severity","Subdomain / Host","Description"], rows, [80,160,280]))
     else:
-        story.append(Paragraph("No CRT.sh subdomains found.", BODY))
+        story.append(Paragraph("No subdomains discovered.", BODY))
     story.append(Spacer(1,12))
 
     # ── S15: HackerTarget ──────────────────────────────────────────────────

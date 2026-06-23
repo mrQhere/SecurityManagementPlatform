@@ -36,7 +36,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from tools.config_manager import load_settings
-from tools.db_manager import get_targets, add_log_entry
+from tools.db_manager import get_targets, add_log_entry, trigger_scheduled_system_backup_sequence
 
 logger = logging.getLogger("smp")
 
@@ -143,6 +143,17 @@ def start_scheduler():
         id="hourly_intel_sync_job",
         replace_existing=True
     )
+
+    # Schedule Daily Backup Job
+    backup_trigger = IntervalTrigger(
+        hours=24
+    )
+    _scheduler.add_job(
+        trigger_scheduled_system_backup_sequence,
+        trigger=backup_trigger,
+        id="daily_backup_job",
+        replace_existing=True
+    )
     
     _scheduler.start()
     logger.info("Scheduler started successfully.")
@@ -178,6 +189,12 @@ def reschedule_jobs():
             hours=settings.get("intel_sync_interval_hours", 1)
         )
         _scheduler.reschedule_job("hourly_intel_sync_job", trigger=interval_trigger)
+
+        # Reschedule Daily Backup
+        backup_trigger = IntervalTrigger(
+            hours=24
+        )
+        _scheduler.reschedule_job("daily_backup_job", trigger=backup_trigger)
         
         logger.info("Scheduler jobs rescheduled successfully.")
         add_log_entry("INFO", "Scheduler Triggered: Jobs rescheduled.")

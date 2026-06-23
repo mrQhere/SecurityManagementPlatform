@@ -75,8 +75,9 @@
 
 <!-- NETWORK & INFRASTRUCTURE -->
 <div class="card">
-    <h2>3. Network & Infrastructure (Nmap)</h2>
+    <h2>3. Network & Infrastructure (Nmap & Traceroute)</h2>
     {% if nmap %}
+    <h3>Open Ports & Services (Nmap)</h3>
     <table>
         <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
         <tbody>
@@ -92,14 +93,135 @@
     {% else %}
     <p>No open ports discovered or Nmap did not run.</p>
     {% endif %}
+
+    {% if tracert %}
+    <h3>Network Route Path (Traceroute)</h3>
+    {% for f in tracert %}
+        <div style="margin-top: 1rem;">
+            <strong>{{ f.title }}</strong>
+            <div class="pre-text" style="margin-top: 0.5rem;">{{ f.description }}</div>
+        </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- SSL/TLS ANALYSIS -->
+<div class="card">
+    <h2>4. SSL/TLS Certificate Analysis</h2>
+    {% if ssl_f %}
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in ssl_f %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No SSL/TLS vulnerabilities found or certificate is valid.</p>
+    {% endif %}
+</div>
+
+<!-- HTTP HEADERS, CORS, & ROBOTS.TXT -->
+<div class="card">
+    <h2>5. Web Configuration & Headers Check</h2>
+    
+    {% if headers %}
+    <h3>Security Headers</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in headers %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if cors %}
+    <h3>CORS Configuration</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in cors %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if robots %}
+    <h3>Robots.txt & Sitemap</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in robots %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<!-- CMS & PARAMETER REDIRECT TESTS -->
+<div class="card">
+    <h2>6. CMS & Open Redirect Audits</h2>
+    
+    {% if cms %}
+    <h3>CMS Platform Audit</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in cms %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if redirect %}
+    <h3>Open Redirect Vulnerability Tests</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>Title</th><th>Details</th></tr></thead>
+        <tbody>
+            {% for f in redirect %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 </div>
 
 <!-- APPLICATION VULNERABILITIES -->
 <div class="card">
-    <h2>4. Application Vulnerabilities</h2>
-    <p>Vulnerabilities discovered via active exploitation tools (Nuclei, SQLMap, Wapiti, Nikto, HTTPx).</p>
+    <h2>7. Active Vulnerability & Injection Exploitations</h2>
+    <p>Vulnerabilities discovered via active templates and fuzzers (Nuclei, SQLMap, Wapiti, Nikto, HTTPx, ZAP).</p>
     
-    {% set app_findings = nuclei + sqlmap + wapiti + nikto + httpx %}
+    {% set app_findings = nuclei + sqlmap + wapiti + nikto + httpx + zap %}
     {% if app_findings %}
     <table>
         <thead><tr><th>Source</th><th>Risk</th><th>Title</th><th>Payload / Details</th></tr></thead>
@@ -116,6 +238,46 @@
     </table>
     {% else %}
     <p>No application layer vulnerabilities identified.</p>
+    {% endif %}
+</div>
+
+<!-- CVE CORRELATION & THREAT INTELLIGENCE -->
+<div class="card">
+    <h2>8. CVE Correlation & Threat Intelligence Matches</h2>
+    
+    {% if technologies %}
+    <h3>Detected Software Stack</h3>
+    <table>
+        <thead><tr><th>Technology</th><th>Version</th><th>Category</th><th>Source</th></tr></thead>
+        <tbody>
+            {% for t in technologies %}
+            <tr>
+                <td><strong>{{ t.name }}</strong></td>
+                <td>{{ t.version or '—' }}</td>
+                <td>{{ t.category }}</td>
+                <td>{{ t.source_tool }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if cve_corr %}
+    <h3>Matched CVE Advisories</h3>
+    <table>
+        <thead><tr><th>Risk</th><th>CVE / Title</th><th>Advisory Details</th></tr></thead>
+        <tbody>
+            {% for f in cve_corr %}
+            <tr>
+                <td><span class="badge badge-{{ f.severity|lower }}">{{ f.severity }}</span></td>
+                <td>{{ f.title }}</td>
+                <td><div class="pre-text">{{ f.description }}</div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No CVE matches correlated with the fingerprinted technologies.</p>
     {% endif %}
 </div>
 

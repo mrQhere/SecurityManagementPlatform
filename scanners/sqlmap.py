@@ -59,7 +59,7 @@ def run_sqlmap_scan(url):
         # Intense scan with throttling: --delay=2 (2 seconds delay), --threads=1, --level=5, --risk=3, --crawl=3
         cmd = [
             sqlmap_bin, "-u", url, "--batch", "--crawl=3", "--level=5", "--risk=3",
-            "--delay=2", "--threads=1", "--output-dir", output_dir, "--smart"
+            "--delay=2", "--threads=1", "--output-dir", output_dir, "--smart", "--forms"
         ]
         
         try:

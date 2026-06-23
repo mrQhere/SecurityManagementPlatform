@@ -59,7 +59,7 @@ _HEADERS = {
 
 _PAGE_SIZE    = 500    # Smaller page size for much higher API reliability and fewer 503/timeout errors
 _INTER_PAGE_DELAY = 6.5  # NVD mandates ≥6 s between requests
-_MAX_RETRIES  = 6
+_MAX_RETRIES  = 5
 _RETRY_DELAYS = [30, 60, 120, 240, 480]   # Seconds between retry attempts
 
 
@@ -71,30 +71,29 @@ def _nvd_get(params: dict, timeout: int = 35):
     Returns the requests.Response on success, or None after all retries fail.
     """
     for attempt in range(_MAX_RETRIES):
+        # Determine retry delay safely
+        delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
         try:
             resp = requests.get(NVD_API_URL, headers=_HEADERS, params=params, timeout=timeout)
             if resp.status_code == 200:
                 return resp
             if resp.status_code == 429:
-                wait = int(resp.headers.get("Retry-After", _RETRY_DELAYS[attempt]))
+                wait = int(resp.headers.get("Retry-After", delay))
                 logger.warning(f"NVD 429 rate-limited. Waiting {wait}s (attempt {attempt+1}/{_MAX_RETRIES})…")
                 time.sleep(wait)
                 continue
             if resp.status_code in (500, 502, 503):
-                wait = _RETRY_DELAYS[attempt]
-                logger.warning(f"NVD {resp.status_code}. Waiting {wait}s (attempt {attempt+1}/{_MAX_RETRIES})…")
-                time.sleep(wait)
+                logger.warning(f"NVD {resp.status_code}. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
+                time.sleep(delay)
                 continue
             logger.error(f"NVD API error {resp.status_code}")
             return resp
         except requests.exceptions.Timeout:
-            wait = _RETRY_DELAYS[attempt]
-            logger.warning(f"NVD request timed out. Waiting {wait}s (attempt {attempt+1}/{_MAX_RETRIES})…")
-            time.sleep(wait)
+            logger.warning(f"NVD request timed out. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
+            time.sleep(delay)
         except requests.exceptions.ConnectionError as exc:
-            wait = _RETRY_DELAYS[attempt]
-            logger.warning(f"NVD connection error: {exc}. Waiting {wait}s (attempt {attempt+1}/{_MAX_RETRIES})…")
-            time.sleep(wait)
+            logger.warning(f"NVD connection error: {exc}. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
+            time.sleep(delay)
     return None
 
 
@@ -123,6 +122,59 @@ def _parse_severity(cve_obj: dict) -> str:
         else:
             return "Low"
     return "Medium"
+
+
+def _parse_cvss_data(cve_obj: dict) -> tuple:
+    """Return (cvss_score: float|None, cvss_vector: str|None) from a CVE object."""
+    metrics = cve_obj.get("metrics", {})
+    for key in ("cvssMetricV31", "cvssMetricV30"):
+        entries = metrics.get(key, [])
+        if entries:
+            data = entries[0].get("cvssData", {})
+            score = data.get("baseScore")
+            vector = data.get("vectorString")
+            if score is not None:
+                return float(score), vector
+    v2 = metrics.get("cvssMetricV2", [])
+    if v2:
+        data = v2[0].get("cvssData", {})
+        score = data.get("baseScore")
+        vector = data.get("vectorString")
+        if score is not None:
+            return float(score), vector
+    return None, None
+
+
+def _parse_affected_products(cve_obj: dict) -> list:
+    """Extract affected product names from CPE configurations."""
+    products = set()
+    configurations = cve_obj.get("configurations", [])
+    for config in configurations:
+        for node in config.get("nodes", []):
+            for cpe_match in node.get("cpeMatch", []):
+                cpe = cpe_match.get("criteria", "")
+                # CPE format: cpe:2.3:a:vendor:product:version:...
+                parts = cpe.split(":")
+                if len(parts) >= 5:
+                    vendor = parts[3].replace("_", " ")
+                    product = parts[4].replace("_", " ")
+                    version = parts[5] if len(parts) > 5 and parts[5] != "*" else ""
+                    if product and product != "*":
+                        entry = f"{vendor} {product}".strip()
+                        if version:
+                            entry += f" {version}"
+                        products.add(entry)
+    return sorted(products)[:30]  # Limit to 30 to keep DB size reasonable
+
+
+def _parse_references(cve_obj: dict) -> list:
+    """Extract reference URLs from a CVE object."""
+    refs = []
+    for ref in cve_obj.get("references", [])[:10]:  # Max 10 references
+        url = ref.get("url", "")
+        if url:
+            refs.append(url)
+    return refs
 
 
 def _parse_description(cve_obj: dict) -> str:
@@ -179,12 +231,27 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
             except ValueError:
                 pass
 
-        severity    = _parse_severity(cve_obj)
-        description = _parse_description(cve_obj)
+        severity        = _parse_severity(cve_obj)
+        description     = _parse_description(cve_obj)
+        cvss_score, cvss_vector = _parse_cvss_data(cve_obj)
+        affected_products = _parse_affected_products(cve_obj)
+        references      = _parse_references(cve_obj)
+
+        # Build title from CVE ID + first sentence of description
+        first_sentence = description.split(".")[0].strip()[:120] if description else ""
+        title = f"{cve_id}: {first_sentence}" if first_sentence else cve_id
 
         is_new = add_cve(
-            cve=cve_id, severity=severity,
-            description=description, published_date=pub_date, source="NVD"
+            cve=cve_id,
+            severity=severity,
+            description=description,
+            published_date=pub_date,
+            source="NVD",
+            title=title,
+            cvss_score=cvss_score,
+            cvss_vector=cvss_vector,
+            affected_products=affected_products,
+            references=references,
         )
         if is_new:
             added += 1

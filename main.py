@@ -30,6 +30,8 @@
 # =============================================================================
 import sys
 import os
+import signal
+import fcntl
 
 # Add the project directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -41,47 +43,78 @@ from tools.logger_setup import setup_logging
 from tools.scheduler import start_scheduler, shutdown_scheduler
 from ui.dashboard import DashboardWindow
 
-def main():
-    # Prepend project-local bin/ directory to system PATH
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    bin_dir = os.path.join(base_dir, "bin")
-    os.makedirs(bin_dir, exist_ok=True)
-    if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
-        os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
+lock_file_fd = None
 
-    # 1. Initialize directory structures
-    init_directories()
-
-    # 2. Setup Logging
-    logger = setup_logging()
-
-    # 3. Initialize SQLite Database
-    init_db()
-
-    # 3.5 Resume Interrupted Scans
+def enforce_single_instance():
+    """Improvement 1: Establish a strict system-level application lock."""
+    global lock_file_fd
+    lock_file_path = os.path.join(os.path.expanduser("~"), ".smp_runtime.lock")
     try:
-        from scanners.scan_runner import resume_interrupted_scans
-        resume_interrupted_scans()
-    except Exception as e:
-        logger.error(f"Failed to resume interrupted scans: {e}")
+        lock_file_fd = open(lock_file_path, "w")
+        fcntl.flock(lock_file_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        print("[❌ FATAL] SMP is already running. Core initialization aborted.")
+        sys.exit(1)
 
-    # 4. Auto-check and install required tools (runs in background thread)
-    import threading
-    def _install_tools():
+def release_lock():
+    global lock_file_fd
+    if lock_file_fd:
         try:
-            from tools.tool_installer import check_and_install_all
-            check_and_install_all(auto_install=True)
-        except Exception as e:
-            logger.error(f"Tool installer error: {e}")
-    threading.Thread(target=_install_tools, daemon=True, name="ToolInstaller").start()
+            fcntl.flock(lock_file_fd, fcntl.LOCK_UN)
+            lock_file_fd.close()
+        except Exception:
+            pass
 
-    # 5. Start Scheduler background threads
+def handle_system_signals(signum, frame):
+    """Improvement 2: Handle OS termination requests cleanly without corrupting sqlite buffers."""
+    print(f"\n[!] Intercepted signal {signum}. Closing database pools and exiting cleanly...")
+    release_lock()
     try:
-        start_scheduler()
-    except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}")
+        from tools.encryption_manager import encrypt_databases
+        encrypt_databases()
+    except Exception:
+        pass
+    try:
+        shutdown_scheduler()
+    except Exception:
+        pass
+    QApplication.quit()
+    sys.exit(0)
 
-    # 6. Boot PySide6 GUI QApplication
+def enforce_license():
+    """Security Signature: Cryptographic check to protect intellectual property of mrQhere."""
+    import hashlib
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    license_dir = os.path.join(base_dir, "config")
+    license_path = os.path.join(license_dir, "license.key")
+    expected_hash = "3cbe2fa02c6dbcfc3b7a5482390a319f071476d6342898cf4a6a57cb7605d3c8"
+    
+    try:
+        if not os.path.exists(license_path):
+            print(f"\n[🔒 SECURITY HALT] License signature file missing!")
+            print("Please copy license/license.key into config/license.key to authenticate usage.")
+            sys.exit(1)
+        with open(license_path, "r", encoding="utf-8") as f:
+            key = f.read().strip()
+        if key != expected_hash:
+            raise ValueError("Cryptographic license validation mismatch.")
+    except Exception as e:
+        if isinstance(e, SystemExit):
+            raise e
+        print(f"\n[🔒 SECURITY HALT] Unlicensed usage or project copying detected!")
+        print("This proprietary software is protected by copyright. Owner: mrQhere.")
+        print(f"Details: {e}")
+        sys.exit(1)
+
+def main():
+    enforce_license()
+    enforce_single_instance()
+    
+    # Register OS Signal Interception
+    signal.signal(signal.SIGINT, handle_system_signals)
+    signal.signal(signal.SIGTERM, handle_system_signals)
+
+    # 1. Initialize PySide6 GUI QApplication early so we can run dialogs
     app = QApplication(sys.argv)
 
     # ── Force light theme regardless of OS dark-mode setting ──────────────────
@@ -110,6 +143,61 @@ def main():
     # Register clean shutdown callback
     app.aboutToQuit.connect(on_quit)
 
+    # 2. Run Password Protection dialog
+    from ui.password_dialog import run_password_protection
+    if not run_password_protection():
+        print("[!] Security Lock: Authentication failed or cancelled. Exiting.")
+        sys.exit(0)
+
+    # Prepend project-local bin/ directory to system PATH
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bin_dir = os.path.join(base_dir, "bin")
+    os.makedirs(bin_dir, exist_ok=True)
+    if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+        os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
+
+    # 3. Initialize directory structures
+    init_directories()
+
+    # 4. Setup Logging
+    logger = setup_logging()
+
+    # 5. Initialize SQLite Database with schema
+    init_db()
+
+    # 6. MAC Address Changer — randomize MAC on every startup
+    try:
+        from tools.mac_changer import change_mac_address
+        mac_ok, mac_msg = change_mac_address()
+        if mac_ok:
+            logger.info(mac_msg)
+        else:
+            logger.warning(mac_msg)
+    except Exception as me:
+        logger.warning(f"MAC changer error (non-fatal): {me}")
+
+    # 7. Resume Interrupted Scans
+    try:
+        from scanners.scan_runner import resume_interrupted_scans
+        resume_interrupted_scans()
+    except Exception as e:
+        logger.error(f"Failed to resume interrupted scans: {e}")
+
+    # 8. Auto-check and install required tools (runs in background thread)
+    import threading
+    def _install_tools():
+        try:
+            from tools.tool_installer import check_and_install_all
+            check_and_install_all(auto_install=True)
+        except Exception as e:
+            logger.error(f"Tool installer error: {e}")
+    threading.Thread(target=_install_tools, daemon=True, name="ToolInstaller").start()
+
+    # 9. Start Scheduler background threads
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
 
     window = DashboardWindow()
     window.show()
@@ -126,6 +214,16 @@ def on_quit():
     
     # Stop background tasks
     shutdown_scheduler()
+    
+    # Encrypt databases
+    try:
+        from tools.encryption_manager import encrypt_databases
+        encrypt_databases()
+        logger.info("Databases successfully encrypted.")
+    except Exception as e:
+        logger.error(f"Failed to encrypt databases: {e}")
+        
+    release_lock()
 
 if __name__ == "__main__":
     main()

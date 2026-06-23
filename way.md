@@ -74,6 +74,11 @@ SecurityManagementPlatform-main/
 │   ├── update.log              # Intel update events
 │   └── error.log               # Errors and exceptions
 │
+├── backup/
+│   ├── active_scans.db         # [NEW] Raw scan output backup (JSON per tool)
+│   ├── important_results.db    # [NEW] High/Critical findings only
+│   └── cve_secondary.db        # [NEW] CVE database backup
+│
 ├── reports/
 │   ├── html/                   # Generated HTML reports
 │   └── pdf/                    # Generated PDF reports
@@ -84,19 +89,25 @@ SecurityManagementPlatform-main/
 ├── bin/                        # Project-local tool binaries (auto-populated by setup.sh)
 │
 ├── scanners/
-│   ├── nmap.py                 # Nmap port scanner wrapper
-│   ├── nuclei.py               # Nuclei template scanner wrapper
+│   ├── nmap.py                 # Nmap port scanner (1-10000 ports, vuln scripts, T3 timing)
+│   ├── nuclei.py               # Nuclei template scanner (10 template categories)
 │   ├── nikto.py                # Nikto web vulnerability scanner wrapper
 │   ├── whatweb.py              # WhatWeb technology fingerprinting
 │   ├── subfinder.py            # Subfinder subdomain discovery
 │   ├── httpx_scanner.py        # HTTPx HTTP probing
 │   ├── ffuf.py                 # ffuf directory fuzzer
 │   ├── ssl_scanner.py          # SSL/TLS scanner (sslyze Python lib)
-│   ├── zap.py                  # OWASP ZAP active scanner (optional — NOT IN USE by default)
+│   ├── zap.py                  # OWASP ZAP active scanner (optional — disabled by default)
 │   ├── traceroute.py           # Network path tracer (UDP mode, no root required)
 │   ├── sqlmap.py               # SQL injection scanner (pip-installed sqlmap)
-│   ├── wapiti.py               # Web vulnerability scanner (pip-installed wapiti3)
-│   └── scan_runner.py          # Master pipeline orchestrator
+│   ├── wapiti.py               # Web vulnerability scanner (--level 2)
+│   ├── headers_scanner.py      # [NEW] HTTP security headers checker
+│   ├── robots_scanner.py       # [NEW] robots.txt + sitemap.xml analyser
+│   ├── cors_scanner.py         # [NEW] CORS misconfiguration scanner
+│   ├── tech_fingerprint.py     # [NEW] Deep technology detection (response-based)
+│   ├── open_redirect.py        # [NEW] Open redirect parameter testing
+│   ├── cms_scanner.py          # [NEW] CMS detection (WordPress/Drupal/Joomla/etc.)
+│   └── scan_runner.py          # Master 22-step pipeline orchestrator
 │
 ├── intelligence/
 │   ├── cisa.py                 # CISA KEV feed (full catalog, ~1600+ entries)
@@ -1073,3 +1084,20 @@ _next_url(resp) -> str                     # Parse Link header for pagination
 - **Dashboard Refresh Button**: Added a manual "↻ Refresh" button in the Dashboard header that clears all caches and forces a full redraw of every widget immediately.
 - **Log Text Readability**: Fixed the QListWidget stylesheet — removed the hardcoded `color` rule from `QListWidget::item` which was overriding per-item `setForeground()` colours, making severity-coloured CVE and event items unreadable.
 - **Log Order**: Both master.log and cve.log now correctly display newest entries at the very top.
+
+## [2026-06-23] Stable Release Upgrades (Phase 1 to 5)
+- **PID Lockfile & Intercept (`main.py`)**: Established a system-level runtime lockfile at `~/.smp_runtime.lock` to prevent concurrent dual execution, and intercepted OS signals (SIGINT/SIGTERM) to release lock handles cleanly.
+- **SQLite WAL & Backoff (`tools/db_manager.py`)**: Integrated explicit checkpoint flushes (`PRAGMA wal_checkpoint(TRUNCATE)`) before cold backups, transactional exponential backoff retries on locks, zipped backups container exports, vulnerability surge warnings (>75 findings), and scanner run status JSON tracking.
+- **Resilient Process Isolation (`scanners/scan_runner.py`)**: Implemented dynamic timeout scaling (1.5x on retry), binary checks (`shutil.which`), CPU load-average cooling delays (`os.getloadavg()`), and subprocess monkeypatching for process group isolation/PGID hard-termination.
+- **Failover SMTP & Tech CVE alert (`tools/alert_engine.py`)**: Added regex technology sanitizers, matched technology CVE alerts, and primary-to-backup SMTP relay fallback logic.
+- **Scheduler Daily Backups (`tools/scheduler.py`)**: Set up daily 24-hour backup scheduling and settings rescheduling configuration.
+- **Automated Fallback Wordlist & Hardening (`setup.sh`)**: Added CPU architecture profiling warnings, automated fallback local wordlist generation (`config/common.txt`), directory/database permissions hardening (`chmod 700`), binary hardening (`chmod 750`), and `SYSTEM_ERRORS` post-install consolidation.
+- **Responsive QThread GUI (ui/dashboard.py)**: Offloaded SMTP tests, threat intel syncs, database backups, and raw data exports to asynchronous QThread (WorkerThread) workers. Integrated MD5 state-hashing to skip layout redraw loops, implemented clean prepending for log text boxes, and tuned contrast ratios in APPLE_STYLESHEET.
+- **Master Password AES Encryption (`tools/encryption_manager.py` & `ui/password_dialog.py`)**: Implemented Master Password initialization/verification PySide6 UI and AES-256 Fernet encryption for SQLite database target files on exit, with secure random-byte file shredding on plain text database removals.
+- **Sudo Full Scan Mode (`ui/dashboard.py` & `scanners/scan_runner.py`)**: Added system sudo password verification and secure thread-local execution to execute Nmap script scanning, OS detection, and Traceroute ICMP mode under `sudo -S`.
+- **Capped timeouts & Retry Queue (`tools/config_manager.py` & `scanners/scan_runner.py`)**: Configured dynamic timeout capping to 180s on initial scanner run attempts, with deferral to a queue for 1.5x scaled retries at the end of the sequence.
+- **Test Suite Isolation & Coverage (`tools/verify_smp.py`)**: Isolated all test file paths to a temporary filesystem directory, and added verification tests for encryption/decryption, timeout capping, missing binary checks, and resilient sequence retry and report generation.
+- **License Structure Restructuring (`main.py` & `.gitignore` & `USER_GUIDE.md`)**: Moved the public license reference template to the `license/` folder, added `config/license.key` to `.gitignore` to prevent leaks, removed the automatic license generation logic in `main.py`'s `enforce_license()`, and added halt-and-exit diagnostics directing users to copy the key from `license/license.key` to `config/license.key` to run the app.
+- **Master Password Reset Process (`USER_GUIDE.md` & `way.md`)**: Documented the disaster-recovery process for a forgotten master password (deleting `config/auth.json`, `database/security.db*`, and `backup/*.db*` to boot the application fresh and prompt for a new master password initialization).
+
+

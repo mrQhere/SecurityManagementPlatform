@@ -3,12 +3,17 @@
 # =============================================================================
 
 # ─── Sensitive / Personal Data ───────────────────────────────────────────────
-config/settings.json          # Contains SMTP credentials — NEVER commit
-database/security.db          # SQLite database — local only
+# Contains SMTP credentials — NEVER commit
+config/settings.json
+# Local active license key — NEVER commit
+config/license.key
+# SQLite database — local only
+database/security.db
 database/*.db
-task.md                       # Local planning artifact
-walkthrough.md                # Local planning artifact
-implementation_plan.md        # Local planning artifact
+# Local planning artifacts
+task.md
+walkthrough.md
+implementation_plan.md
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 logs/
@@ -75,3 +80,7 @@ site/
 .coverage
 htmlcov/
 .tox/
+
+# ─── Developer Reference Note (way.md is personal) ───────────────────────────
+way.md
+
