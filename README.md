@@ -1,114 +1,133 @@
 <div align="center">
 
-<h1>🛡️ Security Management Platform</h1>
-<p><strong>A professional, cross-platform desktop security monitoring application built with PySide6</strong></p>
+# 🛡️ Security Management Platform (SMP)
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
-[![PySide6](https://img.shields.io/badge/GUI-PySide6_Qt6-41cd52?logo=qt)](https://doc.qt.io/qtforpython/)
-[![Platform](https://img.shields.io/badge/Platform-Linux_|_Windows-lightgrey)](https://github.com)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](./way.md)
+<p><strong>A Premium, Enterprise-Grade Desktop Security Monitoring & Vulnerability Orchestration Platform</strong></p>
+
+[![Release](https://img.shields.io/badge/Release-V3.1_Stable-blue.svg?style=flat-square&logo=github&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![PySide6](https://img.shields.io/badge/GUI-PySide6_Qt6-41cd52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython/)
+[![Platform](https://img.shields.io/badge/Platform-Linux_|_Windows-lightgrey?style=flat-square&logo=linux&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
+[![Database Security](https://img.shields.io/badge/Database_Security-AES--256_Fernet-success.svg?style=flat-square&logo=auth0&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square&logo=keycdn&logoColor=white)](./license/license.key)
 
 </div>
 
 ---
 
-## Overview
+## 📖 Overview
 
-**Security Management Platform (SMP)** continuously monitors a list of target URLs by running a sequential multi-tool security scan pipeline. All results are stored in a local SQLite database, professional HTML and PDF reports are generated automatically, and SMTP email alerts are dispatched on newly discovered vulnerabilities.
+The **Security Management Platform (SMP)** is an advanced security monitoring orchestrator designed to run automated, sequential vulnerability scan pipelines on targeted systems. Built on Python 3.11 and the PySide6 (Qt6) framework, it incorporates a responsive Apple-style interface, automatic threat intelligence feeds, locally encrypted databases, and professional reporting metrics.
 
-> **⚠️ Authorised Use Only** — This software is designed for authorised security assessments on systems you own or have explicit written permission to test. Unauthorised scanning is illegal.
+> [!WARNING]
+> **Authorised Assessment Use Only**: This tool is designed strictly for authorised security testing on systems you own or have explicit written permission to test. Unauthorised network scanning is illegal.
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features (V3.1 Stable)
 
-| Feature | Description |
-|---------|-------------|
-| 🔍 **15-Tool Scan Pipeline** | Sequential execution of Traceroute, Nmap, SSL, Nikto, Nuclei, ffuf, Wapiti, SQLMap, and more |
-| 🗄️ **240,000+ CVE Database** | Full NVD, CISA KEV (1,600+), and GitHub Advisory sync — continuously updated |
-| 📄 **15-Section Reports** | Professional HTML + PDF reports covering ports, directories, vulnerabilities, CVE matches, risk scores |
-| 📧 **SMTP Alert Engine** | Automatic email alerts on Critical/High findings and new CVE matches |
-| 📊 **Risk Scoring** | 0–100 risk score calculated from all findings with severity breakdown |
-| 🖥️ **Modern Dark GUI** | PySide6 Qt6 dashboard with live scan progress, threat intel browser, and settings management |
-| ⏰ **Scheduled Automation** | Daily scans and hourly intel syncs via APScheduler |
+| Core Module | Description |
+|:---|:---|
+| 🔍 **22-Step Scan Pipeline** | Run sequential multi-tool scans (WhatWeb, Nmap, Nikto, Nuclei, ffuf, SQLMap, etc.) with rate-limiting and system CPU cooldown protection. |
+| 🔑 **Master Password Encryption** | Secure local storage with AES-256 Fernet disk encryption. Plaintext targets and settings are encrypted on shutdown and wiped via random-byte shredding. |
+| 🛡️ **Full Scan Capability** | Secure sudo credential handling to run elevated scanner modules (Nmap OS detection and ICMP Traceroute) via thread-safe input redirection. |
+| ⏱️ **Resilient Queue & Capping** | Dynamic 180s scanner timeouts prevent stalls. Slow scanner steps are deferred to a Retry Queue and executed with scaled limits. |
+| 🗄️ **240k+ Vulnerability DB** | Real-time local synchronisation with NVD (NIST), CISA Known Exploited Vulnerabilities (KEV), and GitHub Advisories. |
+| 📊 **Exploit Probability Scoring** | EPSS database correlation provides exploit probability metrics to help prioritize remediation. |
+| 📄 **15-Section Reports** | Automated generation of structured PDF and HTML reports compiling open ports, vulnerabilities, TLS profiles, and recommendations. |
+| 📧 **SMTP Routing & Failover** | Instant email notifications for technology changes and critical findings. Automatically routes alerts to a backup SMTP relay if the primary host fails. |
+
+---
+
+## 🔄 Sequential Scan Pipeline Flow
+
+SMP executes scanning tools sequentially to minimize bandwidth spikes, prevent network blocks, and respect server resource limits:
+
+```
+[Target URL Check] ➔ HTTPx ➔ WhatWeb ➔ Subdomain Discovery (Subfinder / CRT.sh) 
+   ➔ DNS Recon (HackerTarget) ➔ Whois ➔ Wayback URL Mapping ➔ Network Traceroute 
+   ➔ Port Scan (Nmap) ➔ SSL/TLS Cryptography Analysis (SSLyze) ➔ Security Headers 
+   ➔ Robots.txt Scanner ➔ CORS Configuration Audits ➔ CMS Theme/Plugin Scanner 
+   ➔ CGI Audits (Nikto) ➔ Template Vulnerabilities (Nuclei) ➔ Directory Fuzzing (ffuf) 
+   ➔ Open Redirects ➔ Web App Vulnerabilities (Wapiti) ➔ SQL Injection (SQLMap) 
+   ➔ IoT exposure check (Shodan) ➔ CVE Correlation ➔ Risk Scoring ➔ Report Generation
+```
 
 ---
 
 ## 🚀 Quick Start
 
-### Linux / Ubuntu
+### 1. Pre-installation Requirements
+* **OS**: Linux Ubuntu 20.04 LTS (or newer) / Windows 10 & 11
+* **Python**: Version 3.11 or newer
+* **System Packages**: `sudo` access required for installing network tools (`nmap`, `nikto`, `whatweb`, `traceroute`).
 
+### 2. Linux Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/SecurityManagementPlatform.git
+git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# One-time setup (fully automatic — downloads Go, installs all tools)
+# Run the automated installer (installs Go, python venv, system utilities, and configures binary permissions)
 bash setup.sh
 
-# Configure your settings (see Configuration section below)
-cp config/settings.example.json config/settings.json
-# Edit config/settings.json with your SMTP credentials and preferences
-
-# Copy the public license key to local config folder
+# Copy the public license template to local config folder (Mandatory to authenticate execution)
 cp license/license.key config/license.key
 
-# Launch the application
+# Copy the settings configuration file and configure SMTP/receiver preferences
+cp config/settings.example.json config/settings.json
+
+# Launch the platform
 bash run.sh
 ```
 
-### Windows
-
+### 3. Windows Setup
+Run PowerShell or Command Prompt as **Administrator**:
 ```bat
-:: Run PowerShell or CMD as Administrator
-setup.ps1      :: or: setup.bat
+setup.ps1      :: run powershell setup
+:: or
+setup.bat      :: run batch setup
+
+:: Launch the app
 run.bat
 ```
 
-> **Note:** `setup.sh` is fully automatic. It downloads Go, installs all Python packages, system tools (nmap, nikto, whatweb), and pre-built binaries for nuclei/subfinder/httpx/ffuf. No manual steps required.
+---
+
+## 🗂️ Project Architecture Directory Layout
+
+```
+SecurityManagementPlatform/
+├── main.py                    # Application entrypoint, license validation, and signal intercept
+├── setup.sh / setup.bat       # Automated environment install scripts
+├── run.sh / run.bat           # Run scripts setting system PATH configurations
+├── requirements.txt           # Virtual environment requirements
+├── USER_GUIDE.md              # Public User Reference Manual
+├── way.md                     # Private reference log (gitignored — local developer only)
+│
+├── license/
+│   └── license.key            # Public cryptographic license validation hash reference
+│
+├── config/
+│   ├── settings.example.json  # Settings template config
+│   ├── settings.json          # Runtime target configuration (gitignored — never commit)
+│   └── license.key            # Active execution license key (gitignored — never commit)
+│
+├── scanners/                  # 22-step individual scanning modules
+├── intelligence/              # CVE, CISA KEV, and EPSS feed integrations
+├── tools/                     # DB managers, report generators, email managers, and encryption routines
+└── ui/                        # PySide6 Qt6 Light Fusion Apple-style UI dashboard
+```
 
 ---
 
-## 📋 Requirements
+## ⚙️ Configuration Setup
 
-### System
-- Ubuntu Linux 20.04+ or Windows 10/11
-- Python 3.11+
-- Internet access (for CVE database sync and Go tool downloads)
-
-### Python Packages (auto-installed by setup.sh)
-```
-PySide6          APScheduler>=3.10.0    requests>=2.31.0
-reportlab>=4.0.0 sslyze>=5.2.0         sqlmap
-wapiti3          python-owasp-zap-v2.4
-```
-
-### External Tools (auto-installed by setup.sh on Linux)
-| Tool | Method | Purpose |
-|------|--------|---------|
-| nmap | apt | Port scanning |
-| nikto | apt | Web vulnerability scanning |
-| whatweb | apt | Technology fingerprinting |
-| traceroute | apt | Network path discovery |
-| nuclei | Go / pre-built binary | Template-based CVE scanning |
-| subfinder | Go / pre-built binary | Subdomain discovery |
-| httpx | Go / pre-built binary | HTTP probing |
-| ffuf | Go / pre-built binary | Directory fuzzing |
-| sqlmap | pip | SQL injection detection |
-| wapiti3 | pip | Web app vulnerability scanning |
-
----
-
-## ⚙️ Configuration
-
-Copy the example settings file and fill in your values:
-
+Copy the template configuration file:
 ```bash
 cp config/settings.example.json config/settings.json
 ```
-
-Edit `config/settings.json`:
-
+Edit the file to configure your target alerts parameters:
 ```json
 {
     "smtp_host": "smtp.gmail.com",
@@ -116,119 +135,48 @@ Edit `config/settings.json`:
     "smtp_user": "your-email@gmail.com",
     "smtp_pass": "your-16-char-app-password",
     "smtp_receiver": "alerts@yourdomain.com",
-    "tester_name": "Your Name",
+    "tester_name": "Your Auditor Name",
     "scan_schedule_hour": 2,
     "intel_sync_interval_hours": 1
 }
 ```
-
-> **Gmail users:** `smtp_pass` must be a **16-character App Password**, not your regular Gmail password.
-> Generate one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) after enabling 2-Step Verification.
-
----
-
-## 🔄 Scan Pipeline
-
-All tools run **sequentially** (one at a time) to avoid IDS triggers and target rate-limiting:
-
-```
-Traceroute → HTTPx → WhatWeb → Subfinder → Nmap →
-SSL Scan → Nikto → Nuclei → ffuf → Wapiti → SQLMap →
-CVE Correlator → Risk Scorer → Report Generator → SMTP Alerts
-```
+> [!NOTE]
+> **Gmail Configuration**: You must enable 2-Step Verification and generate a **16-character App Password** (accessible via [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)) to populate the `smtp_pass` field.
 
 ---
 
-## 📄 Report Structure (15 Sections)
+## 🔄 Disaster Recovery & System Resets
 
-Generated automatically as both HTML (dark theme) and PDF after every scan:
+If you need to restore the platform, wipe configurations, or clean up scanning histories, refer to the following reset parameters:
 
-1. Cover Page with live metrics
-2. Table of Contents
-3. Executive Summary (severity breakdown)
-4. Scope & Authorization Statement
-5. Scan Methodology & Tool Pipeline
-6. Network Reconnaissance (Traceroute)
-7. Open Ports & Services (Nmap)
-8. SSL/TLS Certificate Analysis
-9. Technology Stack Identified
-10. Directory & File Discovery (ffuf)
-11. Web Vulnerability Findings (Nuclei / Nikto)
-12. Injection & Active Tests (Wapiti / SQLMap)
-13. CVE Correlation & Threat Intelligence Matches
-14. Risk Score & Scoring Breakdown
-15. Security Recommendations
-16. References & Citations (NVD, CISA, GitHub)
-17. Historical Comparison & Timeline
+* **Reset Master Password & Database (Fresh Database)**:
+  Wipes all scanned targets, findings, and logs:
+  ```bash
+  rm -f config/auth.json database/security.db* backup/*.db*
+  ```
+* **Reset User Settings**:
+  ```bash
+  rm -f config/settings.json && cp config/settings.example.json config/settings.json
+  ```
+* **Clear Scanning Logs & Cached Feeds**:
+  ```bash
+  rm -rf logs/* && rm -f cache/intel_cache.json
+  ```
+* **Clear Output HTML & PDF Reports**:
+  ```bash
+  rm -rf reports/html/* reports/pdf/*
+  ```
+* **Complete Factory Reset (Restore Post-Clone State)**:
+  ```bash
+  rm -rf config/auth.json config/settings.json config/license.key database/* backup/* logs/* cache/* reports/html/* reports/pdf/*
+  ```
+  *(Remember to manually copy `license/license.key` back to `config/license.key` after running a factory reset.)*
 
----
-
-## 🗄️ Threat Intelligence
-
-The platform maintains a local SQLite database continuously synced from:
-
-| Source | Volume | Sync Mode |
-|--------|--------|-----------|
-| **NVD (NIST)** | 240,000+ CVEs | Full paginated on first run; 30-day incremental after |
-| **CISA KEV** | ~1,600 entries | Full catalog every sync |
-| **GitHub Advisories** | Thousands | All pages via Link-header pagination |
-| **EPSS** | Per-CVE scores | Enriches existing CVE records |
-
-> **First sync note:** NVD full download takes 20–40 minutes due to the API's mandatory 6-second inter-request delay. Subsequent syncs (30-day window) complete in seconds.
+Detailed reset instructions and log explanations can be found in the [USER_GUIDE.md](file:///home/dxt/Downloads/SecurityManagementPlatform-main/USER_GUIDE.md).
 
 ---
 
-## 🗂️ Project Structure
-
-```
-SecurityManagementPlatform/
-├── main.py                    # Entry point
-├── setup.sh / setup.bat       # One-click installers
-├── run.sh / run.bat           # Launchers
-├── requirements.txt           # Python dependencies
-├── way.md                     # Developer reference log (gitignored — personal only)
-│
-├── license/
-│   └── license.key            # Public license signature file
-│
-├── config/
-│   ├── settings.example.json  # ← Copy to settings.json and fill in your details
-│   ├── settings.json          # Runtime settings config (gitignored — never commit)
-│   └── license.key            # Local active license key (gitignored — never commit)
-│
-├── scanners/                  # Individual tool wrapper modules
-├── intelligence/              # CVE feed sync modules
-├── tools/                     # Core utilities (DB, alerts, reports, scheduler)
-└── ui/                        # PySide6 GUI dashboard
-```
-
----
-
-## 🔐 Security & Privacy
-
-- `config/settings.json` is in `.gitignore` — your credentials **never** leave your machine
-- `config/license.key` is in `.gitignore` — your local active license files are never committed
-- The SQLite databases (`database/security.db` and backup databases) are stored local-only and fully encrypted on disk using AES-256 Fernet encryption, requiring your Master Password to decrypt at runtime.
-- All logs and generated reports are gitignored
-- No telemetry, no analytics, no external data sharing
-
----
-
-## ⚖️ Legal Notice
-
-> This software is **proprietary**. All rights reserved.
->
-> - Authorised use only — scan only systems you own or have explicit written permission to test
-> - Unauthorised security testing is illegal in most jurisdictions
-> - The owner accepts no liability for misuse, damage, or legal consequences arising from use of this software
-> - All source files contain a proprietary notice header — see `way.md` for full terms
-
----
-
-## 📚 References
-
-- [CISA Known Exploited Vulnerabilities](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
-- [NVD — National Vulnerability Database](https://nvd.nist.gov)
-- [GitHub Security Advisories](https://github.com/advisories)
-- [OWASP Top 10](https://owasp.org/Top10)
-- [ProjectDiscovery Nuclei](https://nuclei.projectdiscovery.io)
+## ⚖️ Legal & Copyright License
+* **Proprietary Software** — All rights reserved by **mrQhere**.
+* Access and execution are restricted to licensed administrators only.
+* Unauthorised redistribution, reverse engineering, or modification is prohibited. See [USER_GUIDE.md](file:///home/dxt/Downloads/SecurityManagementPlatform-main/USER_GUIDE.md) for licensing terms.

@@ -1,7 +1,7 @@
 # Security Management Platform (SMP) — User Guide & Reference Manual
 
 **Author:** mrQhere  
-**Version:** 2.0 (Stable Release)  
+**Version:** V3.1 (Stable Release)  
 **Security Status:** Protected under Cryptographic License Signature Verification
 
 ---
@@ -26,6 +26,10 @@ Any modification or deletion of the licensing validation triggers a system secur
 6. [F. SMTP Alert Engine & Failover Routing](#f-smtp-alert-engine--failover-routing)
 7. [G. Security Audits & Logs Interpretation](#g-security-audits-&-logs-interpretation)
 8. [H. Database Backups & Data Portability](#h-database-backups-&-data-portability)
+9. [I. Security Locks & Scanner Capabilities](#i-security-locks-&-scanner-capabilities)
+10. [J. Disaster Recovery & Complete System Resets](#j-disaster-recovery-&-complete-system-resets)
+
+---
 
 ---
 
@@ -235,18 +239,14 @@ To prevent the scan queue from stalling indefinitely on slower targets:
 
 ---
 
-### License Verification Setup
-For user awareness and license key security:
-* A public copy of the valid license key is provided in the [license.key](file:///home/dxt/Downloads/SecurityManagementPlatform-main/license/license.key) file within the `license/` folder.
-* To authenticate the platform for execution, you must manually copy this file into the gitignored config directory as `config/license.key`.
-* Running the platform without copying the license key will trigger a security halt and exit on launch.
+## J. Disaster Recovery & Complete System Resets
 
----
+If you encounter system corruptions, lose passwords, or need to restore the platform to a clean slate, follow these reset procedures:
 
-### Resetting the Master Password (Starting Fresh)
+### 1. Resetting the Master Password (Fresh Database Setup)
 If you forget your Master Password, you will be locked out of the encrypted databases and configurations. Since the databases are securely encrypted using your password, recovery is not cryptographically possible. 
 
-To reset the platform and start fresh:
+To wipe target databases and start fresh:
 1. Delete the authentication configuration and encrypted databases:
    ```bash
    rm -f config/auth.json database/security.db* backup/*.db*
@@ -256,3 +256,48 @@ To reset the platform and start fresh:
    ./run.sh
    ```
 3. You will be prompted to configure a new Master Password upon startup.
+
+### 2. Resetting User Configurations & Settings
+If you want to clear SMTP passwords, custom tool paths, or scheduler configurations:
+```bash
+# Delete local configuration settings
+rm -f config/settings.json
+# Restore the settings template
+cp config/settings.example.json config/settings.json
+```
+
+### 3. Resetting Threat Intelligence & CVE Cache
+If you want to force a full re-download and sync of NVD, CISA, and GitHub Advisories:
+```bash
+# Delete cached EPSS / intelligence cache files
+rm -f cache/intel_cache.json
+```
+
+### 4. Cleaning All Audit Logs & Scan Logs
+To flush the terminal views and start with blank log displays:
+```bash
+# Clear all logs
+rm -rf logs/*
+```
+
+### 5. Cleaning Generated PDF & HTML Reports
+To delete all previously generated report files:
+```bash
+# Remove all reports
+rm -rf reports/html/* reports/pdf/*
+```
+
+### 6. Full Factory Reset (All-in-One Command)
+To revert the entire application directory to its pristine post-cloned state (wiping all local configurations, logs, databases, cache, and reports):
+```bash
+rm -rf config/auth.json config/settings.json config/license.key database/* backup/* logs/* cache/* reports/html/* reports/pdf/*
+```
+*Note: Make sure to copy `license/license.key` into `config/license.key` manually after resetting to enable startup.*
+
+---
+
+### License Verification Setup
+For user awareness and license key security:
+* A public copy of the valid license key is provided in the [license.key](file:///home/dxt/Downloads/SecurityManagementPlatform-main/license/license.key) file within the `license/` folder.
+* To authenticate the platform for execution, you must manually copy this file into the gitignored config directory as `config/license.key`.
+* Running the platform without copying the license key will trigger a security halt and exit on launch.
