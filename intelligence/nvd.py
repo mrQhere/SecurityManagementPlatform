@@ -222,13 +222,13 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
         if not cve_id:
             continue
 
-        # Reject entries older than 2020 (fast-skip)
+        # Reject entries older than 2015 (fast-skip)
         if cve_id.startswith("CVE-"):
             parts = cve_id.split("-")
             if len(parts) >= 2:
                 try:
                     year = int(parts[1])
-                    if year < 2020:
+                    if year < 2015:
                         continue
                 except ValueError:
                     pass
@@ -237,7 +237,7 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
         if pub_date:
             try:
                 year = int(pub_date[:4])
-                if year < 2020:
+                if year < 2015:
                     continue
             except ValueError:
                 pass

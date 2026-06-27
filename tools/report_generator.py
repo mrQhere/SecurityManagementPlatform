@@ -15,8 +15,9 @@ Structure:
 """
 import os
 import json
-import html as _html_module
 import logging
+import hashlib
+import html as _html_module
 from datetime import datetime
 from tools.config_manager import BASE_DIR, init_directories, load_settings
 
@@ -333,15 +334,16 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     pdf_path  = os.path.join(BASE_DIR, "reports", "pdf",
                              f"VAPT_Report_{safe_name}_{timestamp}.pdf")
 
-    from tools.db_manager import get_scan, get_technologies_for_scan, get_risk_score
+    from tools.db_manager import get_scan, get_technologies_for_scan, get_risk_score, get_scan_trend_deltas
     scan_rec     = get_scan(scan_id)
     scanned_by   = (scan_rec.get("scanned_by") if scan_rec else None) or \
                    load_settings().get("tester_name", "Security Auditor")
     technologies = get_technologies_for_scan(scan_id)
     risk_data    = get_risk_score(scan_id)
+    trend_deltas = get_scan_trend_deltas(url, scan_id)
 
     ctx = _build_context(scan_id, target, current_findings, previous_scan,
-                         scanned_by, technologies, risk_data)
+                         scanned_by, technologies, risk_data, trend_deltas)
 
     # HTML fallback (lightweight)
     try:
@@ -356,6 +358,21 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
         try:
             _generate_vapt_pdf(pdf_path, ctx)
             logger.info(f"VAPT PDF report generated: {pdf_path}")
+            
+            # Digitally verify and hash the PDF
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            file_hash = hashlib.sha256(pdf_bytes).hexdigest()
+            
+            # Save the hash to the database for future verification
+            from tools.db_manager import save_report_hash
+            save_report_hash(scan_id, file_hash)
+            
+            signed_pdf_path = os.path.join(BASE_DIR, "reports", "pdf", f"VAPT_Report_{safe_name}_{timestamp}_{file_hash[:8]}.pdf")
+            os.rename(pdf_path, signed_pdf_path)
+            pdf_path = signed_pdf_path
+            logger.info(f"PDF Digitally Signed: {pdf_path}")
+            
         except Exception as e:
             logger.error(f"PDF report failed: {e}", exc_info=True)
             pdf_path = None
@@ -369,7 +386,7 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
 # ── Context builder ───────────────────────────────────────────────────────────
 
 def _build_context(scan_id, target, findings, previous_scan,
-                   scanned_by, technologies, risk_data):
+                   scanned_by, technologies, risk_data, trend_deltas):
     url       = target["url"]
     scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     settings  = load_settings()
@@ -408,6 +425,7 @@ def _build_context(scan_id, target, findings, previous_scan,
             counts[s] += 1
 
     return dict(
+        target=target,
         url=url, scan_time=scan_time, scanned_by=scanned_by,
         doc_version="1.0", doc_status="Final",
         findings=findings, nmap=nmap, nuclei=nuclei, nikto=nikto,
@@ -421,6 +439,7 @@ def _build_context(scan_id, target, findings, previous_scan,
         previous_scan=previous_scan, counts=counts,
         total=len(findings),
         settings=settings,
+        trend_deltas=trend_deltas,
     )
 
 
@@ -466,15 +485,21 @@ def _generate_vapt_pdf(filepath, ctx):
     ]
 
     # Cover metadata grid
+    company_name = c["target"].get("company_name") or "Unknown Company"
+    submitted_to = c["target"].get("submitted_to") or "Internal Security Team"
+    
     cover_meta = [
         ("Document Title",      "Vulnerability Assessment and Penetration Testing (VAPT) Final Report"),
         ("Target Application",   c["url"]),
+        ("Target Company",       company_name),
+        ("Submitted To",         submitted_to),
         ("Date of Issuance",     c["scan_time"][:10]),
         ("Document Version",     c["doc_version"]),
         ("Document Status",      c["doc_status"]),
         ("Lead Penetration Tester", c["scanned_by"]),
         ("QA Reviewer",          c["settings"].get("qa_reviewer", "QA Manager")),
         ("Data Classification",  "CONFIDENTIAL — INTERNAL USE ONLY"),
+        ("Verification Status",  "DIGITALLY VERIFIED (SHA-256 Hash Attached to Filename)"),
     ]
     story.append(_kv_table(cover_meta, st, col_w=[BW * 0.35, BW * 0.65]))
     story += [_spacer(20)]
@@ -563,7 +588,20 @@ def _generate_vapt_pdf(filepath, ctx):
         )
 
     story.append(Paragraph(posture_stmt, st["exec_narrative"]))
-    story.append(_spacer(10))
+    story.append(_spacer(12))
+
+    # Historical Trend Analysis
+    if c.get("trend_deltas") and c["trend_deltas"].get("previous_scan_id"):
+        story.append(Paragraph("Historical Scan Trend Analysis", st["h3"]))
+        td = c["trend_deltas"]
+        trend_text = (
+            f"Compared to the previous assessment (Scan ID: {td['previous_scan_id']}), the following changes were observed:<br/><br/>"
+            f"<b><font color='{_P['crit']}'>[+] New Findings:</font></b> {td['new']}<br/>"
+            f"<b><font color='{_P['green']}'>[-] Resolved Findings:</font></b> {td['resolved']}<br/>"
+            f"<b><font color='{_P['med']}'>[=] Persisting Findings:</font></b> {td['persisting']}"
+        )
+        story.append(Paragraph(trend_text, st["body"]))
+        story.append(_spacer(12))
 
     # Risk Metric Dashboard — severity counts table
     story.append(Paragraph("Risk Metric Dashboard", st["h3"]))
@@ -768,6 +806,7 @@ def _generate_vapt_pdf(filepath, ctx):
             # ── Taxonomy Mappings ─────────────────────────────────────────
             story.append(Paragraph("Taxonomy Mappings", st["h4"]))
             story.append(_kv_table([
+                ("MITRE ATT&CK",    f.get('mitre_id', 'Unknown')),
                 ("CVE",             "See CVE Correlation section for matched CVEs"),
                 ("CWE",             _get_cwe_hint(tool, sev)),
                 ("OWASP Category",  _get_owasp_hint(tool)),

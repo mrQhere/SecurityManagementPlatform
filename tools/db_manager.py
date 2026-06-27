@@ -29,10 +29,14 @@ import sqlite3
 import shutil
 import time
 import zipfile
+import logging
 from datetime import datetime
+from pathlib import Path
 from tools.config_manager import BASE_DIR, init_directories
+from intelligence.mitre_mapper import enrich_finding_with_mitre
 
 DB_PATH = os.path.join(BASE_DIR, "database", "security.db")
+ANALYTICS_DB_PATH = os.path.join(BASE_DIR, "database", "analytics.db")
 BACKUP_DIR = os.path.join(BASE_DIR, "backup")
 
 # ── All active scan step statuses (complete list for pipeline tracking) ────────
@@ -88,7 +92,9 @@ def _initialize_db_schema(conn):
             url TEXT UNIQUE NOT NULL,
             status TEXT NOT NULL DEFAULT 'Enabled',
             added_date TEXT NOT NULL,
-            last_scan TEXT
+            last_scan TEXT,
+            company_name TEXT,
+            submitted_to TEXT
         );
     """)
 
@@ -102,6 +108,7 @@ def _initialize_db_schema(conn):
             status TEXT NOT NULL,
             scanned_by TEXT,
             scanner_status TEXT,
+            report_hash TEXT,
             FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE
         );
     """)
@@ -110,6 +117,7 @@ def _initialize_db_schema(conn):
     for col, definition in [
         ("scanned_by", "TEXT"),
         ("scanner_status", "TEXT"),
+        ("report_hash", "TEXT"),
     ]:
         try:
             cursor.execute(f"SELECT {col} FROM scans LIMIT 1")
@@ -126,6 +134,7 @@ def _initialize_db_schema(conn):
             description TEXT,
             source_tool TEXT NOT NULL,
             confidence INTEGER DEFAULT 50,
+            mitre_id TEXT DEFAULT 'Unknown',
             FOREIGN KEY (scan_id) REFERENCES scans(id) ON DELETE CASCADE
         );
     """)
@@ -133,6 +142,34 @@ def _initialize_db_schema(conn):
         cursor.execute("SELECT confidence FROM findings LIMIT 1")
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
+
+    # V4.0 seamless upgrade: Add company_name and submitted_to to targets
+    try:
+        cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
+        cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Seamless upgrade: Add mitre_id to findings
+    try:
+        cursor.execute("ALTER TABLE findings ADD COLUMN mitre_id TEXT DEFAULT 'Unknown'")
+    except sqlite3.OperationalError:
+        pass
+
+    # ── Initialize Analytics DB ────────────────────────────────────────────────
+    analytics_conn = sqlite3.connect(ANALYTICS_DB_PATH)
+    analytics_cursor = analytics_conn.cursor()
+    
+    analytics_cursor.execute("""
+        CREATE TABLE IF NOT EXISTS threat_intel (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source TEXT NOT NULL,
+            data TEXT NOT NULL,
+            recorded_at TEXT NOT NULL
+        );
+    """)
+    analytics_conn.commit()
+    analytics_conn.close()
 
     # alerts table
     cursor.execute("""
@@ -296,9 +333,9 @@ def init_db():
     except Exception:
         pass
 
-    # Pre-2018 CVEs cleanup migration
+    # Pre-2015 CVEs cleanup migration
     try:
-        conn.execute("DELETE FROM cves WHERE cve LIKE 'CVE-%' AND CAST(SUBSTR(cve, 5, 4) AS INTEGER) < 2018")
+        conn.execute("DELETE FROM cves WHERE cve LIKE 'CVE-%' AND CAST(SUBSTR(cve, 5, 4) AS INTEGER) < 2015")
     except Exception:
         pass
 
@@ -402,7 +439,7 @@ def _init_backup_databases():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS scans_backup (
             id INTEGER, target_id INTEGER, target_url TEXT, start_time TEXT,
-            end_time TEXT, status TEXT, scanned_by TEXT, backed_up_at TEXT NOT NULL
+            end_time TEXT, status TEXT, scanned_by TEXT, report_hash TEXT, backed_up_at TEXT NOT NULL
         );
     """)
     # Findings mirror
@@ -458,14 +495,14 @@ def _init_backup_databases():
 
 # ----------------- Target Management -----------------
 
-def add_target(url):
+def add_target(url, company_name=None, submitted_to=None):
     """Add a target URL to the database."""
     conn = get_db_connection()
     try:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn.execute(
-            "INSERT INTO targets (url, status, added_date) VALUES (?, ?, ?)",
-            (url.strip(), "Enabled", now)
+            "INSERT INTO targets (url, status, added_date, company_name, submitted_to) VALUES (?, ?, ?, ?, ?)",
+            (url.strip(), "Enabled", now, company_name, submitted_to)
         )
         conn.commit()
         return True
@@ -588,6 +625,23 @@ def update_scan_scanner_status(scan_id, scanner_status_json):
     finally:
         conn.close()
 
+def save_report_hash(scan_id, report_hash):
+    """Save the generated report's SHASUM in the scans table."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE scans SET report_hash = ? WHERE id = ?",
+            (report_hash, scan_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger("smp").error(f"Failed to save report hash: {e}")
+        return False
+    finally:
+        conn.close()
+
 
 def get_scans(limit=50):
     """Retrieve all scans."""
@@ -626,9 +680,12 @@ def get_scans_for_target(target_id, limit=10):
 
 # ----------------- Findings Management -----------------
 
-def add_finding(scan_id, severity, title, description, source_tool, confidence=50):
+def add_finding(scan_id, severity, title, description, source_tool, confidence=50, mitre_id="Unknown"):
     """Insert a scan finding. Prevents duplicates for the same scan, title and source tool."""
     conn = get_db_connection()
+    if mitre_id == "Unknown":
+        mitre_id = enrich_finding_with_mitre(title)
+
     try:
         # Check for duplicate finding
         existing = conn.execute(
@@ -639,8 +696,8 @@ def add_finding(scan_id, severity, title, description, source_tool, confidence=5
             return False
 
         conn.execute(
-            "INSERT INTO findings (scan_id, severity, title, description, source_tool, confidence) VALUES (?, ?, ?, ?, ?, ?)",
-            (scan_id, severity, title, description, source_tool, confidence)
+            "INSERT INTO findings (scan_id, severity, title, description, source_tool, confidence, mitre_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (scan_id, severity, title, description, source_tool, confidence, mitre_id)
         )
         conn.commit()
         return True
@@ -712,20 +769,20 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None,
     Add or update a CVE entry with enhanced metadata.
     Returns True if genuinely new, False if updated/replaced.
     """
-    # Reject entries older than 2018
+    # Reject entries older than 2015
     if cve.startswith("CVE-"):
         parts = cve.split("-")
         if len(parts) >= 2:
             try:
                 year = int(parts[1])
-                if year < 2018:
+                if year < 2015:
                     return False
             except ValueError:
                 pass
     if published_date:
         try:
             year = int(published_date[:4])
-            if year < 2018:
+            if year < 2015:
                 return False
         except ValueError:
             pass
@@ -1436,8 +1493,44 @@ def restore_from_backup():
         
         conn.commit()
         conn.close()
-        return True, "Restored successfully from full backup."
+        return True
     except Exception as e:
-        logger.error(f"Restore failed: {e}")
-        return False, str(e)
+        logger.error(f"Failed to restore DB snapshot: {e}")
+        return False
 
+# ----------------- Trend Analysis -----------------
+
+def get_scan_trend_deltas(target_url, current_scan_id):
+    """
+    Compares the current scan's findings against the previous scan for the same target.
+    Returns metrics on new vs resolved findings.
+    """
+    conn = get_db_connection()
+    try:
+        # Get the previous scan id for this target
+        prev_scan = conn.execute(
+            "SELECT id FROM scans WHERE target_url = ? AND id < ? AND status = 'Completed' ORDER BY id DESC LIMIT 1",
+            (target_url, current_scan_id)
+        ).fetchone()
+        
+        if not prev_scan:
+            return {"new": 0, "resolved": 0, "persisting": 0, "previous_scan_id": None}
+            
+        prev_scan_id = prev_scan["id"]
+        
+        # Get finding titles
+        curr_titles = set(r["title"] for r in conn.execute("SELECT title FROM findings WHERE scan_id = ?", (current_scan_id,)).fetchall())
+        prev_titles = set(r["title"] for r in conn.execute("SELECT title FROM findings WHERE scan_id = ?", (prev_scan_id,)).fetchall())
+        
+        new_findings = len(curr_titles - prev_titles)
+        resolved_findings = len(prev_titles - curr_titles)
+        persisting_findings = len(curr_titles.intersection(prev_titles))
+        
+        return {
+            "new": new_findings,
+            "resolved": resolved_findings,
+            "persisting": persisting_findings,
+            "previous_scan_id": prev_scan_id
+        }
+    finally:
+        conn.close()

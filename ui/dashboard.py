@@ -663,7 +663,7 @@ class DashboardWindow(QMainWindow):
         layout.addStretch()
 
         # Version label
-        ver = QLabel("v3.5 Stable • SMP Console")
+        ver = QLabel("V4.7 • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -778,6 +778,8 @@ class DashboardWindow(QMainWindow):
         # Add target card
         add_card = self._make_card("Add New Target")
         add_layout = add_card.layout()
+        
+        # Row 1: Target URL
         add_row = QHBoxLayout()
         self.txt_url = QLineEdit()
         self.txt_url.setPlaceholderText("https://example.com  —  domain or IP address")
@@ -786,7 +788,18 @@ class DashboardWindow(QMainWindow):
         btn_add.clicked.connect(self.add_new_target)
         add_row.addWidget(self.txt_url, 1)
         add_row.addWidget(btn_add)
+        
+        # Row 2: Company Info for Report
+        company_row = QHBoxLayout()
+        self.txt_company_name = QLineEdit()
+        self.txt_company_name.setPlaceholderText("Target Company Name (for Report)")
+        self.txt_submitted_to = QLineEdit()
+        self.txt_submitted_to.setPlaceholderText("Submitted To (Recipient Name)")
+        company_row.addWidget(self.txt_company_name)
+        company_row.addWidget(self.txt_submitted_to)
+        
         add_layout.addLayout(add_row)
+        add_layout.addLayout(company_row)
         layout.addWidget(add_card)
 
         # Targets table card
@@ -989,10 +1002,43 @@ class DashboardWindow(QMainWindow):
         self.txt_tester_name.setPlaceholderText("e.g. John Doe (Security Auditor)")
         make_report_field("Tester / Operator Name", self.txt_tester_name)
 
+        self.txt_report_email = QLineEdit()
+        self.txt_report_email.setPlaceholderText("e.g. security@company.com (For auto-sending reports)")
+        make_report_field("Report Email Address", self.txt_report_email)
+
         self.btn_check_tools = QPushButton("Check Dependencies & Tools")
         self.btn_check_tools.setObjectName("btn_secondary")
         self.btn_check_tools.clicked.connect(self.check_tools_dependencies)
         report_layout.addWidget(self.btn_check_tools)
+
+        # ── SHASUM Validator Widget ──
+        class DropLabel(QLabel):
+            def __init__(self, parent=None):
+                super().__init__("Drag & Drop Report PDF here to verify SHASUM", parent)
+                self.setAlignment(Qt.AlignCenter)
+                self.setStyleSheet("border: 2px dashed #444444; color: #888888; border-radius: 8px; font-weight: bold; background-color: #1A1A1A;")
+                self.setMinimumHeight(60)
+                self.setAcceptDrops(True)
+                self.parent_dashboard = None
+
+            def dragEnterEvent(self, event):
+                if event.mimeData().hasUrls():
+                    event.accept()
+                else:
+                    event.ignore()
+
+            def dropEvent(self, event):
+                urls = event.mimeData().urls()
+                if urls and self.parent_dashboard:
+                    file_path = urls[0].toLocalFile()
+                    self.parent_dashboard.verify_shasum(file_path)
+
+        self.shasum_drop = DropLabel(self)
+        self.shasum_drop.parent_dashboard = self
+        report_layout.addSpacing(10)
+        report_layout.addWidget(QLabel("<b style='color: #DDDDDD;'>Report Integrity Verification</b>"))
+        report_layout.addWidget(self.shasum_drop)
+        
         scroll_layout.addWidget(report_card)
 
         # ── ZAP Group ──
@@ -1033,6 +1079,30 @@ class DashboardWindow(QMainWindow):
         backup_btn_row.addWidget(self.btn_download_backup)
         backup_layout.addLayout(backup_btn_row)
         scroll_layout.addWidget(backup_card)
+
+        # ── Danger Zone ──
+        danger_card = self._make_card("Danger Zone")
+        danger_layout = danger_card.layout()
+
+        danger_desc = QLabel(
+            "<b>Warning:</b> Destructive actions. Proceed with caution."
+        )
+        danger_desc.setStyleSheet("color: #ef4444; font-size: 13px; padding-bottom: 5px;")
+        danger_layout.addWidget(danger_desc)
+
+        danger_btn_row = QHBoxLayout()
+        self.btn_reset_default = QPushButton("Reset to Default")
+        self.btn_reset_default.setStyleSheet("background-color: #3b2818; color: #f97316; border: 1px solid #9a3412; font-weight: bold;")
+        self.btn_reset_default.clicked.connect(self.reset_to_default)
+        
+        self.btn_full_reset = QPushButton("Full Reset")
+        self.btn_full_reset.setStyleSheet("background-color: #450a0a; color: #ef4444; border: 1px solid #7f1d1d; font-weight: bold;")
+        self.btn_full_reset.clicked.connect(self.full_reset)
+        
+        danger_btn_row.addWidget(self.btn_reset_default)
+        danger_btn_row.addWidget(self.btn_full_reset)
+        danger_layout.addLayout(danger_btn_row)
+        scroll_layout.addWidget(danger_card)
 
         scroll_layout.addStretch()
         scroll_area.setWidget(scroll_content)
@@ -1361,6 +1431,7 @@ class DashboardWindow(QMainWindow):
         self.txt_smtp_receiver.setText(settings.get("smtp_receiver", ""))
         self.chk_smtp_ssl.setChecked(settings.get("smtp_ssl", False))
         self.txt_tester_name.setText(settings.get("tester_name", "Security Auditor"))
+        self.txt_report_email.setText(settings.get("report_email", ""))
         self.chk_zap_enabled.setChecked(settings.get("zap_enabled", False))
 
     def save_smtp_settings(self):
@@ -1372,9 +1443,11 @@ class DashboardWindow(QMainWindow):
         receiver = self.txt_smtp_receiver.text().strip()
         ssl_val = self.chk_smtp_ssl.isChecked()
         tester = self.txt_tester_name.text().strip() or "Security Auditor"
+        report_email = self.txt_report_email.text().strip()
 
         current_settings = load_settings()
         current_settings["tester_name"] = tester
+        current_settings["report_email"] = report_email
         current_settings["zap_enabled"] = self.chk_zap_enabled.isChecked()
 
         smtp_configured = True
@@ -1404,18 +1477,96 @@ class DashboardWindow(QMainWindow):
             if smtp_configured:
                 self.lbl_smtp_status.setText("✓  Settings saved successfully.")
                 self.lbl_smtp_status.setStyleSheet("color: #34C759; font-weight: 600; font-size: 13px;")
-                QMessageBox.information(self, "Settings Saved", "System settings saved successfully.")
             else:
                 self.lbl_smtp_status.setText("General settings saved (SMTP disabled).")
                 self.lbl_smtp_status.setStyleSheet("color: #8E8E93; font-style: italic; font-size: 13px;")
-                QMessageBox.information(self, "Settings Saved", "General settings saved. SMTP notifications remain disabled.")
+            QMessageBox.information(self, "Settings Saved", "SMTP, Report, and Scan settings updated.")
+
+    def verify_shasum(self, file_path):
+        try:
+            with open(file_path, "rb") as f:
+                sha256_hash = hashlib.sha256()
+                for byte_block in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(byte_block)
+            file_hash = sha256_hash.hexdigest()
+            
+            # Check against database
+            from tools.db_manager import get_db_connection
+            conn = get_db_connection()
+            row = conn.execute("SELECT id FROM scans WHERE report_hash = ?", (file_hash,)).fetchone()
+            conn.close()
+
+            if row:
+                QMessageBox.information(self, "SHASUM Valid", f"The report is VALID and legitimate.\n\nHash: {file_hash}\nMatched Scan ID: {row['id']}")
+            else:
+                QMessageBox.warning(self, "SHASUM Invalid", f"The report hash does NOT match any known signature in the database.\n\nHash: {file_hash}")
+        except Exception as e:
+            QMessageBox.critical(self, "SHASUM Error", f"Failed to verify file: {e}")
+
+    def reset_to_default(self):
+        reply = QMessageBox.warning(self, "Reset to Default", 
+                                    "This will reset the website scan settings, turn off OWASP ZAP, and delete the cache.\n\nAre you sure you want to continue?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
             try:
-                from tools.alert_engine import _logged_alerts
-                _logged_alerts.clear()
+                from tools.db_manager import get_db_connection
+                conn = get_db_connection()
+                conn.execute("DELETE FROM targets")
+                conn.execute("DELETE FROM scans")
+                conn.execute("DELETE FROM scan_results")
+                conn.commit()
+                conn.close()
+                self.load_targets_table()
+
+                self.chk_zap_enabled.setChecked(False)
+                current_settings = load_settings()
+                current_settings["zap_enabled"] = False
+                save_settings(current_settings)
+
+                import shutil, os
+                from tools.config_manager import BASE_DIR
+                cache_dir = os.path.join(BASE_DIR, "cache")
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                    os.makedirs(cache_dir)
+                
+                QMessageBox.information(self, "Reset Successful", "Settings have been reset to default.")
             except Exception as e:
-                pass
-        else:
-            QMessageBox.critical(self, "Error", "Failed to save settings to database.")
+                QMessageBox.critical(self, "Error", f"Failed to reset: {e}")
+
+    def full_reset(self):
+        reply = QMessageBox.critical(self, "FULL RESET", 
+                                    "WARNING: This will delete ALL data including databases, PDF reports, logs, and reset everything to a first-install state.\n\nThis action CANNOT be undone!\nAre you absolutely sure?",
+                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            try:
+                import shutil, os, sys
+                from tools.config_manager import BASE_DIR
+                
+                sys.path.append(BASE_DIR)
+                import reset_db
+                reset_db.reset_databases()
+
+                reports_dir = os.path.join(BASE_DIR, "reports")
+                if os.path.exists(reports_dir):
+                    shutil.rmtree(reports_dir)
+                os.makedirs(os.path.join(reports_dir, "pdf"))
+                os.makedirs(os.path.join(reports_dir, "html"))
+
+                logs_dir = os.path.join(BASE_DIR, "logs")
+                if os.path.exists(logs_dir):
+                    shutil.rmtree(logs_dir)
+                os.makedirs(logs_dir)
+
+                self.load_targets_table()
+                
+                QMessageBox.information(self, "Full Reset Complete", "The platform has been reset to its factory state.\nPlease restart the application.")
+                sys.exit(0)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to perform full reset: {e}")
+
+    def load_statistics(self):
+        pass
 
     def check_tools_dependencies(self):
         from tools.tool_installer import check_and_install_all

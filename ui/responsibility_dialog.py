@@ -64,6 +64,29 @@ class ResponsibilityDialog(QDialog):
         self.chk_accept = QCheckBox("I have read and accept the responsibility disclaimer.")
         layout.addWidget(self.chk_accept)
 
+        # Privacy policy link
+        self.lbl_policy_link = QLabel('<a href="#" style="color: #2563EB; text-decoration: none;">Read our Privacy Policy & Legal Terms</a>')
+        self.lbl_policy_link.setTextFormat(Qt.RichText)
+        self.lbl_policy_link.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.lbl_policy_link.linkActivated.connect(self._toggle_policy)
+        layout.addWidget(self.lbl_policy_link)
+
+        # Hidden policy text
+        policy_text = (
+            "<b>Privacy Policy & Legal Terms</b><br>"
+            "This software is provided 'as is' without warranty of any kind. "
+            "You use it entirely at your own accord. All generated reports, logs, "
+            "and active scanning activities are the sole responsibility of the operator. "
+            "Ensure you have explicit, written authorization before scanning any network "
+            "or system. Unauthorized access or disruption of systems is illegal and "
+            "punishable by law."
+        )
+        self.lbl_policy_text = QLabel(policy_text)
+        self.lbl_policy_text.setWordWrap(True)
+        self.lbl_policy_text.setStyleSheet("color: #888888; font-size: 11px; background-color: #151515; padding: 10px; border-radius: 4px;")
+        self.lbl_policy_text.hide()
+        layout.addWidget(self.lbl_policy_text)
+
         from datetime import datetime
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.lbl_timestamp = QLabel(f"Confirmation timestamp: {now}")
@@ -75,6 +98,14 @@ class ResponsibilityDialog(QDialog):
         self.btn_ok.clicked.connect(self._on_accept)
         btn_layout.addWidget(self.btn_ok)
         layout.addLayout(btn_layout)
+
+    def _toggle_policy(self, link):
+        if self.lbl_policy_text.isHidden():
+            self.lbl_policy_text.show()
+            self.setFixedSize(500, 350)
+        else:
+            self.lbl_policy_text.hide()
+            self.setFixedSize(500, 250)
 
     def _on_accept(self):
         if not self.chk_accept.isChecked():

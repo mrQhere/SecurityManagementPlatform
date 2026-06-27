@@ -163,18 +163,22 @@ def _run_cmd(cmd, sudo_password=None, timeout=10):
             # Replace -n (non-interactive) with -S (read password from stdin)
             cmd_clean = [c for c in cmd if c != "-n"]
             if "-S" not in cmd_clean:
-                # Insert -S after 'sudo'
+                # Insert -S to read password from stdin
                 cmd_clean = ["sudo", "-S"] + cmd_clean[1:]
+            
             result = subprocess.run(
                 cmd_clean,
                 input=sudo_password + "\n",
-                capture_output=True, text=True, timeout=timeout
+                capture_output=True,
+                text=True,
+                timeout=timeout
             )
+            return result.returncode == 0, result.stderr.strip()
         else:
             result = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=timeout
             )
-        return result.returncode == 0, result.stderr.strip()
+            return result.returncode == 0, result.stderr.strip()
     except Exception as e:
         return False, str(e)
 

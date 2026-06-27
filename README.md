@@ -4,7 +4,7 @@
 
 <p><strong>A Premium, Enterprise-Grade Desktop Security Monitoring & Vulnerability Orchestration Platform</strong></p>
 
-[![Release](https://img.shields.io/badge/Release-V3.4_Stable-blue.svg?style=flat-square&logo=github&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
+[![Release](https://img.shields.io/badge/Release-V4.1_Stable-blue.svg?style=flat-square&logo=github&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6_Qt6-41cd52?style=flat-square&logo=qt&logoColor=white)](https://doc.qt.io/qtforpython/)
 [![Platform](https://img.shields.io/badge/Platform-Linux_|_Windows-lightgrey?style=flat-square&logo=linux&logoColor=white)](https://github.com/mrQhere/SecurityManagementPlatform)
@@ -24,15 +24,18 @@ The **Security Management Platform (SMP)** is an advanced security monitoring or
 
 ---
 
-## ✨ Key Features (V3.4 Stable)
+## ✨ Key Features (V4.1 Stable)
 
 | Core Module | Description |
 |:---|:---|
 | 🔍 **22-Step Scan Pipeline** | Run sequential multi-tool scans (WhatWeb, Nmap, Nikto, Nuclei, ffuf, SQLMap, etc.) with rate-limiting and system CPU cooldown protection. |
+| 🛡️ **Defensive Analytics Engine** | V4.0 introduces Watchdog baseline diffing, Fail2Ban threat intelligence integration, and MITRE ATT&CK technique mapping for enterprise-grade context. |
+| 📈 **Historical Scan Trends** | Report engine dynamically calculates and charts findings deltas (new, resolved, persisting) across historical assessments. |
 | 🔑 **Master Password Encryption** | Secure local storage with AES-256 Fernet disk encryption. Plaintext targets and settings are encrypted on shutdown and wiped via random-byte shredding. |
 | 🛡️ **Full Scan Capability** | Secure sudo credential handling to run elevated scanner modules (Nmap OS detection and ICMP Traceroute) via thread-safe input redirection. |
 | ⏱️ **Resilient Queue & Capping** | Dynamic 180s scanner timeouts prevent stalls. Slow scanner steps are deferred to a Retry Queue and executed with scaled limits. |
-| 💾 **4-Layer Database Redundancy** | Every completed scan instantly syncs to 4 redundant backup databases including a 1:1 `full_backup.db` mirror allowing complete disaster recovery. |
+| 💾 **5-Layer Database Redundancy** | Every completed scan instantly syncs to backup databases, now including an isolated `analytics.db` for threat intel. |
+| 🔒 **Digital PDF Verification** | Generated VAPT PDF reports are digitally verified via an embedded SHA-256 hash in the filename to ensure data integrity. |
 | 🗄️ **240k+ Vulnerability DB** | Real-time local synchronisation with NVD (NIST), CISA Known Exploited Vulnerabilities (KEV), and GitHub Advisories. |
 | 📊 **Exploit Probability Scoring** | EPSS database correlation provides exploit probability metrics to help prioritize remediation. |
 | 📄 **15-Section Reports** | Automated generation of structured PDF and HTML reports compiling open ports, vulnerabilities, TLS profiles, and recommendations. |
@@ -138,7 +141,7 @@ Edit the file to configure your target alerts parameters:
     "smtp_receiver": "alerts@yourdomain.com",
     "tester_name": "Your Auditor Name",
     "scan_schedule_hour": 2,
-    "intel_sync_interval_hours": 1
+    "intel_sync_interval_hours": 24
 }
 ```
 > [!NOTE]

@@ -156,7 +156,7 @@ def test_smtp_connection():
         return False, f"SMTP error: {e}"
 
 
-def send_email_alert(subject, body_text, body_html=None, attachment_path=None):
+def send_email_alert(subject, body_text, body_html=None, attachment_path=None, receiver_override=None):
     """
     Sends an email alert using the SMTP configuration in settings.json.
 
@@ -176,8 +176,11 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None):
     smtp_user    = settings.get("smtp_user", "")
     smtp_pass    = settings.get("smtp_pass", "")
     sender       = settings.get("smtp_sender", "") or smtp_user
-    receiver_raw = settings.get("smtp_receiver", "")
+    receiver_raw = receiver_override or settings.get("smtp_receiver", "")
     receivers    = [r.strip() for r in receiver_raw.split(",") if r.strip()]
+
+    if not all([smtp_host, smtp_user, smtp_pass, receivers]):
+        return False
     smtp_ssl     = settings.get("smtp_ssl", False)
     smtp_servers = [
         {"host": smtp_host, "port": smtp_port, "ssl": smtp_ssl},
@@ -314,12 +317,18 @@ def process_alerts_for_scan(
 
     reportable_findings = [f for f in findings if _is_reportable(f)]
 
-    # ── Only send alert if there are actually reportable High/Critical findings ──
+    # ── Only send alert if there are actually reportable High/Critical findings or if report_email is set ──
+    from tools.config_manager import load_settings
+    report_email = load_settings().get("report_email", "")
+
     has_serious = any(f.get("severity") in ("High", "Critical") for f in reportable_findings)
     if not reportable_findings or not has_serious:
-        logger.info(f"SMTP: No confirmed High/Critical findings for {url}. Email alert suppressed.")
-        add_log_entry("INFO", f"SMTP: No confirmed findings requiring alert for {url}. Skipped.")
-        return
+        if not report_email:
+            logger.info(f"SMTP: No confirmed High/Critical findings for {url}. Email alert suppressed.")
+            add_log_entry("INFO", f"SMTP: No confirmed findings requiring alert for {url}. Skipped.")
+            return
+        else:
+            logger.info(f"SMTP: No High/Critical findings, but report_email is configured. Sending report.")
 
     # ── Case 2: New findings or severity escalation ─────────────────────────
     if new_findings_detected or severity_escalated:
@@ -373,8 +382,18 @@ def process_alerts_for_scan(
             <p><strong>Recommendation:</strong> Review the attached security report and patch vulnerabilities.</p>
         </body></html>
         """
-        # Attach PDF report if available
-        send_email_alert(subject, body_text, body_html, attachment_path=pdf_report_path)
+        
+        # Override receiver if report_email is explicitly set
+        if report_email:
+            send_email_alert(subject, body_text, body_html, attachment_path=pdf_report_path or html_report_path, receiver_override=report_email)
+        else:
+            send_email_alert(subject, body_text, body_html, attachment_path=pdf_report_path or html_report_path)
+    elif report_email:
+        # report_email is set but no serious findings were found
+        subject = f"SCAN REPORT: Security Assessment for {url}"
+        body_text = f"Security Scan Completed\n\nTarget: {url}\n\nPlease find the detailed security report attached."
+        body_html = f"<html><body><h2>Security Scan Completed</h2><p>Target: {url}</p><p>Please find the detailed security report attached.</p></body></html>"
+        send_email_alert(subject, body_text, body_html, attachment_path=pdf_report_path or html_report_path, receiver_override=report_email)
 
 
 def process_cve_alert(cve, severity, description, source):

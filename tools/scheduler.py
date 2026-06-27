@@ -151,9 +151,9 @@ def start_scheduler():
         replace_existing=True
     )
     
-    # Schedule Hourly Threat Intel Sync Job
+    # Schedule Daily Threat Intel Sync Job
     interval_trigger = IntervalTrigger(
-        hours=settings.get("intel_sync_interval_hours", 1)
+        hours=settings.get("intel_sync_interval_hours", 24)
     )
     _scheduler.add_job(
         trigger_intel_job,
@@ -182,8 +182,8 @@ def start_scheduler():
         replace_existing=True
     )
 
-    # Schedule Watchdog Continuous Monitoring (every 15 minutes)
-    watchdog_trigger = IntervalTrigger(minutes=15)
+    # Schedule Watchdog Continuous Monitoring (every 2 hours)
+    watchdog_trigger = IntervalTrigger(hours=2)
     _scheduler.add_job(
         trigger_watchdog_job,
         trigger=watchdog_trigger,
@@ -222,7 +222,7 @@ def reschedule_jobs():
         
         # Reschedule Intel Sync
         interval_trigger = IntervalTrigger(
-            hours=settings.get("intel_sync_interval_hours", 1)
+            hours=settings.get("intel_sync_interval_hours", 24)
         )
         _scheduler.reschedule_job("hourly_intel_sync_job", trigger=interval_trigger)
 
@@ -235,7 +235,7 @@ def reschedule_jobs():
         _scheduler.reschedule_job("weekly_db_purge_job", trigger=purge_trigger)
 
         # Reschedule Watchdog
-        watchdog_trigger = IntervalTrigger(minutes=15)
+        watchdog_trigger = IntervalTrigger(hours=2)
         _scheduler.reschedule_job("watchdog_monitor_job", trigger=watchdog_trigger)
 
         logger.info("Scheduler jobs rescheduled successfully.")
