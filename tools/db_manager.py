@@ -37,13 +37,14 @@ BACKUP_DIR = os.path.join(BASE_DIR, "backup")
 
 # ── All active scan step statuses (complete list for pipeline tracking) ────────
 ALL_ACTIVE_STATUSES = [
-    "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running CRT.sh",
+    "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running theHarvester", "Running CRT.sh",
     "Running HackerTarget", "Running Whois", "Running Wayback Machine",
     "Running Traceroute", "Running Nmap", "Running SSL Scan",
     "Running Security Headers", "Running Robots.txt", "Running CORS",
     "Running CMS Scanner", "Running Nikto", "Running Nuclei", "Running ffuf",
     "Running Open Redirect", "Running Tech Fingerprint",
-    "Running Wapiti", "Running SQLMap", "Running Shodan",
+    "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
+    "Running ZAP",
     "Correlating CVEs", "Report Pending",
 ]
 
@@ -241,18 +242,22 @@ def _initialize_db_schema(conn):
         );
     """)
 
-    # Delete duplicate CVEs keeping the one with the largest id
+    # baselines table — watchdog baseline snapshots per target
     cursor.execute("""
-        DELETE FROM cves 
-        WHERE id NOT IN (
-            SELECT MAX(id) 
-            FROM cves 
-            GROUP BY cve
+        CREATE TABLE IF NOT EXISTS baselines (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_id INTEGER NOT NULL UNIQUE,
+            page_hash TEXT,
+            status_code INTEGER,
+            port_hash TEXT,
+            cert_fingerprint TEXT,
+            cert_expiry TEXT,
+            headers_hash TEXT,
+            dns_ip TEXT,
+            recorded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE
         );
     """)
-
-    # Enforce uniqueness via index
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cves_cve ON cves(cve);")
 
     # Performance indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_technologies_name ON technologies(name);")
@@ -269,6 +274,27 @@ def init_db():
     """Initialize all SQLite tables required for the application."""
     conn = get_db_connection()
     _initialize_db_schema(conn)
+
+    # Ensure the unique index exists (idempotent — safe to run on existing DBs)
+    try:
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cves_cve ON cves(cve);")
+        conn.commit()
+    except Exception:
+        pass
+
+    # One-time deduplication pass — clean up any pre-index duplicates
+    try:
+        conn.execute("""
+            DELETE FROM cves
+            WHERE id NOT IN (
+                SELECT MAX(id)
+                FROM cves
+                GROUP BY cve
+            )
+        """)
+        conn.commit()
+    except Exception:
+        pass
 
     # Pre-2018 CVEs cleanup migration
     try:
@@ -1006,6 +1032,8 @@ def backup_scan_to_raw(scan_id, target_url):
     """
     After a scan completes, archive the full scan record (findings, technologies,
     risk score, raw outputs) to the backup/active_scans.db for audit trail.
+    Enforces a retention limit of 200 records — oldest rows are pruned automatically
+    to prevent unbounded disk usage.
     """
     try:
         _init_backup_databases()
@@ -1035,6 +1063,21 @@ def backup_scan_to_raw(scan_id, target_url):
             json.dumps(raw), now
         ))
         conn.commit()
+
+        # ── Retention pruning: keep only the last 200 scan archives ──
+        # Delete the oldest rows so active_scans.db stays bounded in size.
+        _ACTIVE_SCANS_RETENTION = 200
+        row_count = conn.execute("SELECT COUNT(*) FROM raw_scans").fetchone()[0]
+        if row_count > _ACTIVE_SCANS_RETENTION:
+            excess = row_count - _ACTIVE_SCANS_RETENTION
+            conn.execute(
+                "DELETE FROM raw_scans WHERE id IN "
+                "(SELECT id FROM raw_scans ORDER BY id ASC LIMIT ?)",
+                (excess,)
+            )
+            conn.execute("VACUUM")  # reclaim disk space after pruning
+            conn.commit()
+
         conn.close()
         return True
     except Exception as e:
@@ -1183,6 +1226,30 @@ def trigger_scheduled_system_backup_sequence():
         with open("logs/error.log", "a") as telemetry_errs:
             telemetry_errs.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Backup processing error context: {str(data_err)}\n")
         return False
+
+
+def purge_old_backup_snapshots(days=30):
+    """
+    Delete ZIP snapshot archives in backup/ that are older than `days` days.
+    These are the archive_container_YYYYMMDD_HHMMSS.zip files created by
+    trigger_scheduled_system_backup_sequence(). Called weekly by the scheduler.
+    Returns the number of files deleted.
+    """
+    import glob
+    cutoff = time.time() - (days * 86400)
+    deleted = 0
+    pattern = os.path.join(BACKUP_DIR, "archive_container_*.zip")
+    for fpath in glob.glob(pattern):
+        try:
+            if os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+                deleted += 1
+        except Exception:
+            pass
+    if deleted:
+        import logging
+        logging.getLogger("smp").info(f"[DB Purge] Removed {deleted} backup snapshots older than {days} days.")
+    return deleted
 
 
 def _evaluate_vulnerability_growth_thresholds():

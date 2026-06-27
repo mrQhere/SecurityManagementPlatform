@@ -83,7 +83,15 @@ DEFAULT_SETTINGS = {
     "scan_schedule_hour": 2,
     "scan_schedule_minute": 0,
     "intel_sync_interval_hours": 1,
-    "scanner_timeout_seconds": 180
+    "scanner_timeout_seconds": 180,
+    # MAC Changer (runs at scan start with sudo password)
+    "mac_changer_enabled": True,
+    # Database retention
+    "backup_retention_days": 30,
+    # GitHub Advisory API token (optional — fixes 403 rate-limit errors)
+    "github_token": "",
+    # Report identity
+    "tester_name": "Security Auditor",
 }
 
 def init_directories():

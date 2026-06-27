@@ -415,14 +415,14 @@ class TestSMPComponents(unittest.TestCase):
         targets = get_targets()
         target = [t for t in targets if t["url"] == url][0]
         
-        # Define mock behaviors for the 23 pipeline scanners
+        # Define mock behaviors for the 25 pipeline scanners
         scanner_mocks = [
-            "run_httpx_scan", "run_whatweb_scan", "run_subfinder_scan", "run_crtsh_scan",
+            "run_httpx_scan", "run_whatweb_scan", "run_subfinder_scan", "run_theharvester_scan", "run_crtsh_scan",
             "run_hackertarget_scan", "run_whois_scan", "run_wayback_scan", "run_traceroute",
             "run_nmap_scan", "run_ssl_scan", "run_headers_scan", "run_robots_scan",
             "run_cors_scan", "run_cms_scan", "run_nikto_scan", "run_nuclei_scan",
             "run_ffuf_scan", "run_open_redirect_scan", "run_tech_fingerprint",
-            "run_wapiti_scan", "run_sqlmap_scan", "run_shodan_idb_scan", "run_zap_scan"
+            "run_wapiti_scan", "run_sqlmap_scan", "run_shodan_idb_scan", "run_gitleaks_scan", "run_zap_scan"
         ]
         
         patches = []

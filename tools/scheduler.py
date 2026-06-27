@@ -31,7 +31,12 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from tools.config_manager import load_settings
-from tools.db_manager import get_targets, add_log_entry, trigger_scheduled_system_backup_sequence
+from tools.db_manager import (
+    get_targets, add_log_entry,
+    trigger_scheduled_system_backup_sequence,
+    purge_old_backup_snapshots,
+)
+from scanners.watchdog import run_watchdog
 
 logger = logging.getLogger("smp")
 
@@ -107,6 +112,24 @@ def trigger_intel_job():
         logger.warning("Threat Intel sync completed with errors.")
         add_log_entry("WARNING", "Update Failed: Threat Intel sync completed with errors")
 
+
+def trigger_db_purge_job():
+    """Weekly job: purge ZIP backup snapshots older than 30 days."""
+    try:
+        deleted = purge_old_backup_snapshots(days=30)
+        logger.info(f"[DB Purge] Weekly snapshot cleanup: {deleted} archive(s) removed.")
+        add_log_entry("INFO", f"DB Purge: {deleted} old backup snapshot(s) removed.")
+    except Exception as e:
+        logger.error(f"DB Purge job failed: {e}")
+
+
+def trigger_watchdog_job():
+    """Every-15-minute job: lightweight continuous monitoring checks."""
+    try:
+        run_watchdog()
+    except Exception as e:
+        logger.error(f"Watchdog job failed: {e}")
+
 def start_scheduler():
     """Initialize and start the background scheduler."""
     global _scheduler
@@ -149,7 +172,25 @@ def start_scheduler():
         id="daily_backup_job",
         replace_existing=True
     )
-    
+
+    # Schedule Weekly DB Snapshot Purge Job
+    purge_trigger = IntervalTrigger(hours=168)  # 7 days
+    _scheduler.add_job(
+        trigger_db_purge_job,
+        trigger=purge_trigger,
+        id="weekly_db_purge_job",
+        replace_existing=True
+    )
+
+    # Schedule Watchdog Continuous Monitoring (every 15 minutes)
+    watchdog_trigger = IntervalTrigger(minutes=15)
+    _scheduler.add_job(
+        trigger_watchdog_job,
+        trigger=watchdog_trigger,
+        id="watchdog_monitor_job",
+        replace_existing=True
+    )
+
     _scheduler.start()
     logger.info("Scheduler started successfully.")
     add_log_entry("INFO", "Scheduler Triggered: Scheduler system started.")
@@ -186,11 +227,17 @@ def reschedule_jobs():
         _scheduler.reschedule_job("hourly_intel_sync_job", trigger=interval_trigger)
 
         # Reschedule Daily Backup
-        backup_trigger = IntervalTrigger(
-            hours=24
-        )
+        backup_trigger = IntervalTrigger(hours=24)
         _scheduler.reschedule_job("daily_backup_job", trigger=backup_trigger)
-        
+
+        # Reschedule Weekly DB Purge
+        purge_trigger = IntervalTrigger(hours=168)
+        _scheduler.reschedule_job("weekly_db_purge_job", trigger=purge_trigger)
+
+        # Reschedule Watchdog
+        watchdog_trigger = IntervalTrigger(minutes=15)
+        _scheduler.reschedule_job("watchdog_monitor_job", trigger=watchdog_trigger)
+
         logger.info("Scheduler jobs rescheduled successfully.")
         add_log_entry("INFO", "Scheduler Triggered: Jobs rescheduled.")
     except Exception as e:

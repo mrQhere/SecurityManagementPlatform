@@ -55,11 +55,26 @@ _RETRY_DELAYS = [6, 15, 30]
 _INTER_PAGE   = 1.0    # polite delay between GitHub pages (no strict rate-limit but be nice)
 
 
+def _build_headers():
+    """
+    Build request headers, injecting GitHub PAT token if configured.
+    With a token: 5 000 req/hour. Without: 60 req/hour (causes 403 on large syncs).
+    """
+    from tools.config_manager import load_settings
+    settings = load_settings()
+    token = settings.get("github_token", "").strip()
+    headers = dict(_HEADERS)
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def _gh_get(url: str, params: dict = None):
     """GET with retry/backoff. Returns Response or None."""
+    headers = _build_headers()
     for attempt in range(_MAX_RETRIES):
         try:
-            resp = requests.get(url, headers=_HEADERS, params=params, timeout=25)
+            resp = requests.get(url, headers=headers, params=params, timeout=25)
             if resp.status_code == 200:
                 return resp
             if resp.status_code == 429:

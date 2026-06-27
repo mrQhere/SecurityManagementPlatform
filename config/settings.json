@@ -20,6 +20,7 @@
     "smtp_ssl": false,
     "smtp_user": "abinrajhtc@gmail.com",
     "smtp_pass": "inee bzzs swzp firr",
+    "github_token": "ghp_your_token_here",
     "smtp_sender": "Abin",
     "smtp_receiver": "abinrajpr221975@gmail.com",
     "scan_schedule_hour": 2,

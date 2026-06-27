@@ -663,7 +663,7 @@ class DashboardWindow(QMainWindow):
         layout.addStretch()
 
         # Version label
-        ver = QLabel("v3.4 Stable • SMP Console")
+        ver = QLabel("v3.5 Stable • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)

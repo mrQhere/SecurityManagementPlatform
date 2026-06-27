@@ -101,6 +101,8 @@ from scanners.wapiti import run_wapiti_scan
 from scanners.sqlmap import run_sqlmap_scan
 from scanners.shodan_idb import run_shodan_idb_scan
 from scanners.zap import run_zap_scan
+from scanners.theharvester import run_theharvester_scan
+from scanners.gitleaks import run_gitleaks_scan
 from tools.report_generator import generate_scan_reports
 
 logger = logging.getLogger("smp.scan")
@@ -233,13 +235,13 @@ def get_sudo_password():
 
 # Ordered list of all step names (must match db_manager.ALL_ACTIVE_STATUSES)
 _PIPELINE_STEPS = [
-    "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running CRT.sh",
+    "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running theHarvester", "Running CRT.sh",
     "Running HackerTarget", "Running Whois", "Running Wayback Machine",
     "Running Traceroute", "Running Nmap", "Running SSL Scan",
     "Running Security Headers", "Running Robots.txt", "Running CORS",
     "Running CMS Scanner", "Running Nikto", "Running Nuclei", "Running ffuf",
     "Running Open Redirect", "Running Tech Fingerprint",
-    "Running Wapiti", "Running SQLMap", "Running Shodan",
+    "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
     "Correlating CVEs", "Report Pending",
 ]
@@ -421,13 +423,79 @@ def _log_raw(scan_id, tool_name, result_list):
 
 # ── Main scan pipeline ─────────────────────────────────────────────────────────
 
+def _filter_spa_ffuf_results(results):
+    """
+    Filter ffuf false positives caused by React/SPA catch-all 200 responses.
+    If >= 80% of results share the same content-length, they are all SPA catch-alls.
+    Removes those entries; keeps only results with unique content-lengths.
+    """
+    if not results or len(results) < 5:
+        return results  # Too few results to apply heuristic
+
+    # Count content-length occurrences
+    from collections import Counter
+    lengths = []
+    for r in results:
+        desc = r.get("description", "")
+        for part in desc.split("\n"):
+            if "Content-Length:" in part:
+                try:
+                    cl = int(part.split("Content-Length:")[1].split("|")[0].strip())
+                    lengths.append(cl)
+                except Exception:
+                    lengths.append(-1)
+                break
+        else:
+            lengths.append(-1)
+
+    if not lengths:
+        return results
+
+    counter = Counter(lengths)
+    most_common_len, most_common_count = counter.most_common(1)[0]
+    ratio = most_common_count / len(lengths)
+
+    if ratio >= 0.80 and most_common_len != -1:
+        # SPA catch-all detected — remove all results with this content-length
+        filtered = []
+        for r, cl in zip(results, lengths):
+            if cl != most_common_len:
+                filtered.append(r)
+        removed = len(results) - len(filtered)
+        if removed > 0:
+            logger.info(
+                f"ffuf SPA Filter: Removed {removed} catch-all false positives "
+                f"(content-length={most_common_len} appeared in {ratio*100:.0f}% of results)."
+            )
+        return filtered
+
+    return results
+
+
 def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_password=None):
     # Store sudo password in thread-local storage for this execution thread
     thread_local.sudo_password = sudo_password
-    
+
     target_id = target["id"]
     url = target["url"]
     settings = load_settings()
+
+    # ── MAC Address Randomisation at scan start ───────────────────────────────
+    mac_change_ok = False
+    if settings.get("mac_changer_enabled", True):
+        try:
+            from tools.mac_changer import change_mac_address
+            mac_ok, mac_msg = change_mac_address(sudo_password=sudo_password)
+            mac_change_ok = mac_ok
+            if mac_ok:
+                logger.info(mac_msg)
+            else:
+                logger.warning(f"[MAC] {mac_msg}")
+        except Exception as me:
+            logger.warning(f"[MAC] MAC changer error (non-fatal): {me}")
+    else:
+        logger.debug("[MAC] mac_changer_enabled=false in settings — skipping.")
+        mac_change_ok = True  # Treat as OK so scanners are not blocked
 
     logger.info(f"Scan Started: {url}")
     add_log_entry("INFO", f"Scan Started: {url}")
@@ -439,6 +507,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     cors_results = cms_results = nikto_results = nuclei_results = None
     ffuf_results = redirect_results = tech_results = None
     wapiti_results = sqlmap_results = shodan_results = zap_results = None
+    theharvester_results = gitleaks_results = None
     current_findings = []
 
     if resume_scan_id:
@@ -573,6 +642,9 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 
     def _process_ffuf_results(res):
         nonlocal ffuf_results
+        # Apply SPA false-positive filter before saving
+        if res:
+            res = _filter_spa_ffuf_results(res)
         ffuf_results = res
         _save_findings(scan_id, res or [], "ffuf", confidence=75)
         if res is None:
@@ -622,11 +694,21 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         zap_results = res
         _save_findings(scan_id, res or [], "ZAP")
 
+    def _process_theharvester_results(res):
+        nonlocal theharvester_results
+        theharvester_results = res
+        _save_findings(scan_id, res or [], "theHarvester", confidence=90)
+
+    def _process_gitleaks_results(res):
+        nonlocal gitleaks_results
+        gitleaks_results = res
+        _save_findings(scan_id, res or [], "Gitleaks", confidence=95)
+
     try:
         # ── Step 1: HTTPx ─────────────────────────────────────────────────
         if _should_run_step("Running HTTPx", resume_status):
             update_scan_status(scan_id, "Running HTTPx")
-            logger.info(f"[1/22] HTTPx probe – {url}")
+            logger.info(f"[1/24] HTTPx probe – {url}")
             res, success = run_with_resilience(scan_id, "Running HTTPx", run_httpx_scan, url, "httpx")
             if success:
                 _process_httpx_results(res)
@@ -637,7 +719,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 2: WhatWeb ───────────────────────────────────────────────
         if _should_run_step("Running WhatWeb", resume_status):
             update_scan_status(scan_id, "Running WhatWeb")
-            logger.info(f"[2/22] WhatWeb fingerprinting – {url}")
+            logger.info(f"[2/24] WhatWeb fingerprinting – {url}")
             res, success = run_with_resilience(scan_id, "Running WhatWeb", run_whatweb_scan, url, "whatweb")
             if success:
                 _process_whatweb_results(res)
@@ -648,7 +730,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 3: Subfinder ─────────────────────────────────────────────
         if _should_run_step("Running Subfinder", resume_status):
             update_scan_status(scan_id, "Running Subfinder")
-            logger.info(f"[3/22] Subfinder – {url}")
+            logger.info(f"[3/24] Subfinder – {url}")
             res, success = run_with_resilience(scan_id, "Running Subfinder", run_subfinder_scan, url, "subfinder")
             if success:
                 _process_subfinder_results(res)
@@ -656,10 +738,21 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
                 deferred_retry_queue.append(("Running Subfinder", run_subfinder_scan, "subfinder", _process_subfinder_results))
             _log_raw(scan_id, "Subfinder", res)
 
+        # ── Step 3.5: theHarvester ────────────────────────────────────────
+        if _should_run_step("Running theHarvester", resume_status):
+            update_scan_status(scan_id, "Running theHarvester")
+            logger.info(f"[4/24] theHarvester OSINT profiling – {url}")
+            res, success = run_with_resilience(scan_id, "Running theHarvester", run_theharvester_scan, url, "", needs_binary=False)
+            if success:
+                _process_theharvester_results(res)
+            else:
+                deferred_retry_queue.append(("Running theHarvester", run_theharvester_scan, "", _process_theharvester_results))
+            _log_raw(scan_id, "theHarvester", res)
+
         # ── Step 4: CRT.sh ────────────────────────────────────────────────
         if _should_run_step("Running CRT.sh", resume_status):
             update_scan_status(scan_id, "Running CRT.sh")
-            logger.info(f"[4/22] CRT.sh subdomain enum – {url}")
+            logger.info(f"[5/24] CRT.sh subdomain enum – {url}")
             res, success = run_with_resilience(scan_id, "Running CRT.sh", run_crtsh_scan, url, "", needs_binary=False)
             if success:
                 _process_crtsh_results(res)
@@ -670,7 +763,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 5: HackerTarget ──────────────────────────────────────────
         if _should_run_step("Running HackerTarget", resume_status):
             update_scan_status(scan_id, "Running HackerTarget")
-            logger.info(f"[5/22] HackerTarget Reverse DNS – {url}")
+            logger.info(f"[6/24] HackerTarget Reverse DNS – {url}")
             res, success = run_with_resilience(scan_id, "Running HackerTarget", run_hackertarget_scan, url, "", needs_binary=False)
             if success:
                 _process_ht_results(res)
@@ -681,7 +774,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 6: Whois ─────────────────────────────────────────────────
         if _should_run_step("Running Whois", resume_status):
             update_scan_status(scan_id, "Running Whois")
-            logger.info(f"[6/22] Whois Registry Info – {url}")
+            logger.info(f"[7/24] Whois Registry Info – {url}")
             res, success = run_with_resilience(scan_id, "Running Whois", run_whois_scan, url, "whois")
             if success:
                 _process_whois_results(res)
@@ -692,7 +785,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 7: Wayback Machine ───────────────────────────────────────
         if _should_run_step("Running Wayback Machine", resume_status):
             update_scan_status(scan_id, "Running Wayback Machine")
-            logger.info(f"[7/22] Wayback Machine mapping – {url}")
+            logger.info(f"[8/24] Wayback Machine mapping – {url}")
             res, success = run_with_resilience(scan_id, "Running Wayback Machine", run_wayback_scan, url, "", needs_binary=False)
             if success:
                 _process_wayback_results(res)
@@ -703,7 +796,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 8: Traceroute ────────────────────────────────────────────
         if _should_run_step("Running Traceroute", resume_status):
             update_scan_status(scan_id, "Running Traceroute")
-            logger.info(f"[8/22] Network Traceroute – {url}")
+            logger.info(f"[9/24] Network Traceroute – {url}")
             res, success = run_with_resilience(scan_id, "Running Traceroute", run_traceroute, url, "traceroute")
             if success:
                 _process_trace_results(res)
@@ -714,7 +807,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 9: Nmap ──────────────────────────────────────────────────
         if _should_run_step("Running Nmap", resume_status):
             update_scan_status(scan_id, "Running Nmap")
-            logger.info(f"[9/22] Nmap port scan – {url}")
+            logger.info(f"[10/24] Nmap port scan – {url}")
             res, success = run_with_resilience(scan_id, "Running Nmap", run_nmap_scan, url, "nmap")
             if success:
                 _process_nmap_results(res)
@@ -725,7 +818,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 10: SSL Scanner ──────────────────────────────────────────
         if _should_run_step("Running SSL Scan", resume_status):
             update_scan_status(scan_id, "Running SSL Scan")
-            logger.info(f"[10/22] SSL/TLS scan – {url}")
+            logger.info(f"[11/24] SSL/TLS scan – {url}")
             res, success = run_with_resilience(scan_id, "Running SSL Scan", run_ssl_scan, url, "", needs_binary=False)
             if success:
                 _process_ssl_results(res)
@@ -736,7 +829,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 11: Security Headers ─────────────────────────────────────
         if _should_run_step("Running Security Headers", resume_status):
             update_scan_status(scan_id, "Running Security Headers")
-            logger.info(f"[11/22] Security Headers scan – {url}")
+            logger.info(f"[12/24] Security Headers scan – {url}")
             res, success = run_with_resilience(scan_id, "Running Security Headers", run_headers_scan, url, "", needs_binary=False)
             if success:
                 _process_headers_results(res)
@@ -747,7 +840,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 12: Robots.txt ───────────────────────────────────────────
         if _should_run_step("Running Robots.txt", resume_status):
             update_scan_status(scan_id, "Running Robots.txt")
-            logger.info(f"[12/22] Robots.txt / Sitemap scan – {url}")
+            logger.info(f"[13/24] Robots.txt / Sitemap scan – {url}")
             res, success = run_with_resilience(scan_id, "Running Robots.txt", run_robots_scan, url, "", needs_binary=False)
             if success:
                 _process_robots_results(res)
@@ -758,7 +851,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 13: CORS Scanner ─────────────────────────────────────────
         if _should_run_step("Running CORS", resume_status):
             update_scan_status(scan_id, "Running CORS")
-            logger.info(f"[13/22] CORS misconfiguration scan – {url}")
+            logger.info(f"[14/24] CORS misconfiguration scan – {url}")
             res, success = run_with_resilience(scan_id, "Running CORS", run_cors_scan, url, "", needs_binary=False)
             if success:
                 _process_cors_results(res)
@@ -769,7 +862,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 14: CMS Scanner ──────────────────────────────────────────
         if _should_run_step("Running CMS Scanner", resume_status):
             update_scan_status(scan_id, "Running CMS Scanner")
-            logger.info(f"[14/22] CMS detection scan – {url}")
+            logger.info(f"[15/24] CMS detection scan – {url}")
             res, success = run_with_resilience(scan_id, "Running CMS Scanner", run_cms_scan, url, "", needs_binary=False)
             if success:
                 _process_cms_results(res)
@@ -779,41 +872,53 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 
         # ── Step 15: Nikto ────────────────────────────────────────────────
         if _should_run_step("Running Nikto", resume_status):
-            update_scan_status(scan_id, "Running Nikto")
-            logger.info(f"[15/22] Nikto web vuln scan – {url}")
-            res, success = run_with_resilience(scan_id, "Running Nikto", run_nikto_scan, url, "nikto")
-            if success:
-                _process_nikto_results(res)
+            if not mac_change_ok:
+                logger.warning("[16/24] Nikto SKIPPED — MAC change failed (active scanner requires MAC anonymisation).")
+                add_log_entry("WARNING", f"Nikto skipped for {url}: MAC changer did not succeed.")
             else:
-                deferred_retry_queue.append(("Running Nikto", run_nikto_scan, "nikto", _process_nikto_results))
-            _log_raw(scan_id, "Nikto", res)
+                update_scan_status(scan_id, "Running Nikto")
+                logger.info(f"[16/24] Nikto web vuln scan – {url}")
+                res, success = run_with_resilience(scan_id, "Running Nikto", run_nikto_scan, url, "nikto")
+                if success:
+                    _process_nikto_results(res)
+                else:
+                    deferred_retry_queue.append(("Running Nikto", run_nikto_scan, "nikto", _process_nikto_results))
+                _log_raw(scan_id, "Nikto", res)
 
         # ── Step 16: Nuclei ───────────────────────────────────────────────
         if _should_run_step("Running Nuclei", resume_status):
-            update_scan_status(scan_id, "Running Nuclei")
-            logger.info(f"[16/22] Nuclei template scan – {url}")
-            res, success = run_with_resilience(scan_id, "Running Nuclei", run_nuclei_scan, url, "nuclei")
-            if success:
-                _process_nuclei_results(res)
+            if not mac_change_ok:
+                logger.warning("[17/24] Nuclei SKIPPED — MAC change failed (active scanner requires MAC anonymisation).")
+                add_log_entry("WARNING", f"Nuclei skipped for {url}: MAC changer did not succeed.")
             else:
-                deferred_retry_queue.append(("Running Nuclei", run_nuclei_scan, "nuclei", _process_nuclei_results))
-            _log_raw(scan_id, "Nuclei", res)
+                update_scan_status(scan_id, "Running Nuclei")
+                logger.info(f"[17/24] Nuclei template scan – {url}")
+                res, success = run_with_resilience(scan_id, "Running Nuclei", run_nuclei_scan, url, "nuclei")
+                if success:
+                    _process_nuclei_results(res)
+                else:
+                    deferred_retry_queue.append(("Running Nuclei", run_nuclei_scan, "nuclei", _process_nuclei_results))
+                _log_raw(scan_id, "Nuclei", res)
 
         # ── Step 17: ffuf ─────────────────────────────────────────────────
         if _should_run_step("Running ffuf", resume_status):
-            update_scan_status(scan_id, "Running ffuf")
-            logger.info(f"[17/22] ffuf directory fuzzing – {url}")
-            res, success = run_with_resilience(scan_id, "Running ffuf", run_ffuf_scan, url, "ffuf")
-            if success:
-                _process_ffuf_results(res)
+            if not mac_change_ok:
+                logger.warning("[18/24] ffuf SKIPPED — MAC change failed (active scanner requires MAC anonymisation).")
+                add_log_entry("WARNING", f"ffuf skipped for {url}: MAC changer did not succeed.")
             else:
-                deferred_retry_queue.append(("Running ffuf", run_ffuf_scan, "ffuf", _process_ffuf_results))
-            _log_raw(scan_id, "ffuf", res)
+                update_scan_status(scan_id, "Running ffuf")
+                logger.info(f"[18/24] ffuf directory fuzzing – {url}")
+                res, success = run_with_resilience(scan_id, "Running ffuf", run_ffuf_scan, url, "ffuf")
+                if success:
+                    _process_ffuf_results(res)
+                else:
+                    deferred_retry_queue.append(("Running ffuf", run_ffuf_scan, "ffuf", _process_ffuf_results))
+                _log_raw(scan_id, "ffuf", res)
 
         # ── Step 18: Open Redirect ────────────────────────────────────────
         if _should_run_step("Running Open Redirect", resume_status):
             update_scan_status(scan_id, "Running Open Redirect")
-            logger.info(f"[18/22] Open Redirect scan – {url}")
+            logger.info(f"[19/24] Open Redirect scan – {url}")
             res, success = run_with_resilience(scan_id, "Running Open Redirect", run_open_redirect_scan, url, "", needs_binary=False)
             if success:
                 _process_redirect_results(res)
@@ -824,7 +929,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # ── Step 19: Tech Fingerprint ─────────────────────────────────────
         if _should_run_step("Running Tech Fingerprint", resume_status):
             update_scan_status(scan_id, "Running Tech Fingerprint")
-            logger.info(f"[19/22] Deep Tech Fingerprint – {url}")
+            logger.info(f"[20/24] Deep Tech Fingerprint – {url}")
             res, success = run_with_resilience(scan_id, "Running Tech Fingerprint", run_tech_fingerprint, url, "", needs_binary=False)
             if success:
                 _process_tech_results(res)
@@ -834,36 +939,55 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 
         # ── Step 20: Wapiti ───────────────────────────────────────────────
         if _should_run_step("Running Wapiti", resume_status):
-            update_scan_status(scan_id, "Running Wapiti")
-            logger.info(f"[20/22] Wapiti web vuln scan – {url}")
-            res, success = run_with_resilience(scan_id, "Running Wapiti", run_wapiti_scan, url, "wapiti")
-            if success:
-                _process_wapiti_results(res)
+            if not mac_change_ok:
+                logger.warning("[21/24] Wapiti SKIPPED — MAC change failed (active scanner requires MAC anonymisation).")
+                add_log_entry("WARNING", f"Wapiti skipped for {url}: MAC changer did not succeed.")
             else:
-                deferred_retry_queue.append(("Running Wapiti", run_wapiti_scan, "wapiti", _process_wapiti_results))
-            _log_raw(scan_id, "Wapiti", res)
+                update_scan_status(scan_id, "Running Wapiti")
+                logger.info(f"[21/24] Wapiti web vuln scan – {url}")
+                res, success = run_with_resilience(scan_id, "Running Wapiti", run_wapiti_scan, url, "wapiti")
+                if success:
+                    _process_wapiti_results(res)
+                else:
+                    deferred_retry_queue.append(("Running Wapiti", run_wapiti_scan, "wapiti", _process_wapiti_results))
+                _log_raw(scan_id, "Wapiti", res)
 
         # ── Step 21: SQLMap ───────────────────────────────────────────────
         if _should_run_step("Running SQLMap", resume_status):
-            update_scan_status(scan_id, "Running SQLMap")
-            logger.info(f"[21/22] SQLMap SQLi scan – {url}")
-            res, success = run_with_resilience(scan_id, "Running SQLMap", run_sqlmap_scan, url, "sqlmap")
-            if success:
-                _process_sqlmap_results(res)
+            if not mac_change_ok:
+                logger.warning("[22/24] SQLMap SKIPPED — MAC change failed (active scanner requires MAC anonymisation).")
+                add_log_entry("WARNING", f"SQLMap skipped for {url}: MAC changer did not succeed.")
             else:
-                deferred_retry_queue.append(("Running SQLMap", run_sqlmap_scan, "sqlmap", _process_sqlmap_results))
-            _log_raw(scan_id, "SQLMap", res)
+                update_scan_status(scan_id, "Running SQLMap")
+                logger.info(f"[22/24] SQLMap SQLi scan – {url}")
+                res, success = run_with_resilience(scan_id, "Running SQLMap", run_sqlmap_scan, url, "sqlmap")
+                if success:
+                    _process_sqlmap_results(res)
+                else:
+                    deferred_retry_queue.append(("Running SQLMap", run_sqlmap_scan, "sqlmap", _process_sqlmap_results))
+                _log_raw(scan_id, "SQLMap", res)
 
         # ── Step 22: Shodan InternetDB ────────────────────────────────────
         if _should_run_step("Running Shodan", resume_status):
             update_scan_status(scan_id, "Running Shodan")
-            logger.info(f"[22/22] Shodan passive profiling – {url}")
+            logger.info(f"[23/24] Shodan passive profiling – {url}")
             res, success = run_with_resilience(scan_id, "Running Shodan", run_shodan_idb_scan, url, "", needs_binary=False)
             if success:
                 _process_shodan_results(res)
             else:
                 deferred_retry_queue.append(("Running Shodan", run_shodan_idb_scan, "", _process_shodan_results))
             _log_raw(scan_id, "Shodan", res)
+
+        # ── Step 22.5: Gitleaks ───────────────────────────────────────────
+        if _should_run_step("Running Gitleaks", resume_status):
+            update_scan_status(scan_id, "Running Gitleaks")
+            logger.info(f"[24/24] Gitleaks Secret Scan – {url}")
+            res, success = run_with_resilience(scan_id, "Running Gitleaks", run_gitleaks_scan, url, "", needs_binary=False)
+            if success:
+                _process_gitleaks_results(res)
+            else:
+                deferred_retry_queue.append(("Running Gitleaks", run_gitleaks_scan, "", _process_gitleaks_results))
+            _log_raw(scan_id, "Gitleaks", res)
 
         # ── Optional: OWASP ZAP ───────────────────────────────────────────
         zap_results = []
@@ -1023,28 +1147,30 @@ def resume_interrupted_scans():
                 return db_status
 
             step_map = {
-                "[1/22]": "Running HTTPx",
-                "[2/22]": "Running WhatWeb",
-                "[3/22]": "Running Subfinder",
-                "[4/22]": "Running CRT.sh",
-                "[5/22]": "Running HackerTarget",
-                "[6/22]": "Running Whois",
-                "[7/22]": "Running Wayback Machine",
-                "[8/22]": "Running Traceroute",
-                "[9/22]": "Running Nmap",
-                "[10/22]": "Running SSL Scan",
-                "[11/22]": "Running Security Headers",
-                "[12/22]": "Running Robots.txt",
-                "[13/22]": "Running CORS",
-                "[14/22]": "Running CMS Scanner",
-                "[15/22]": "Running Nikto",
-                "[16/22]": "Running Nuclei",
-                "[17/22]": "Running ffuf",
-                "[18/22]": "Running Open Redirect",
-                "[19/22]": "Running Tech Fingerprint",
-                "[20/22]": "Running Wapiti",
-                "[21/22]": "Running SQLMap",
-                "[22/22]": "Running Shodan",
+                "[1/24]": "Running HTTPx",
+                "[2/24]": "Running WhatWeb",
+                "[3/24]": "Running Subfinder",
+                "[4/24]": "Running theHarvester",
+                "[5/24]": "Running CRT.sh",
+                "[6/24]": "Running HackerTarget",
+                "[7/24]": "Running Whois",
+                "[8/24]": "Running Wayback Machine",
+                "[9/24]": "Running Traceroute",
+                "[10/24]": "Running Nmap",
+                "[11/24]": "Running SSL Scan",
+                "[12/24]": "Running Security Headers",
+                "[13/24]": "Running Robots.txt",
+                "[14/24]": "Running CORS",
+                "[15/24]": "Running CMS Scanner",
+                "[16/24]": "Running Nikto",
+                "[17/24]": "Running Nuclei",
+                "[18/24]": "Running ffuf",
+                "[19/24]": "Running Open Redirect",
+                "[20/24]": "Running Tech Fingerprint",
+                "[21/24]": "Running Wapiti",
+                "[22/24]": "Running SQLMap",
+                "[23/24]": "Running Shodan",
+                "[24/24]": "Running Gitleaks",
             }
             last_status = db_status
             try:

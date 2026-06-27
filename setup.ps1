@@ -109,6 +109,7 @@ if (-not $SkipGoTools) {
             "subfinder" = "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
             "httpx"     = "github.com/projectdiscovery/httpx/cmd/httpx@latest"
             "ffuf"      = "github.com/ffuf/ffuf/v2@latest"
+            "gitleaks"  = "github.com/gitleaks/gitleaks/v8@latest"
         }
         foreach ($tool in $goTools.Keys) {
             if (Get-Command $tool -ErrorAction SilentlyContinue) {

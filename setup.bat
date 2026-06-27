@@ -93,6 +93,7 @@ if %errorlevel% == 0 (
     go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
     go install github.com/projectdiscovery/httpx/cmd/httpx@latest
     go install github.com/ffuf/ffuf/v2@latest
+    go install github.com/gitleaks/gitleaks/v8@latest
     echo [OK]    Go tools installed. (Add %%GOPATH%%\bin to PATH if needed)
 ) else (
     echo [WARN]  Go not found. Install from https://go.dev/dl/
@@ -101,6 +102,7 @@ if %errorlevel% == 0 (
     echo           go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
     echo           go install github.com/projectdiscovery/httpx/cmd/httpx@latest
     echo           go install github.com/ffuf/ffuf/v2@latest
+    echo           go install github.com/gitleaks/gitleaks/v8@latest
 )
 
 REM ── Nikto (Perl-based – Windows instructions) ──────────────────────────────

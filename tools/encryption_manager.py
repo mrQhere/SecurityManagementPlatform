@@ -39,11 +39,13 @@ from tools.config_manager import BASE_DIR
 AUTH_FILE = os.path.join(BASE_DIR, "config", "auth.json")
 
 # Database paths to secure
+# NOTE: cve_secondary.db is intentionally excluded — CVE data is public threat
+# intelligence, not sensitive user data. Encrypting it wastes I/O on every
+# app open/close (240k+ rows) with zero security benefit.
 DB_FILES = {
     os.path.join(BASE_DIR, "database", "security.db"): os.path.join(BASE_DIR, "database", "security.db.enc"),
     os.path.join(BASE_DIR, "backup", "active_scans.db"): os.path.join(BASE_DIR, "backup", "active_scans.db.enc"),
     os.path.join(BASE_DIR, "backup", "important_results.db"): os.path.join(BASE_DIR, "backup", "important_results.db.enc"),
-    os.path.join(BASE_DIR, "backup", "cve_secondary.db"): os.path.join(BASE_DIR, "backup", "cve_secondary.db.enc"),
 }
 
 ACTIVE_KEY = None  # Stored in memory while running

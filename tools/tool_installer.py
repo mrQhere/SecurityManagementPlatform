@@ -55,7 +55,7 @@ logger = logging.getLogger("smp")
 #   install_arg:    package/module name, apt package, go import path, or URL
 
 TOOLS = [
-    # Python packages (pip – auto-installed)
+    # Pure-library pip packages (no binary — checked via import)
     ("sslyze",                 None,          "pip",    "sslyze"),
     ("python-owasp-zap-v2.4",  None,          "pip",    "python-owasp-zap-v2.4"),
     # APScheduler already in requirements.txt but check anyway
@@ -66,6 +66,7 @@ TOOLS = [
     # pip packages that ship CLI binaries (installed into venv/bin via pip)
     ("Wapiti",  "wapiti",  "pip", "wapiti3"),
     ("SQLMap",  "sqlmap",  "pip", "sqlmap"),
+    ("theHarvester", "theHarvester", "pip", "theHarvester"),
 
     # System binaries – apt
     ("Nmap",                   "nmap",        "apt",    "nmap"),
@@ -73,15 +74,26 @@ TOOLS = [
     ("WhatWeb",                "whatweb",     "apt",    "whatweb"),
     ("Traceroute",             "traceroute",  "apt",    "traceroute"),
 
-    # Go binaries (projectdiscovery.io)
+    # Go binaries (projectdiscovery.io / other)
     ("Nuclei",    "nuclei",    "go",  "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"),
     ("Subfinder", "subfinder", "go",  "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"),
     ("HTTPx",     "httpx",     "go",  "github.com/projectdiscovery/httpx/cmd/httpx@latest"),
     ("ffuf",      "ffuf",      "go",  "github.com/ffuf/ffuf/v2@latest"),
+    ("Gitleaks",  "gitleaks",  "go",  "github.com/gitleaks/gitleaks/v8/cmd/gitleaks@latest"),
 
     # Manual
     ("OWASP ZAP", "zaproxy",  "manual", "https://www.zaproxy.org/download/"),
 ]
+
+# Module name overrides for pip packages with non-standard import names
+_PIP_IMPORT_OVERRIDES = {
+    "python-owasp-zap-v2.4": "zapv2",
+    "sslyze": "sslyze",
+    "APScheduler": "apscheduler",
+    "reportlab": "reportlab",
+    "requests": "requests",
+    "theHarvester": "theHarvester",
+}
 
 
 def _pip_install(package):
@@ -181,14 +193,11 @@ def check_and_install_all(auto_install=True):
 
         # For pure-library pip packages (no binary), try importing
         if method == "pip" and not binary:
-            module = arg.replace("-", "_").replace(".", "_").split("@")[0]
-            if module == "python_owasp_zap_v2_4":
-                module = "zapv2"
-            else:
-                module = module.lower()
+            # Use override map; fall back to lowercased package name
+            module = _PIP_IMPORT_OVERRIDES.get(arg, arg.lower().replace("-", "_"))
             try:
                 __import__(module)
-                logger.debug(f"Tool check: pip package '{arg}' already installed.")
+                logger.debug(f"Tool check: pip package '{arg}' already installed (import {module} OK).")
                 installed.append(display_name)
                 continue
             except ImportError:
@@ -279,7 +288,8 @@ def _download_missing_tools_locally(missing):
             "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_arm64.zip",
             "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
             "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
-            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
+            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
+            "Gitleaks": "https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_arm64.tar.gz",
         }
     else:
         urls = {
@@ -287,7 +297,8 @@ def _download_missing_tools_locally(missing):
             "Subfinder": "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip",
             "HTTPx": "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
             "ffuf": "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
-            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip"
+            "Nikto": "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
+            "Gitleaks": "https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz",
         }
 
     downloaded_any = False

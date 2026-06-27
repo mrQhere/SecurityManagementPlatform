@@ -104,10 +104,10 @@ info "Installing PySide6 (Qt6 GUI – this may take a while)..."
     || { err "PySide6 install failed. Try: $VENV_PIP install PySide6"; SYSTEM_ERRORS+=("PySide6 install failed"); }
 
 # Scanners (pip-installable)
-info "Installing scanner packages (sqlmap, wapiti3)..."
-"$VENV_PIP" install --quiet sqlmap 2>/dev/null \
-    && success "sqlmap installed." \
-    || warn "sqlmap pip install failed – will try system apt fallback."
+info "Installing scanner packages (sqlmap, theHarvester, wapiti3)..."
+"$VENV_PIP" install --quiet sqlmap theHarvester 2>/dev/null \
+    && success "sqlmap and theHarvester installed." \
+    || warn "sqlmap/theHarvester pip install failed – will try system fallbacks."
 
 "$VENV_PIP" install --quiet \
     "typing-extensions>=4.10.0" \
@@ -219,6 +219,7 @@ declare -A PREBUILT_URLS=(
     ["subfinder"]="https://github.com/projectdiscovery/subfinder/releases/download/v2.7.1/subfinder_2.7.1_linux_amd64.zip"
     ["httpx"]="https://github.com/projectdiscovery/httpx/releases/download/v1.6.10/httpx_1.6.10_linux_amd64.zip"
     ["ffuf"]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz"
+    ["gitleaks"]="https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz"
 )
 
 # ARM64 overrides
@@ -227,6 +228,7 @@ if [ "$GO_ARCH" = "arm64" ]; then
     PREBUILT_URLS["subfinder"]="https://github.com/projectdiscovery/subfinder/releases/download/v2.7.1/subfinder_2.7.1_linux_arm64.zip"
     PREBUILT_URLS["httpx"]="https://github.com/projectdiscovery/httpx/releases/download/v1.6.10/httpx_1.6.10_linux_arm64.zip"
     PREBUILT_URLS["ffuf"]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
+    PREBUILT_URLS["gitleaks"]="https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_arm64.tar.gz"
 fi
 
 declare -A GO_PKGS=(
@@ -234,6 +236,7 @@ declare -A GO_PKGS=(
     ["subfinder"]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
     ["httpx"]="github.com/projectdiscovery/httpx/cmd/httpx@latest"
     ["ffuf"]="github.com/ffuf/ffuf/v2@latest"
+    ["gitleaks"]="github.com/gitleaks/gitleaks/v8@latest"
 )
 
 _download_binary() {
@@ -279,7 +282,7 @@ _download_binary() {
     return 0
 }
 
-for tool in "nuclei" "subfinder" "httpx" "ffuf"; do
+for tool in "nuclei" "subfinder" "httpx" "ffuf" "gitleaks"; do
     if command -v "$tool" &>/dev/null; then
         success "$tool already installed at $(command -v "$tool")"
         continue

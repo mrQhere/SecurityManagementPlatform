@@ -60,17 +60,26 @@ _RETRY_DELAYS = [30, 60, 120, 240, 480]   # Seconds between retry attempts
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
-def _nvd_get(params: dict, timeout: int = 35):
+def _nvd_get(params: dict, timeout: int = 45):
     """
     Single GET to the NVD API with retry / backoff.
     Returns the requests.Response on success, or None after all retries fail.
+    Handles ChunkedEncodingError ('Response ended prematurely') with auto-retry.
     """
     for attempt in range(_MAX_RETRIES):
         # Determine retry delay safely
         delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]
         try:
-            resp = requests.get(NVD_API_URL, headers=_HEADERS, params=params, timeout=timeout)
+            resp = requests.get(NVD_API_URL, headers=_HEADERS, params=params,
+                                timeout=timeout, stream=False)
             if resp.status_code == 200:
+                # Validate we got a complete response before returning
+                try:
+                    _ = resp.content  # Force full body read; raises on truncation
+                except Exception as read_err:
+                    logger.warning(f"NVD response read error: {read_err}. Retrying…")
+                    time.sleep(delay)
+                    continue
                 return resp
             if resp.status_code == 429:
                 wait = int(resp.headers.get("Retry-After", delay))
@@ -86,8 +95,15 @@ def _nvd_get(params: dict, timeout: int = 35):
         except requests.exceptions.Timeout:
             logger.warning(f"NVD request timed out. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
             time.sleep(delay)
+        except requests.exceptions.ChunkedEncodingError as exc:
+            # 'Response ended prematurely' — NVD dropped the connection mid-transfer
+            logger.warning(f"NVD response ended prematurely (attempt {attempt+1}/{_MAX_RETRIES}): {exc}. Waiting {delay}s…")
+            time.sleep(delay)
         except requests.exceptions.ConnectionError as exc:
             logger.warning(f"NVD connection error: {exc}. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
+            time.sleep(delay)
+        except Exception as exc:
+            logger.warning(f"NVD unexpected error: {exc}. Waiting {delay}s (attempt {attempt+1}/{_MAX_RETRIES})…")
             time.sleep(delay)
     return None
 

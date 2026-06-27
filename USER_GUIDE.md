@@ -1,7 +1,7 @@
 # Security Management Platform (SMP) — User Guide & Reference Manual
 
 **Author:** mrQhere  
-**Version:** V3.4 (Stable Release)  
+**Version:** V3.6 (Stable Release — 2026-06-27)  
 **Security Status:** Protected under Cryptographic License Signature Verification
 
 ---
@@ -20,14 +20,16 @@ Any modification or deletion of the licensing validation triggers a system secur
 ## 📖 Table of Contents
 1. [A. Welcome to SMP & Installation](#a-welcome-to-smp--installation)
 2. [B. System Navigation & GUI Control](#b-system-navigation--gui-control)
-3. [C. The 22-Step Sequential Scan Pipeline](#c-the-22-step-sequential-scan-pipeline)
+3. [C. The 24-Step Sequential Scan Pipeline](#c-the-24-step-sequential-scan-pipeline)
 4. [D. Threat Intelligence Feed Integration](#d-threat-intelligence-feed-integration)
 5. [E. Vulnerability Reporting (HTML & PDF)](#e-vulnerability-reporting-html--pdf)
 6. [F. SMTP Alert Engine & Failover Routing](#f-smtp-alert-engine--failover-routing)
-7. [G. Security Audits & Logs Interpretation](#g-security-audits-&-logs-interpretation)
-8. [H. Database Backups & Data Portability](#h-database-backups-&-data-portability)
-9. [I. Security Locks & Scanner Capabilities](#i-security-locks-&-scanner-capabilities)
-10. [J. Disaster Recovery & Complete System Resets](#j-disaster-recovery-&-complete-system-resets)
+7. [G. Security Audits & Logs Interpretation](#g-security-audits--logs-interpretation)
+8. [H. Database Backups & Data Portability](#h-database-backups--data-portability)
+9. [I. Security Locks & Scanner Capabilities](#i-security-locks--scanner-capabilities)
+10. [J. Disaster Recovery & Complete System Resets](#j-disaster-recovery--complete-system-resets)
+11. [K. New Scanning Tools & Automated Action Plans](#k-new-scanning-tools--automated-action-plans)
+12. [L. Roadmap & Future Features (V4.0)](#l-roadmap--future-features-v40)
 
 ---
 
@@ -46,19 +48,9 @@ Welcome to the **Security Management Platform (SMP)**. We designed this tool to 
 ### Automated Setup (Linux)
 The platform features a fully automated, non-interactive installation script. You literally just paste one command and grab a coffee.
 
-1. Open your Terminal.
-2. Navigate to the project folder.
-3. Run the setup script:
-
 ```bash
 bash setup.sh
 ```
-
-**What the installer does while you wait:**
-1. Checks for Python and installs it if missing.
-2. Creates a safe "sandbox" (`./venv`) so it doesn't mess with your computer's other programs.
-3. Downloads all the required cybersecurity tools (Nmap, Nikto, ffuf, etc.) automatically.
-4. Secures your files so nobody else on your network can read your reports.
 
 ### Launching the Application
 Once setup is complete, you can launch the beautiful GUI dashboard anytime by running:
@@ -66,9 +58,6 @@ Once setup is complete, you can launch the beautiful GUI dashboard anytime by ru
 ```bash
 bash run.sh
 ```
-
-> [!NOTE]
-> **Pro Tip:** Always use `bash run.sh` to start the app. It automatically handles all the complex environment variables and paths for you!
 
 ---
 
@@ -85,7 +74,6 @@ When you run `bash run.sh` for the first time, you will immediately be greeted b
 After unlocking the app, a Legal Responsibility dialog will appear. 
 - Read the terms carefully. 
 - You must physically check the **"I acknowledge"** box to proceed. 
-- *Note:* The exact time you click this box is permanently logged in the secure database for legal compliance.
 
 ### Step 3: Configure Your Email Alerts (Optional but Recommended)
 Before scanning, you probably want to receive PDF reports automatically.
@@ -108,37 +96,34 @@ You are now ready to click **Scan**!
 
 The SMP Console features a premium, Apple-inspired high-contrast graphical user interface. We've removed the clutter so you can focus on what matters: your security posture.
 
-> [!TIP]
-> **Pro Tip:** The interface is divided into 5 main tabs on the left. Think of "Dashboard" as your bird's-eye view, and "Targets" as your control room where you actually launch scans.
-
 1. **Dashboard Tab**:
    - **KPI Metric Banners**: Live count of Monitored Targets, CVE Threat database volume, Active ongoing scans, and Alert dispatch status.
    - **Target Risk Summary Table**: List of monitored domains with their live operational status and calculated risk classification.
    - **Recent Security Events**: Scrollable widget displaying real-time warning logs, scan triggers, and sync occurrences.
-   - **Refresh Button**: Instantly clears memory and redraws the dashboard elements. If things ever look stuck, click this!
-   - **Scan All Targets Button**: Bulk-triggers the 22-step scan pipeline for all enabled targets. Perfect for overnight audits.
-   - **Responsibility Disclaimer**: A legal disclaimer must be accepted before first use. Upon acceptance, the exact confirmation timestamp is permanently recorded on screen and inside the database for compliance.
+   - **Refresh Button**: Instantly clears memory and redraws the dashboard elements.
+   - **Scan All Targets Button**: Bulk-triggers the 24-step scan pipeline for all enabled targets.
 
 2. **Targets Tab**:
-   - **Add New Target**: Simply type your website address (e.g. `https://example.com`) and click "Add Target" to add it to your monitoring pool.
-   - **Monitored Pipeline Table**: Shows each target's current status, last completed scan timestamp, and action keys (`Scan`, `Report`, `Toggle`, `Delete`).
+   - **Add New Target**: Simply type your website address and click "Add Target".
+   - **Monitored Pipeline Table**: Shows each target's current status and action keys (`Scan`, `Report`, `Toggle`, `Delete`).
    - **Ongoing Scans Feed**: Live feedback showing exactly which tool is currently analyzing your website.
 
 3. **Threat Intel Tab**:
    - **Filters**: Dropdowns to search the global vulnerability database. 
-   - **CVE Advisory Feed**: Hover over any entry to read what the vulnerability actually does. Color-coded from Info (Grey) to Critical (Red).
+   - **CVE Advisory Feed**: Hover over any entry to read what the vulnerability actually does.
 
 4. **Settings Tab**:
-   - **Scanner Binary Paths**: Advanced users can customize where the terminal tools are installed.
-   - **SMTP Configuration**: Connect your email here so the platform can send you PDF reports automatically when it finds a critical issue.
+   - **Scanner Binary Paths**: Customize where the terminal tools are installed.
+   - **GitHub Token**: Provide your token for higher API rate limits when pulling Advisories.
+   - **SMTP Configuration**: Connect your email here so the platform can send you PDF reports automatically.
 
 5. **Audit Logs Tab**:
    - **Master Log**: Your chronological history of everything the app has done.
-   - **Scan Events Log**: Terminal output. Useful if you want to see the "Matrix" code of the scanners working.
+   - **Scan Events Log**: Terminal output of the scanners working.
 
 ---
 
-## C. The 22-Step Sequential Scan Pipeline
+## C. The 24-Step Sequential Scan Pipeline
 
 To protect networks from Denial of Service (DoS) triggers, the pipeline runs **sequentially (one tool at a time)**.
 
@@ -147,25 +132,27 @@ To protect networks from Denial of Service (DoS) triggers, the pipeline runs **s
 | 1 | **HTTPx Probe** | Reconnaissance | Validates the target is online. Pipeline skips early if down. |
 | 2 | **WhatWeb** | Fingerprinting | Identifies underlying server technologies (Apache, WordPress, PHP). |
 | 3 | **Subfinder** | Subdomain Enum | Identifies active subdomains via passive query feeds. |
-| 4 | **CRT.sh** | Subdomain Enum | Queries Certificate Transparency logs to find subdomains. |
-| 5 | **HackerTarget** | DNS Recon | Resolves IP ranges and reverse DNS maps. |
-| 6 | **Whois** | Registry Recon | Pulls registrar dates and contact names. |
-| 7 | **Wayback Machine**| URL Recon | Searches archive archives to extract historical URL endpoints. |
-| 8 | **Traceroute** | Network Mapping | Performs a UDP path trace without root dependencies. |
-| 9 | **Nmap** | Port Scanner | Scans top-100 ports (`-F -sV -T4`) for open ports and banners. |
-| 10 | **SSL Scanner** | Cryptography | Evaluates TLS configuration vulnerabilities via `sslyze`. |
-| 11 | **Security Headers**| Web Audits | Verifies presence of CSP, HSTS, X-Frame-Options, etc. |
-| 12 | **Robots Scanner** | Path Recon | Parses `robots.txt` and locates `sitemap.xml` for hidden paths. |
-| 13 | **CORS Scanner** | API Audits | Validates origin parameters to check for wildcard CORS. |
-| 14 | **CMS Scanner** | Platform Audits | Specifically probes theme/plugin structures on WordPress/Drupal. |
-| 15 | **Nikto Web Scan** | Web Vulnerability | Runs CGI and file-based checks (CSV formatted). |
-| 16 | **Nuclei** | Vulnerabilities | Runs template-based YAML scanners for CVE exposures. |
-| 17 | **ffuf** | Path Fuzzing | Directory fuzzer using wordlist; isolates output via JSON temp file. |
-| 18 | **Open Redirect** | Web Audits | Tests parameters (e.g. `?url=`, `?next=`) for open redirection. |
-| 19 | **Tech Fingerprint**| Fingerprinting | Performs deep response header profiling. |
-| 20 | **Wapiti** | Web Vulnerability | Performs active OWASP injection checks using `wapiti3`. |
-| 21 | **SQLMap** | Injection Audits | Tests potential SQL injection points with `--forms --batch --smart`. |
-| 22 | **Shodan profile** | IoT profiling | Queries Shodan InternetDB passively to verify external exposures. |
+| 4 | **theHarvester** | OSINT | Passive search engine scraping for exposed emails and subdomains. |
+| 5 | **CRT.sh** | Subdomain Enum | Queries Certificate Transparency logs to find subdomains. |
+| 6 | **HackerTarget** | DNS Recon | Resolves IP ranges and reverse DNS maps. |
+| 7 | **Whois** | Registry Recon | Pulls registrar dates and contact names. |
+| 8 | **Wayback Machine**| URL Recon | Searches archive archives to extract historical URL endpoints. |
+| 9 | **Traceroute** | Network Mapping | Performs a UDP path trace without root dependencies. |
+| 10 | **Nmap** | Port Scanner | Scans top-100 ports (`-F -sV -T4`) for open ports and banners. |
+| 11 | **SSL Scanner** | Cryptography | Evaluates TLS configuration vulnerabilities via `sslyze`. |
+| 12 | **Security Headers**| Web Audits | Verifies presence of CSP, HSTS, X-Frame-Options, etc. |
+| 13 | **Robots Scanner** | Path Recon | Parses `robots.txt` and locates `sitemap.xml` for hidden paths. |
+| 14 | **CORS Scanner** | API Audits | Validates origin parameters to check for wildcard CORS. |
+| 15 | **CMS Scanner** | Platform Audits | Specifically probes theme/plugin structures on WordPress/Drupal. |
+| 16 | **Nikto Web Scan** | Web Vulnerability | Runs CGI and file-based checks (CSV formatted). |
+| 17 | **Nuclei** | Vulnerabilities | Runs template-based YAML scanners for CVE exposures. |
+| 18 | **ffuf** | Path Fuzzing | Directory fuzzer using wordlist; isolates output via JSON temp file. |
+| 19 | **Open Redirect** | Web Audits | Tests parameters (e.g. `?url=`, `?next=`) for open redirection. |
+| 20 | **Tech Fingerprint**| Fingerprinting | Performs deep response header profiling. |
+| 21 | **Wapiti** | Web Vulnerability | Performs active OWASP injection checks using `wapiti3`. |
+| 22 | **SQLMap** | Injection Audits | Tests potential SQL injection points with `--forms --batch --smart`. |
+| 23 | **Shodan profile** | IoT profiling | Queries Shodan InternetDB passively to verify external exposures. |
+| 24 | **Gitleaks** | Secret Scanning | Checks for hardcoded passwords, keys, and credentials in repos. |
 
 ---
 
@@ -173,14 +160,10 @@ To protect networks from Denial of Service (DoS) triggers, the pipeline runs **s
 
 The Threat Intelligence engine syncs periodically to compile a local vulnerability database, which maps directly to target technologies:
 
-1. **NVD NIST Feed**:
-   - Fetches paginated base records published since 2018. Enforces a 6.5s delay to strictly comply with API request rates. Uses incremental 30-day checks after the first initial sync.
-2. **CISA KEV Feed**:
-   - Syncs CISA's catalog of Known Exploited Vulnerabilities directly to focus alerts on real-world active exploits.
-3. **GitHub Advisories**:
-   - Gathers production-grade advisory CVE records using HTTP Link-header pagination.
-4. **EPSS scoring**:
-   - Enriches entries with Exploit Prediction Scoring System probabilities to help prioritize critical items.
+1. **NVD NIST Feed**: Fetches paginated base records published since 2018.
+2. **CISA KEV Feed**: Syncs CISA's catalog of Known Exploited Vulnerabilities.
+3. **GitHub Advisories**: Gathers production-grade advisory CVE records via tokenized authentication.
+4. **EPSS scoring**: Enriches entries with Exploit Prediction Scoring System probabilities.
 
 ### Technology Correlation
 After a scan completes, the Correlation Engine searches the `cves` table for overlaps with the target's detected software names. Any matches are inserted into the `findings` table as a **CVE Correlation** finding, making them visible in the dashboard and reports.
@@ -203,7 +186,7 @@ When a scan finishes, a detailed **15-section report** is compiled:
 10. **Injection Vulnerabilities**: SQL injection vulnerabilities found by SQLMap or Wapiti.
 11. **Threat Intel (CVEs)**: Correlated CVE advisories.
 12. **Risk Score Metrics**: Displays calculated numeric score (0 to 100) and severity rating.
-13. **Hardening Recommendations**: Actionable items mapped to findings.
+13. **Hardening Recommendations**: Actionable items mapped to findings (e.g., Nginx/Apache configuration changes).
 14. **References & Citations**: Educational URLs to mapping sources.
 15. **Historical Timeline**: Charts comparing findings with previous scans.
 
@@ -225,9 +208,6 @@ Standard Gmail accounts require a 16-character **App Password** for SMTP authent
 3. Click **App Passwords** and generate a key for "Mail".
 4. Copy the generated 16-character password and enter it into the Settings tab.
 
-### Failover Relay Routing
-To prevent critical alert delivery failure, if the primary SMTP connection (`smtp_host`) fails or times out, the router automatically fails over to the configured backup SMTP relay settings before logging an error.
-
 ---
 
 ## G. Security Audits & Logs Interpretation
@@ -244,49 +224,41 @@ Logs are organized into four dedicated targets:
 
 To prevent data corruption and ensure compliance, the platform maintains a highly redundant 4-layer backup system. Every time a scan completes, the database orchestrator automatically synchronizes the live data.
 
-### The 4 Redundant Backup Databases (`/backup/`)
-1. **`active_scans.db` (Audit Trail)**: Archives the absolute raw JSON output of every tool (Nmap, ffuf, SQLMap, etc) exactly as it was captured, preserving forensic integrity.
-2. **`important_results.db` (Executive Backup)**: Separates and stores only High and Critical severity findings. Useful for rapid remediation workflows.
-3. **`cve_secondary.db` (Threat Intel Mirror)**: A complete mirror of the synchronized threat intelligence feeds (NVD, CISA, GitHub Advisories) ensuring offline availability.
-4. **`full_backup.db` (Disaster Recovery)**: A perfect, structural 1:1 mirror of all 8 primary application tables (`targets`, `scans`, `findings`, `logs`, `alerts`, `risk_scores`, `technologies`, `responsibility_log`). If your live `security.db` is corrupted or deleted, the system can instantly restore your exact state using `restore_from_backup()`.
+### Database Storage Architecture & Encryption Matrix
 
-### Backup Protection Mechanisms
-- **Write-Ahead Logging (WAL)**: Enabled by default to permit concurrent read and write transactions.
-- **Transactional Backoff**: Exponential backoff retry loop resolves locks if writes conflict.
-- **Safe WAL Checkpoints**: `PRAGMA wal_checkpoint(TRUNCATE)` is executed before copying the database to ensure all logs are fully committed.
-- **Zipped Backups**: Backups are archived directly into a zip file (`backup/archive_container_{timestamp}.zip`).
-- **Raw Data Export**: Export SQLite raw data scans directly to a zip file using the GUI.
+| Database Name | File Path | Purpose / Description | Encryption (AES-256) |
+| :--- | :--- | :--- | :--- |
+| **Primary Database** | `database/security.db` | Contains the primary schema: targets, scans, findings, technologies, baselines, etc. | **Yes** (encrypted at rest) |
+| **Audit Trail** | `backup/active_scans.db` | Archives the absolute raw JSON output of every tool exactly as it was captured. | **Yes** (encrypted at rest) |
+| **Executive Backup** | `backup/important_results.db` | Stores only High and Critical severity findings. | **Yes** (encrypted at rest) |
+| **Disaster Recovery** | `backup/full_backup.db` | Structural 1:1 replica of all 8 primary application tables. | **Yes** (encrypted at rest) |
+| **Threat Intel Mirror** | `backup/cve_secondary.db` | A local cache mirror of synchronized threat intelligence feeds. | **No** (Stored in plain text) |
 
 ---
 
----
-
-## 🚨 I. Security Locks & Scanner Capabilities
+## I. Security Locks & Scanner Capabilities
 
 ### Master Password Security Lock
 To protect your sensitive vulnerability data, SMP automatically encrypts your databases using military-grade **AES-256 Encryption**. 
 
-1. **Initial Startup**: On your very first launch, you will be asked to create a **Master Password**. Don't lose this!
-2. **Subsequent Launches**: Every time you open the app, you must type this password to unlock your data.
-3. **Automatic Cleanup**: When you close the app, it instantly scrambles and encrypts your files on the hard drive, so even if someone steals your laptop, they cannot read your security reports.
-
 > [!CAUTION]
 > **Warning:** If you forget your Master Password, there is absolutely no "Forgot Password" button. Your data is cryptographically locked forever. You will have to perform a Factory Reset (see Section J).
+
+> [!WARNING]
+> **OWASP ZAP Note:** ZAP active scanning requires a running Java daemon (`zaproxy`) that must be started separately before the SMP scan runs. It is not auto-started. (ZAP is disabled by default).
 
 ### Scanning Modes (Standard vs. Deep Scan)
 When you click "Scan", you'll see a popup asking for your computer's administrator (`sudo`) password.
 
-* **Standard Mode (Leave Blank)**: If you just click OK without typing your computer password, the scan runs safely using standard permissions. It's fast and effective.
-* **Deep Mode (Enter Password)**: If you type your computer password, you give SMP permission to use advanced "Root" techniques. This allows Nmap to attempt to guess the exact operating system of the target, and allows Traceroute to bypass certain firewalls.
+* **Standard Mode (Leave Blank)**: If you just click OK without typing your computer password, the scan runs safely using standard permissions. **Active vulnerability scanners (Nikto, Nuclei, ffuf, Wapiti, SQLMap) will be skipped** because they require the MAC anonymisation step to proceed.
+* **Deep Mode (Enter Password)**: If you type your computer password, SMP:
+  1. **Randomises your MAC address** — your network adapter's address is changed to a random same-vendor address.
+  2. **Enables all active scanners** — Nikto, Nuclei, ffuf, Wapiti, and SQLMap are enabled.
+  3. **Unlocks deep Nmap** — Nmap attempts OS fingerprinting and Traceroute bypasses certain firewalls.
 
 ---
 
-## 🛠️ J. Disaster Recovery & Complete System Resets
-
-Sometimes things go wrong, or you just want a completely fresh start. Here are the exact copy-paste commands to clean up your system.
-
-> [!IMPORTANT]
-> **Pro Tip:** Open your Terminal, navigate to the `SecurityManagementPlatform-main` folder, and literally copy-paste the grey command blocks below.
+## J. Disaster Recovery & Complete System Resets
 
 ### 1. Resetting the Master Password (Fresh Database Setup)
 Forgot your Master Password? You are locked out. To wipe everything and start entirely fresh:
@@ -299,33 +271,7 @@ rm -f config/auth.json database/security.db* backup/*.db*
 bash run.sh
 ```
 
-### 2. Resetting User Configurations & Settings
-Messed up your settings or SMTP passwords? Reset them back to factory defaults:
-
-```bash
-# Delete your current settings and restore the blank template
-rm -f config/settings.json
-cp config/settings.example.json config/settings.json
-```
-
-### 3. Cleaning All Logs & Cached Data
-Want to clear your audit logs and force the app to re-download the global CVE Threat Database?
-
-```bash
-# Delete all logs and cache
-rm -rf logs/*
-rm -f cache/intel_cache.json
-```
-
-### 4. Cleaning Generated PDF & HTML Reports
-Too many old PDF reports cluttering up your system?
-
-```bash
-# Delete all generated reports
-rm -rf reports/html/* reports/pdf/*
-```
-
-### 5. THE NUCLEAR OPTION: Full Factory Reset
+### 2. THE NUCLEAR OPTION: Full Factory Reset
 Want to completely obliterate all your data, settings, logs, and passwords to make the app exactly like the day you downloaded it? Run this single command:
 
 ```bash
@@ -335,8 +281,45 @@ rm -rf config/auth.json config/settings.json config/license.key database/* backu
 
 ---
 
-### License Verification Setup
-For user awareness and license key security:
-* A public copy of the valid license key is provided in the [license.key](file:///home/dxt/Downloads/SecurityManagementPlatform-main/license/license.key) file within the `license/` folder.
-* To authenticate the platform for execution, you must manually copy this file into the gitignored config directory as `config/license.key`.
-* Running the platform without copying the license key will trigger a security halt and exit on launch.
+## K. New Scanning Tools & Automated Action Plans
+
+### 1. OSINT Email & Domain Harvesting (theHarvester)
+- **What it does**: Passive search engine scraping of Google, DuckDuckGo, and Bing for target domain’s exposed email addresses and hosts/subdomains.
+- **Severity**: Info/Medium.
+- **Execution Step**: [4/24].
+
+### 2. Exposed Repositories & Secret Leaks (Gitleaks)
+- **What it does**: 
+  - Checks if the target web server exposes `.git/config` to the internet (Critical risk).
+  - Performs full code repository credential scanning, checking for hardcoded passwords, keys, and credentials.
+- **Severity**: Critical.
+- **Execution Step**: [24/24].
+
+### 3. Automated Hardening Recommendations & Action Plan
+- **What it does**: Matches active scan findings against a local security configuration dictionary (`config/hardening_rules.json`). Output is sorted by severity and includes Nginx, Apache, and Linux Shell/Bash commands that are copy-pasteable to remediate findings instantly.
+
+---
+
+## L. Roadmap & Future Features (V4.0)
+
+As part of our ongoing commitment to improving the Security Management Platform, the following features are planned for upcoming releases:
+
+### Tier 1 — Next Sprint Additions (High Impact, Low Effort)
+1. **Amass (Deep Subdomain Enumeration)**: Supplements Subfinder by using active DNS brute-forcing, ASN lookups, and 50+ data sources to find subdomains not registered in public feeds.
+2. **Feroxbuster (Recursive Directory Fuzzing)**: Supplements `ffuf` with recursive directory fuzzing and native auto-detection of wildcard responses.
+3. **Dnsx (DNS Record Brute-Forcing)**: Actively brute-forces DNS records (A, AAAA, CNAME, MX, TXT, NS) to find misconfigured records and dangling subdomains.
+
+### Tier 2 — Roadmap Features (High Impact, Moderate Effort)
+4. **Lynis (Server-Side Hardening Audit)**: Scans the server from the inside via SSH to check OS-level configurations (file permissions, kernel parameters, sudoers).
+5. **Trivy (Container & Dependency CVE Scanner)**: Scans inside Docker containers and `requirements.txt` files for dependency vulnerabilities.
+6. **Fail2Ban Log Reader (Active Threat Visibility)**: Reads `/var/log/fail2ban.log` via SSH to display currently-banned IPs and active threat feeds on the dashboard.
+7. **Wfuzz (Parameter & API Fuzzing)**: Fuzzes URL parameters, form fields, headers, and cookie values to find broken access control, IDOR, and parameter injection.
+8. **JWT Analyzer**: Extracts and analyzes JSON Web Tokens for vulnerabilities such as algorithm confusion (`alg: none`), weak secrets, and expiry issues.
+
+### Tier 3 — Enterprise & Advanced Analytics (High Impact, High Effort)
+9. **MITRE ATT&CK Technique Mapper**: Maps every SMP finding to an ATT&CK technique ID (e.g., T1059.007 for JavaScript injection) to provide enterprise-grade threat intelligence context.
+10. **Response Baseline Diffing (Watchdog)**: Periodically hashes page content, checks ports, cert fingerprints, and DNS IPs to detect real-time changes and active compromises.
+11. **Historical Scan Trend Analysis**: Adds trend graphs and delta analysis (new vs. resolved findings) to the report's Historical Timeline section.
+12. **Technology-to-Known-Exploit Correlation**: Extracts specific version numbers from WhatWeb/HTTPx/Nmap to filter CVE matching more accurately.
+13. **Passive Shodan + Censys Cross-Reference**: Uses Censys API to cross-reference open ports and JARM fingerprints with Nmap and Shodan findings.
+

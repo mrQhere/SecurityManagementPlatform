@@ -1,0 +1,230 @@
+[
+  {
+    "id": "missing_hsts",
+    "keywords": ["hsts", "strict-transport-security", "strict transport security"],
+    "severity_applies_to": ["High", "Medium"],
+    "title": "Enable HTTP Strict Transport Security (HSTS)",
+    "explanation": "Without HSTS, browsers can be tricked into connecting over plain HTTP even when HTTPS is available. This enables SSL stripping attacks.",
+    "effort": "Low",
+    "fix_nginx": "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains; preload\" always;",
+    "fix_apache": "Header always set Strict-Transport-Security \"max-age=31536000; includeSubDomains\"",
+    "fix_notes": "Add to your server block in nginx.conf or .htaccess. Restart web server after."
+  },
+  {
+    "id": "missing_csp",
+    "keywords": ["content-security-policy", "csp", "content security policy"],
+    "severity_applies_to": ["High", "Medium"],
+    "title": "Add Content Security Policy Header",
+    "explanation": "Without CSP, attackers can inject malicious scripts into your pages (XSS). CSP tells browsers which sources are trusted.",
+    "effort": "Medium",
+    "fix_nginx": "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';\" always;",
+    "fix_apache": "Header set Content-Security-Policy \"default-src 'self';\"",
+    "fix_notes": "Start with a restrictive policy and loosen only what breaks. Test in report-only mode first using Content-Security-Policy-Report-Only."
+  },
+  {
+    "id": "missing_xframe",
+    "keywords": ["x-frame-options", "clickjacking", "frame"],
+    "severity_applies_to": ["Medium", "Low"],
+    "title": "Add X-Frame-Options Header (Clickjacking Protection)",
+    "explanation": "Without this header, attackers can embed your site in an invisible iframe and trick users into clicking hidden buttons.",
+    "effort": "Low",
+    "fix_nginx": "add_header X-Frame-Options \"SAMEORIGIN\" always;",
+    "fix_apache": "Header always set X-Frame-Options \"SAMEORIGIN\"",
+    "fix_notes": "Use DENY if you never need your site embedded. Use SAMEORIGIN if you embed it yourself."
+  },
+  {
+    "id": "missing_xcontent",
+    "keywords": ["x-content-type", "mime sniffing", "content type options", "x-content-type-options"],
+    "severity_applies_to": ["Low", "Medium"],
+    "title": "Add X-Content-Type-Options Header",
+    "explanation": "Without this, browsers may guess the file type and execute a text file as JavaScript.",
+    "effort": "Low",
+    "fix_nginx": "add_header X-Content-Type-Options \"nosniff\" always;",
+    "fix_apache": "Header always set X-Content-Type-Options \"nosniff\"",
+    "fix_notes": "One line. No downside. Always add this."
+  },
+  {
+    "id": "missing_referrer_policy",
+    "keywords": ["referrer-policy", "referrer policy"],
+    "severity_applies_to": ["Low", "Medium"],
+    "title": "Add Referrer-Policy Header",
+    "explanation": "Without this, your URLs (including query strings with sensitive data) are leaked to third-party sites via the Referer header.",
+    "effort": "Low",
+    "fix_nginx": "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;",
+    "fix_apache": "Header always set Referrer-Policy \"strict-origin-when-cross-origin\"",
+    "fix_notes": "Use 'no-referrer' for maximum privacy. 'strict-origin-when-cross-origin' is the recommended balance."
+  },
+  {
+    "id": "missing_permissions_policy",
+    "keywords": ["permissions-policy", "feature-policy", "permissions policy"],
+    "severity_applies_to": ["Low", "Info"],
+    "title": "Add Permissions-Policy Header",
+    "explanation": "Without this, any third-party script can request access to camera, microphone, and geolocation.",
+    "effort": "Low",
+    "fix_nginx": "add_header Permissions-Policy \"camera=(), microphone=(), geolocation=()\" always;",
+    "fix_apache": "Header always set Permissions-Policy \"camera=(), microphone=(), geolocation=()\"",
+    "fix_notes": "List only the features your site actively uses. Deny everything else."
+  },
+  {
+    "id": "open_mysql_port",
+    "keywords": ["3306", "mysql", "mariadb"],
+    "severity_applies_to": ["Critical", "High"],
+    "title": "Close Externally Exposed MySQL Port (3306)",
+    "explanation": "MySQL should NEVER be accessible from the internet. An exposed port 3306 allows brute-force attacks against your database directly.",
+    "effort": "Low",
+    "fix_bash": [
+      "sudo ufw deny 3306",
+      "sudo ufw reload",
+      "sudo ufw status"
+    ],
+    "fix_notes": "If your app needs database access, use localhost (127.0.0.1) in your connection string, not the public IP."
+  },
+  {
+    "id": "open_redis_port",
+    "keywords": ["6379", "redis"],
+    "severity_applies_to": ["Critical", "High"],
+    "title": "Close Externally Exposed Redis Port (6379)",
+    "explanation": "Unauthenticated Redis is a critical vulnerability. Attackers can read all cached data, write arbitrary keys, and in some configs achieve remote code execution.",
+    "effort": "Low",
+    "fix_bash": [
+      "sudo ufw deny 6379",
+      "sudo ufw reload"
+    ],
+    "fix_redis_conf": "bind 127.0.0.1",
+    "fix_notes": "Edit /etc/redis/redis.conf and set bind to 127.0.0.1. Then restart Redis: sudo systemctl restart redis"
+  },
+  {
+    "id": "open_mongodb_port",
+    "keywords": ["27017", "mongodb", "mongo"],
+    "severity_applies_to": ["Critical", "High"],
+    "title": "Close Externally Exposed MongoDB Port (27017)",
+    "explanation": "An unauthenticated MongoDB instance can expose your entire database to the internet. This has led to thousands of data breaches.",
+    "effort": "Low",
+    "fix_bash": [
+      "sudo ufw deny 27017",
+      "sudo ufw reload"
+    ],
+    "fix_notes": "Edit /etc/mongod.conf and set net.bindIp to 127.0.0.1. Restart: sudo systemctl restart mongod"
+  },
+  {
+    "id": "open_ssh_default",
+    "keywords": ["port 22", " ssh ", "openssh"],
+    "severity_applies_to": ["Medium", "High"],
+    "title": "Harden SSH Access",
+    "explanation": "Port 22 exposed to the internet attracts automated brute-force bots within minutes of server creation.",
+    "effort": "Medium",
+    "fix_bash": [
+      "sudo sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config",
+      "sudo systemctl restart sshd",
+      "sudo ufw allow 2222",
+      "sudo ufw deny 22",
+      "sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config",
+      "sudo systemctl restart sshd"
+    ],
+    "fix_notes": "Always test the new SSH connection in a second terminal before closing the first one. Never lock yourself out."
+  },
+  {
+    "id": "ssl_expiry",
+    "keywords": ["ssl expir", "certificate expir", "tls expir", "cert expir"],
+    "severity_applies_to": ["Critical", "High"],
+    "title": "Renew SSL Certificate",
+    "explanation": "An expired certificate breaks HTTPS for all users and shows a security warning in browsers.",
+    "effort": "Low",
+    "fix_bash": [
+      "sudo certbot renew",
+      "sudo systemctl reload nginx",
+      "echo '0 3 * * * certbot renew --quiet && systemctl reload nginx' | sudo crontab -"
+    ],
+    "fix_notes": "Set up auto-renewal immediately. Let's Encrypt certificates expire every 90 days."
+  },
+  {
+    "id": "directory_listing",
+    "keywords": ["directory listing", "directory index", "index of /", "autoindex"],
+    "severity_applies_to": ["Medium", "High"],
+    "title": "Disable Directory Listing",
+    "explanation": "Directory listing shows all files in a folder to anyone who visits. Attackers use this to find backup files, config files, and source code.",
+    "effort": "Low",
+    "fix_nginx": "autoindex off;",
+    "fix_apache": "Options -Indexes",
+    "fix_htaccess": "Options -Indexes",
+    "fix_notes": "Add to your server config or .htaccess file in the web root."
+  },
+  {
+    "id": "cors_misconfiguration",
+    "keywords": ["cors", "access-control-allow-origin", "cross-origin"],
+    "severity_applies_to": ["High", "Critical"],
+    "title": "Fix CORS Misconfiguration",
+    "explanation": "A wildcard CORS policy (Access-Control-Allow-Origin: *) allows any website to read your API responses, enabling data theft from logged-in users.",
+    "effort": "Medium",
+    "fix_nginx": "add_header Access-Control-Allow-Origin \"https://yourdomain.com\" always;",
+    "fix_notes": "Replace * with your specific frontend domain. Never use * on authenticated APIs."
+  },
+  {
+    "id": "sql_injection",
+    "keywords": ["sql injection", "sqli", "sqlmap", "sql inject"],
+    "severity_applies_to": ["Critical"],
+    "title": "Fix SQL Injection Vulnerability",
+    "explanation": "SQL injection allows attackers to read, modify, or delete your entire database. This is one of the most critical vulnerabilities possible.",
+    "effort": "High",
+    "fix_notes": "Switch to parameterized queries / prepared statements. Never concatenate user input into SQL strings. Python: cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,)) instead of f'SELECT * FROM users WHERE id = {user_id}'"
+  },
+  {
+    "id": "server_version_exposed",
+    "keywords": ["server header", "x-powered-by", "version disclosure", "server version", "server banner"],
+    "severity_applies_to": ["Low", "Medium"],
+    "title": "Hide Server Version Information",
+    "explanation": "Exposing your server version tells attackers exactly which CVEs to use against you.",
+    "effort": "Low",
+    "fix_nginx": "server_tokens off;",
+    "fix_apache": "ServerTokens Prod\nServerSignature Off",
+    "fix_notes": "Also remove X-Powered-By headers from your application framework."
+  },
+  {
+    "id": "weak_tls",
+    "keywords": ["tls 1.0", "tls 1.1", "ssl 3", "sslv3", "weak cipher", "weak tls", "tlsv1.0", "tlsv1.1"],
+    "severity_applies_to": ["High", "Critical"],
+    "title": "Disable Weak TLS Versions",
+    "explanation": "TLS 1.0 and 1.1 have known vulnerabilities (POODLE, BEAST). Only TLS 1.2 and 1.3 should be enabled.",
+    "effort": "Low",
+    "fix_nginx": "ssl_protocols TLSv1.2 TLSv1.3;\nssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;\nssl_prefer_server_ciphers off;",
+    "fix_apache": "SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1\nSSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256",
+    "fix_notes": "Test your TLS config at https://www.ssllabs.com/ssltest/ after applying changes."
+  },
+  {
+    "id": "open_redirect",
+    "keywords": ["open redirect", "open-redirect"],
+    "severity_applies_to": ["Medium", "High"],
+    "title": "Fix Open Redirect Vulnerability",
+    "explanation": "Open redirects allow attackers to use your trusted domain to redirect users to malicious sites, making phishing attacks more convincing.",
+    "effort": "Medium",
+    "fix_notes": "Never redirect to a URL taken directly from user input. Validate that the redirect target is within your own domain. Use a whitelist of allowed redirect destinations."
+  },
+  {
+    "id": "xss",
+    "keywords": ["xss", "cross-site scripting", "cross site scripting", "script injection"],
+    "severity_applies_to": ["High", "Critical"],
+    "title": "Fix Cross-Site Scripting (XSS)",
+    "explanation": "XSS allows attackers to inject JavaScript into your pages, stealing session cookies, redirecting users, and defacing the site.",
+    "effort": "High",
+    "fix_notes": "Escape all user input before rendering in HTML. Use a templating engine that auto-escapes (Jinja2 autoescaping, React JSX). Implement a strict Content-Security-Policy. Set HttpOnly flag on session cookies."
+  },
+  {
+    "id": "missing_cookie_flags",
+    "keywords": ["cookie", "httponly", "secure flag", "samesite"],
+    "severity_applies_to": ["Medium", "High"],
+    "title": "Harden Cookie Security Flags",
+    "explanation": "Cookies without HttpOnly can be stolen via XSS. Cookies without Secure can be sent over plain HTTP. Cookies without SameSite are vulnerable to CSRF.",
+    "effort": "Low",
+    "fix_notes": "Set all session cookies with: HttpOnly; Secure; SameSite=Strict. In Python/Flask: response.set_cookie('session', value, httponly=True, secure=True, samesite='Strict')"
+  },
+  {
+    "id": "exposed_admin_panel",
+    "keywords": ["admin", "/admin", "/wp-admin", "admin panel", "admin login", "administrator"],
+    "severity_applies_to": ["High", "Medium"],
+    "title": "Restrict Access to Admin Panel",
+    "explanation": "A publicly exposed admin panel is a high-value target. Attackers can brute-force it or exploit vulnerabilities in the admin interface directly.",
+    "effort": "Medium",
+    "fix_nginx": "location /admin {\n  allow YOUR_IP;\n  deny all;\n}",
+    "fix_notes": "Restrict /admin, /wp-admin, /dashboard to your IP address only. Add multi-factor authentication to all admin accounts."
+  }
+]

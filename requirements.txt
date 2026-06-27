@@ -5,3 +5,4 @@ sslyze>=5.2.0
 python-owasp-zap-v2.4>=0.0.21
 Jinja2>=3.1.2
 weasyprint>=60.2
+theHarvester

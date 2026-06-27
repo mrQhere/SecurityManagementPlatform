@@ -518,6 +518,7 @@ def _generate_vapt_pdf(filepath, ctx):
         ("3", "Engagement Scope & Methodology Boundaries"),
         ("4", "Findings Summary Matrix"),
         ("5", "Deep-Dive Technical Findings"),
+        ("5B", "Automated Hardening Recommendations & Action Plan"),
         ("6A", "Appendix A — Security Assessment Tooling"),
         ("6B", "Appendix B — Post-Testing Environment Clean-up Log"),
         ("6C", "Appendix C — Severity Definitions Glossary"),
@@ -802,6 +803,10 @@ def _generate_vapt_pdf(filepath, ctx):
             if idx % 3 == 0 and idx < len(sorted_findings):
                 story.append(PageBreak())
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # SECTION 5B — AUTOMATED HARDENING RECOMMENDATIONS
+    # ══════════════════════════════════════════════════════════════════════════
+    _generate_hardening_section(c["findings"], st, story)
     story.append(PageBreak())
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -994,6 +999,118 @@ def _generate_vapt_pdf(filepath, ctx):
     ))
 
     doc.build(story)
+
+
+# ── Hardening Recommendation matching ────────────────────────────────────────
+
+def _generate_hardening_section(findings, st, story):
+    """
+    Appends Section 5B: Automated Hardening Recommendations / Action Plan to story.
+    Matches findings to rules in config/hardening_rules.json.
+    """
+    import os
+    import json
+    rules_path = os.path.join(BASE_DIR, "config", "hardening_rules.json")
+    if not os.path.exists(rules_path):
+        return
+
+    try:
+        with open(rules_path, "r", encoding="utf-8") as f:
+            rules = json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load hardening rules: {e}")
+        return
+
+    # Match rules to findings
+    matched_rules = []
+    for rule in rules:
+        matched_findings = []
+        highest_sev = "Info"
+        keywords = rule.get("keywords", [])
+        for f in findings:
+            title_lower = f.get("title", "").lower()
+            desc_lower = f.get("description", "").lower()
+            if any(kw.lower() in title_lower or kw.lower() in desc_lower for kw in keywords):
+                matched_findings.append(f)
+                sev = f.get("severity", "Info")
+                if _sev_rank(sev) < _sev_rank(highest_sev):
+                    highest_sev = sev
+
+        if matched_findings:
+            matched_rules.append({
+                "rule": rule,
+                "findings": matched_findings,
+                "highest_severity": highest_sev
+            })
+
+    if not matched_rules:
+        story.append(_section_header(st, "5B", "Automated Hardening Recommendations"))
+        story.append(Paragraph("No specific infrastructure hardening templates matched the active findings list.", st["body"]))
+        story.append(_spacer(20))
+        return
+
+    # Sort matched rules by highest severity of findings they address
+    matched_rules.sort(key=lambda r: _sev_rank(r["highest_severity"]))
+
+    story.append(_section_header(st, "5B", "Automated Hardening Recommendations &amp; Action Plan"))
+    story.append(Paragraph(
+        "This section maps the active scan findings to pre-configured security hardening templates. "
+        "Each recommendation below includes strategic explanations and specific server/command fixes sorted by severity.",
+        st["body"]
+    ))
+    story.append(_spacer(15))
+
+    for idx, mr in enumerate(matched_rules, 1):
+        rule = mr["rule"]
+        findings_str = ", ".join(f["title"] for f in mr["findings"])
+        label, sev_hex = _SEV_LABEL.get(mr["highest_severity"], ("INFO", _P["info"]))
+
+        # Title
+        story.append(Paragraph(f"<b>5B.{idx} — {rule.get('title')}</b>", st["h3"]))
+        
+        # Details table
+        pairs = [
+            ("Addressed Vulnerabilities", findings_str[:160] + ("..." if len(findings_str) > 160 else "")),
+            ("Max Severity Level", f'<font color="{sev_hex}"><b>{label}</b></font>'),
+            ("Implementation Effort", rule.get("effort", "Medium")),
+        ]
+        story.append(_kv_table(pairs, st))
+        story.append(_spacer(6))
+
+        # Explanation
+        story.append(Paragraph("<b>Concept &amp; Risk Explanation:</b>", st["label"] if "label" in st else st["cell_bold"]))
+        story.append(Paragraph(rule.get("explanation", ""), st["body"]))
+        story.append(_spacer(6))
+
+        # Command fixes
+        if rule.get("fix_nginx"):
+            story.append(Paragraph("<b>Nginx Configuration:</b>", st["cell_bold"]))
+            story.append(_code_block(rule.get("fix_nginx"), st))
+            story.append(_spacer(4))
+        if rule.get("fix_apache"):
+            story.append(Paragraph("<b>Apache Configuration:</b>", st["cell_bold"]))
+            story.append(_code_block(rule.get("fix_apache"), st))
+            story.append(_spacer(4))
+        if rule.get("fix_bash"):
+            bash_cmds = rule.get("fix_bash")
+            if isinstance(bash_cmds, list):
+                bash_str = "\n".join(bash_cmds)
+            else:
+                bash_str = str(bash_cmds)
+            story.append(Paragraph("<b>Remediation Commands (Shell/Bash):</b>", st["cell_bold"]))
+            story.append(_code_block(bash_str, st))
+            story.append(_spacer(4))
+        if rule.get("fix_notes"):
+            story.append(Paragraph("<b>Implementation Notes:</b>", st["cell_bold"]))
+            story.append(Paragraph(rule.get("fix_notes"), st["body"]))
+            story.append(_spacer(6))
+
+        story.append(_hr(_P["border"]))
+        story.append(_spacer(10))
+
+        # Add page break after every 2 rules to keep layout clean
+        if idx % 2 == 0 and idx < len(matched_rules):
+            story.append(PageBreak())
 
 
 # ── Taxonomy / Remediation helpers ────────────────────────────────────────────
