@@ -222,25 +222,7 @@ def _process_vulns(vulns, is_initial: bool, smtp_configured: bool) -> int:
         if not cve_id:
             continue
 
-        # Reject entries older than 2015 (fast-skip)
-        if cve_id.startswith("CVE-"):
-            parts = cve_id.split("-")
-            if len(parts) >= 2:
-                try:
-                    year = int(parts[1])
-                    if year < 2015:
-                        continue
-                except ValueError:
-                    pass
-
         pub_date = cve_obj.get("published", "")
-        if pub_date:
-            try:
-                year = int(pub_date[:4])
-                if year < 2015:
-                    continue
-            except ValueError:
-                pass
 
         severity        = _parse_severity(cve_obj)
         description     = _parse_description(cve_obj)

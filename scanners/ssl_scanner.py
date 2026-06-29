@@ -37,10 +37,16 @@ try:
         Scanner, ServerScanRequest, ServerNetworkLocation,
         ScanCommand,
     )
-    from sslyze.errors import ConnectionToServerFailed
+    # sslyze 5.x uses ServerScanStatusAsEnum to check scan status
+    try:
+        from sslyze import ServerScanStatusAsEnum
+        _HAS_STATUS_ENUM = True
+    except ImportError:
+        _HAS_STATUS_ENUM = False
     _SSLYZE_AVAILABLE = True
 except ImportError:
     _SSLYZE_AVAILABLE = False
+    _HAS_STATUS_ENUM = False
     logger.warning("sslyze not installed. SSL scanner disabled. Run: pip install sslyze")
 
 try:
@@ -107,10 +113,20 @@ def run_ssl_scan(url):
         scanner.queue_scans([request])
 
         for result in scanner.get_results():
-            if result.connectivity_error_trace:
-                err = str(result.connectivity_error_trace)
+            # sslyze 5.x: connectivity errors surface as connectivity_error attribute
+            conn_err = (
+                getattr(result, 'connectivity_error', None) or
+                getattr(result, 'connectivity_error_trace', None)
+            )
+            if conn_err:
+                err = str(conn_err)
                 logger.error(f"SSL Scan connectivity error for {host}: {err}")
                 add_log_entry("ERROR", f"SSL Scan Failed: Cannot connect to {host}:{port}")
+                return []
+
+            # sslyze 5.x: check scan_result exists and has no error
+            if result.scan_result is None:
+                logger.warning(f"SSL Scan: No scan result returned for {host}:{port}")
                 return []
 
             findings.extend(_analyse_result(result, host))
@@ -134,21 +150,62 @@ def _analyse_result(result, host):
                          "template_id": "SSL-Scan"})
 
     # ── Deprecated / insecure protocol support ─────────────────────────────
-    proto_checks = [
-        (ScanCommand.SSL_2_0_CIPHER_SUITES, "SSL 2.0", "Critical"),
-        (ScanCommand.SSL_3_0_CIPHER_SUITES, "SSL 3.0 (POODLE)", "Critical"),
-        (ScanCommand.TLS_1_0_CIPHER_SUITES, "TLS 1.0 (deprecated)", "High"),
-        (ScanCommand.TLS_1_1_CIPHER_SUITES, "TLS 1.1 (deprecated)", "Medium"),
+    # sslyze 5.x uses direct snake_case attribute access on scan_result
+    # Attribute names: ssl_2_0_cipher_suites, ssl_3_0_cipher_suites, etc.
+    proto_attrs = [
+        ("ssl_2_0_cipher_suites",  "SSL 2.0",              "Critical"),
+        ("ssl_3_0_cipher_suites",  "SSL 3.0 (POODLE)",     "Critical"),
+        ("tls_1_0_cipher_suites",  "TLS 1.0 (deprecated)", "High"),
+        ("tls_1_1_cipher_suites",  "TLS 1.1 (deprecated)", "Medium"),
     ]
-    for cmd, proto_name, severity in proto_checks:
+    for attr_name, proto_name, severity in proto_attrs:
         try:
-            scan_result = getattr(result.scan_result, cmd.value, None)
-            if scan_result and scan_result.result and scan_result.result.accepted_cipher_suites:
+            attr_result = getattr(result.scan_result, attr_name, None)
+            # sslyze 5.x: result attr is an object with a .result sub-attribute
+            if attr_result is None:
+                continue
+            inner = getattr(attr_result, 'result', None)
+            if inner is None:
+                continue
+            accepted = getattr(inner, 'accepted_cipher_suites', None)
+            if accepted:
+                suite_list = ', '.join(
+                    getattr(s, 'cipher_suite', {}).name
+                    if hasattr(getattr(s, 'cipher_suite', None), 'name')
+                    else str(s)
+                    for s in accepted[:5]
+                )
                 _add(severity,
                      f"Insecure Protocol Enabled: {proto_name}",
-                     f"{host} accepts {proto_name} connections. This protocol is deprecated and vulnerable.")
+                     f"{host} accepts {proto_name} connections — this protocol is deprecated and cryptographically broken.\n"
+                     f"Accepted cipher suites (sample): {suite_list}\n"
+                     f"Recommendation: Disable {proto_name} in your server configuration immediately.")
         except Exception:
             pass
+
+    # ── TLS Fallback SCSV (downgrade prevention) ───────────────────────────
+    try:
+        fb = getattr(result.scan_result, 'tls_fallback_scsv', None)
+        if fb:
+            fb_inner = getattr(fb, 'result', None)
+            if fb_inner and getattr(fb_inner, 'supports_fallback_scsv', None) is False:
+                _add("Medium", "TLS Fallback SCSV Not Supported",
+                     f"{host} does not support TLS_FALLBACK_SCSV, allowing potential downgrade attacks.")
+    except Exception:
+        pass
+
+    # ── Session Renegotiation ───────────────────────────────────────────────
+    try:
+        reneg = getattr(result.scan_result, 'session_renegotiation', None)
+        if reneg:
+            reneg_inner = getattr(reneg, 'result', None)
+            if reneg_inner:
+                if getattr(reneg_inner, 'is_vulnerable_to_client_renegotiation_dos', False):
+                    _add("High", "Insecure Session Renegotiation (DoS Risk)",
+                         f"{host} supports insecure client-initiated TLS session renegotiation. "
+                         f"This can be abused for denial-of-service attacks.")
+    except Exception:
+        pass
 
     # ── Heartbleed ─────────────────────────────────────────────────────────
     try:

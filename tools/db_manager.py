@@ -1463,28 +1463,28 @@ def restore_from_backup():
             [(r["id"], r["url"], r["status"], r["added_date"], r["last_scan"]) for r in targets]
         )
         conn.executemany(
-            "INSERT INTO scans (id, target_id, target_url, start_time, end_time, status, scanned_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [(r["id"], r["target_id"], r["target_url"], r["start_time"], r["end_time"], r["status"], r["scanned_by"]) for r in scans]
+            "INSERT INTO scans (id, target_id, start_time, end_time, status, scanned_by) VALUES (?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["start_time"], r["end_time"], r["status"], r["scanned_by"]) for r in scans]
         )
         conn.executemany(
-            "INSERT INTO findings (id, scan_id, target_url, severity, title, description, source_tool, confidence) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [(r["id"], r["scan_id"], r["target_url"], r["severity"], r["title"], r["description"], r["source_tool"], r["confidence"]) for r in findings]
+            "INSERT INTO findings (id, scan_id, severity, title, description, source_tool, confidence) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["severity"], r["title"], r["description"], r["source_tool"], r["confidence"]) for r in findings]
         )
         conn.executemany(
             "INSERT INTO logs (id, timestamp, level, message) VALUES (?, ?, ?, ?)",
             [(r["id"], r["timestamp"], r["level"], r["message"]) for r in logs]
         )
         conn.executemany(
-            "INSERT INTO alerts (id, target_id, target_url, alert_type, severity, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-            [(r["id"], r["target_id"], r["target_url"], r["alert_type"], r["severity"], r["timestamp"]) for r in alerts]
+            "INSERT INTO alerts (id, target_id, alert_type, severity, timestamp) VALUES (?, ?, ?, ?, ?)",
+            [(r["id"], r["target_id"], r["alert_type"], r["severity"], r["timestamp"]) for r in alerts]
         )
         conn.executemany(
-            "INSERT INTO risk_scores (id, scan_id, target_url, score, rating, breakdown, calculated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [(r["id"], r["scan_id"], r["target_url"], r["score"], r["rating"], r["breakdown"], r["calculated_at"]) for r in risk_scores]
+            "INSERT INTO risk_scores (id, scan_id, score, rating, breakdown, calculated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["score"], r["rating"], r["breakdown"], r["calculated_at"]) for r in risk_scores]
         )
         conn.executemany(
-            "INSERT INTO technologies (id, scan_id, target_url, name, version, category, confidence, source_tool) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [(r["id"], r["scan_id"], r["target_url"], r["name"], r["version"], r["category"], r["confidence"], r["source_tool"]) for r in technologies]
+            "INSERT INTO technologies (id, scan_id, name, version, category, confidence, source_tool) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(r["id"], r["scan_id"], r["name"], r["version"], r["category"], r["confidence"], r["source_tool"]) for r in technologies]
         )
         conn.executemany(
             "INSERT INTO responsibility_log (id, accepted_at, platform, notes) VALUES (?, ?, ?, ?)",
@@ -1509,7 +1509,7 @@ def get_scan_trend_deltas(target_url, current_scan_id):
     try:
         # Get the previous scan id for this target
         prev_scan = conn.execute(
-            "SELECT id FROM scans WHERE target_url = ? AND id < ? AND status = 'Completed' ORDER BY id DESC LIMIT 1",
+            "SELECT id FROM scans WHERE target_id = (SELECT id FROM targets WHERE url = ?) AND id < ? AND status = 'Completed' ORDER BY id DESC LIMIT 1",
             (target_url, current_scan_id)
         ).fetchone()
         

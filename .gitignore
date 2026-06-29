@@ -1,5 +1,6 @@
 # =============================================================================
 # Security Management Platform (SMP) — .gitignore
+# Owner: mrQhere — All Rights Reserved
 # =============================================================================
 
 # ─── Sensitive / Personal Data ───────────────────────────────────────────────
@@ -10,6 +11,10 @@ config/license.key
 # SQLite database — local only
 database/security.db
 database/*.db
+# Local auth file (master password hash) — NEVER commit
+config/auth.json
+# Legal responsibility acknowledgement (local state) — NEVER commit
+config/responsibility.json
 # Local planning artifacts
 task.md
 walkthrough.md
@@ -27,6 +32,9 @@ reports/pdf/*.pdf
 
 # ─── Intel Cache ─────────────────────────────────────────────────────────────
 cache/intel_cache.json
+
+# ─── Backup Databases (runtime-generated — never commit) ─────────────────────
+backup/
 
 # ─── Python Virtual Environment ──────────────────────────────────────────────
 venv/
@@ -64,6 +72,7 @@ desktop.ini
 # ─── Temporary Files ─────────────────────────────────────────────────────────
 *.tmp
 *.temp
+scanners/*.tmp
 ffuf_out_*.json
 /tmp/
 

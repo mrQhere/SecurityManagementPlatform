@@ -1891,13 +1891,35 @@ class DashboardWindow(QMainWindow):
                 dur_str = f"{int(h):02}:{int(m):02}:{int(s):02}"
             except Exception:
                 pass
-            prog = status_map.get(scan["status"], f"⬤  {scan['status']}")
+            current_status = scan.get("scanner_status") or scan["status"]
+            prog = status_map.get(current_status, f"⬤  {current_status}")
             text = f"{scan['url']}   {prog}   [{dur_str}]"
-            item = QListWidgetItem(text)
-            color = "#007AFF" if "Running" in prog else "#FF9500" if "◌" in prog else "#34C759"
-            item.setForeground(QBrush(QColor(color)))
-            item.setFont(QFont("Menlo", 11))
+            
+            item = QListWidgetItem()
             self.lst_scans.addItem(item)
+            
+            widget = QWidget()
+            layout = QHBoxLayout(widget)
+            layout.setContentsMargins(5, 2, 5, 2)
+            
+            lbl_text = QLabel(text)
+            color = "#007AFF" if "Running" in prog else "#FF9500" if "◌" in prog else "#34C759"
+            lbl_text.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
+            layout.addWidget(lbl_text)
+            
+            layout.addStretch()
+            
+            btn_cancel = QPushButton("Cancel")
+            btn_cancel.setFixedSize(60, 20)
+            btn_cancel.setStyleSheet("background-color: #DC2626; color: white; border: none; border-radius: 3px; font-size: 10px;")
+            btn_cancel.setCursor(Qt.PointingHandCursor)
+            
+            # Using default argument in lambda to capture the current target_id
+            btn_cancel.clicked.connect(lambda checked=False, tid=scan["target_id"]: self.cancel_scan(tid))
+            layout.addWidget(btn_cancel)
+            
+            item.setSizeHint(widget.sizeHint())
+            self.lst_scans.setItemWidget(item, widget)
 
     def refresh_intel_feed(self):
         stats = get_cve_stats()
@@ -2156,6 +2178,21 @@ class DashboardWindow(QMainWindow):
         if set_target_status(target["id"], new_status):
             logger.info(f"Target {target['url']} set to {new_status}")
             self._cache_targets_hash = None
+            self.poll_updates()
+
+    def cancel_scan(self, target_id):
+        reply = QMessageBox.question(
+            self,
+            "Cancel Scan",
+            "Are you sure you want to cancel the ongoing scan for this target?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            from scanners.scan_runner import cancel_scan
+            cancel_scan(target_id)
+            logger.info(f"Cancellation requested for target {target_id}")
+            self._cache_scans_hash = None
             self.poll_updates()
 
     def trigger_manual_scan(self, target):

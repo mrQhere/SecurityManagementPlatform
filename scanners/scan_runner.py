@@ -247,6 +247,8 @@ _PIPELINE_STEPS = [
 ]
 
 
+_cancel_events = {}
+
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def start_scan_for_target(target, sudo_password=None):
@@ -267,9 +269,26 @@ def start_scan_for_target(target, sudo_password=None):
             logger.warning(f"Global active scan limit (3) reached. Cannot start scan for: {url}")
             return False
 
+        
+        resume_scan_id = None
+        resume_status = None
+        
+        # Check if there is an interrupted scan for this target
+        from tools.db_manager import get_scans_for_target
+        recent_scans = get_scans_for_target(target_id, limit=1)
+        if recent_scans:
+            last_scan = recent_scans[0]
+            if last_scan["status"] not in ("Completed", "Failed"):
+                # It was interrupted or stuck in "Running ..." state
+                resume_scan_id = last_scan["id"]
+                resume_status = last_scan.get("scanner_status") or last_scan["status"]
+                logger.info(f"Resuming interrupted scan {resume_scan_id} for target {url} from step {resume_status}")
+
+        _cancel_events[target_id] = threading.Event()
+
         thread = threading.Thread(
             target=_run_scan_sequence,
-            args=(target, None, None, sudo_password),
+            args=(target, resume_scan_id, resume_status, sudo_password),
             daemon=True,
             name=f"ScanThread_{target_id}",
         )
@@ -277,6 +296,13 @@ def start_scan_for_target(target, sudo_password=None):
         _active_urls.add(url)
         thread.start()
         return True
+
+def cancel_scan(target_id):
+    """Signal an ongoing scan to cancel gracefully."""
+    with _lock:
+        if target_id in _cancel_events:
+            _cancel_events[target_id].set()
+            logger.info(f"Cancel signal sent to target_id: {target_id}")
 
 
 def is_target_scanning(target_id):
@@ -704,6 +730,15 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         gitleaks_results = res
         _save_findings(scan_id, res or [], "Gitleaks", confidence=95)
 
+    class ScanCancelled(Exception): pass
+    
+    # Shadow the global _should_run_step locally to inject cancel checks
+    global_should_run_step = _should_run_step
+    def _should_run_step(step_name, resume_status):
+        if _cancel_events.get(target_id) and _cancel_events[target_id].is_set():
+            raise ScanCancelled(f"Scan cancelled by user at step {step_name}")
+        return global_should_run_step(step_name, resume_status)
+
     try:
         # ── Step 1: HTTPx ─────────────────────────────────────────────────
         if _should_run_step("Running HTTPx", resume_status):
@@ -1115,15 +1150,23 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         logger.info(f"Scan Completed: {url}")
         add_log_entry("INFO", f"Scan Completed: {url}")
 
+    except ScanCancelled as e:
+        logger.warning(f"Scan Cancelled: {url} - {str(e)}")
+        add_log_entry("WARNING", f"Scan Cancelled by User: {url}")
+        update_scan_status(scan_id, "Cancelled")
+
     except Exception as e:
         logger.error(f"Scan pipeline failed for {url}: {e}", exc_info=True)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         update_scan_status(scan_id, "Failed", end_time=now_str)
         add_log_entry("ERROR", f"Scanner Failure: {url} – {e}")
     finally:
+        # Always clean up both the thread tracking and cancel event
         with _lock:
             _active_scans.pop(target_id, None)
             _active_urls.discard(url)
+        # Remove cancel event regardless of scan outcome (success, cancel, or failure)
+        _cancel_events.pop(target_id, None)
 
 
 # ── Scan resumption ────────────────────────────────────────────────────────────
@@ -1198,6 +1241,9 @@ def resume_interrupted_scans():
                     continue
 
                 resume_step = _infer_resume_step(url, scan["status"])
+
+                # Register a cancel event so resumed scans can also be cancelled from the UI
+                _cancel_events[target_id] = threading.Event()
 
                 thread = threading.Thread(
                     target=_run_scan_sequence,

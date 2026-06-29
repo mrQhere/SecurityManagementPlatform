@@ -1,230 +1,386 @@
 [
-  {
-    "id": "missing_hsts",
-    "keywords": ["hsts", "strict-transport-security", "strict transport security"],
-    "severity_applies_to": ["High", "Medium"],
-    "title": "Enable HTTP Strict Transport Security (HSTS)",
-    "explanation": "Without HSTS, browsers can be tricked into connecting over plain HTTP even when HTTPS is available. This enables SSL stripping attacks.",
-    "effort": "Low",
-    "fix_nginx": "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains; preload\" always;",
-    "fix_apache": "Header always set Strict-Transport-Security \"max-age=31536000; includeSubDomains\"",
-    "fix_notes": "Add to your server block in nginx.conf or .htaccess. Restart web server after."
-  },
-  {
-    "id": "missing_csp",
-    "keywords": ["content-security-policy", "csp", "content security policy"],
-    "severity_applies_to": ["High", "Medium"],
-    "title": "Add Content Security Policy Header",
-    "explanation": "Without CSP, attackers can inject malicious scripts into your pages (XSS). CSP tells browsers which sources are trusted.",
-    "effort": "Medium",
-    "fix_nginx": "add_header Content-Security-Policy \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';\" always;",
-    "fix_apache": "Header set Content-Security-Policy \"default-src 'self';\"",
-    "fix_notes": "Start with a restrictive policy and loosen only what breaks. Test in report-only mode first using Content-Security-Policy-Report-Only."
-  },
-  {
-    "id": "missing_xframe",
-    "keywords": ["x-frame-options", "clickjacking", "frame"],
-    "severity_applies_to": ["Medium", "Low"],
-    "title": "Add X-Frame-Options Header (Clickjacking Protection)",
-    "explanation": "Without this header, attackers can embed your site in an invisible iframe and trick users into clicking hidden buttons.",
-    "effort": "Low",
-    "fix_nginx": "add_header X-Frame-Options \"SAMEORIGIN\" always;",
-    "fix_apache": "Header always set X-Frame-Options \"SAMEORIGIN\"",
-    "fix_notes": "Use DENY if you never need your site embedded. Use SAMEORIGIN if you embed it yourself."
-  },
-  {
-    "id": "missing_xcontent",
-    "keywords": ["x-content-type", "mime sniffing", "content type options", "x-content-type-options"],
-    "severity_applies_to": ["Low", "Medium"],
-    "title": "Add X-Content-Type-Options Header",
-    "explanation": "Without this, browsers may guess the file type and execute a text file as JavaScript.",
-    "effort": "Low",
-    "fix_nginx": "add_header X-Content-Type-Options \"nosniff\" always;",
-    "fix_apache": "Header always set X-Content-Type-Options \"nosniff\"",
-    "fix_notes": "One line. No downside. Always add this."
-  },
-  {
-    "id": "missing_referrer_policy",
-    "keywords": ["referrer-policy", "referrer policy"],
-    "severity_applies_to": ["Low", "Medium"],
-    "title": "Add Referrer-Policy Header",
-    "explanation": "Without this, your URLs (including query strings with sensitive data) are leaked to third-party sites via the Referer header.",
-    "effort": "Low",
-    "fix_nginx": "add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;",
-    "fix_apache": "Header always set Referrer-Policy \"strict-origin-when-cross-origin\"",
-    "fix_notes": "Use 'no-referrer' for maximum privacy. 'strict-origin-when-cross-origin' is the recommended balance."
-  },
-  {
-    "id": "missing_permissions_policy",
-    "keywords": ["permissions-policy", "feature-policy", "permissions policy"],
-    "severity_applies_to": ["Low", "Info"],
-    "title": "Add Permissions-Policy Header",
-    "explanation": "Without this, any third-party script can request access to camera, microphone, and geolocation.",
-    "effort": "Low",
-    "fix_nginx": "add_header Permissions-Policy \"camera=(), microphone=(), geolocation=()\" always;",
-    "fix_apache": "Header always set Permissions-Policy \"camera=(), microphone=(), geolocation=()\"",
-    "fix_notes": "List only the features your site actively uses. Deny everything else."
-  },
-  {
-    "id": "open_mysql_port",
-    "keywords": ["3306", "mysql", "mariadb"],
-    "severity_applies_to": ["Critical", "High"],
-    "title": "Close Externally Exposed MySQL Port (3306)",
-    "explanation": "MySQL should NEVER be accessible from the internet. An exposed port 3306 allows brute-force attacks against your database directly.",
-    "effort": "Low",
-    "fix_bash": [
-      "sudo ufw deny 3306",
-      "sudo ufw reload",
-      "sudo ufw status"
-    ],
-    "fix_notes": "If your app needs database access, use localhost (127.0.0.1) in your connection string, not the public IP."
-  },
-  {
-    "id": "open_redis_port",
-    "keywords": ["6379", "redis"],
-    "severity_applies_to": ["Critical", "High"],
-    "title": "Close Externally Exposed Redis Port (6379)",
-    "explanation": "Unauthenticated Redis is a critical vulnerability. Attackers can read all cached data, write arbitrary keys, and in some configs achieve remote code execution.",
-    "effort": "Low",
-    "fix_bash": [
-      "sudo ufw deny 6379",
-      "sudo ufw reload"
-    ],
-    "fix_redis_conf": "bind 127.0.0.1",
-    "fix_notes": "Edit /etc/redis/redis.conf and set bind to 127.0.0.1. Then restart Redis: sudo systemctl restart redis"
-  },
-  {
-    "id": "open_mongodb_port",
-    "keywords": ["27017", "mongodb", "mongo"],
-    "severity_applies_to": ["Critical", "High"],
-    "title": "Close Externally Exposed MongoDB Port (27017)",
-    "explanation": "An unauthenticated MongoDB instance can expose your entire database to the internet. This has led to thousands of data breaches.",
-    "effort": "Low",
-    "fix_bash": [
-      "sudo ufw deny 27017",
-      "sudo ufw reload"
-    ],
-    "fix_notes": "Edit /etc/mongod.conf and set net.bindIp to 127.0.0.1. Restart: sudo systemctl restart mongod"
-  },
-  {
-    "id": "open_ssh_default",
-    "keywords": ["port 22", " ssh ", "openssh"],
-    "severity_applies_to": ["Medium", "High"],
-    "title": "Harden SSH Access",
-    "explanation": "Port 22 exposed to the internet attracts automated brute-force bots within minutes of server creation.",
-    "effort": "Medium",
-    "fix_bash": [
-      "sudo sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config",
-      "sudo systemctl restart sshd",
-      "sudo ufw allow 2222",
-      "sudo ufw deny 22",
-      "sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config",
-      "sudo systemctl restart sshd"
-    ],
-    "fix_notes": "Always test the new SSH connection in a second terminal before closing the first one. Never lock yourself out."
-  },
-  {
-    "id": "ssl_expiry",
-    "keywords": ["ssl expir", "certificate expir", "tls expir", "cert expir"],
-    "severity_applies_to": ["Critical", "High"],
-    "title": "Renew SSL Certificate",
-    "explanation": "An expired certificate breaks HTTPS for all users and shows a security warning in browsers.",
-    "effort": "Low",
-    "fix_bash": [
-      "sudo certbot renew",
-      "sudo systemctl reload nginx",
-      "echo '0 3 * * * certbot renew --quiet && systemctl reload nginx' | sudo crontab -"
-    ],
-    "fix_notes": "Set up auto-renewal immediately. Let's Encrypt certificates expire every 90 days."
-  },
-  {
-    "id": "directory_listing",
-    "keywords": ["directory listing", "directory index", "index of /", "autoindex"],
-    "severity_applies_to": ["Medium", "High"],
-    "title": "Disable Directory Listing",
-    "explanation": "Directory listing shows all files in a folder to anyone who visits. Attackers use this to find backup files, config files, and source code.",
-    "effort": "Low",
-    "fix_nginx": "autoindex off;",
-    "fix_apache": "Options -Indexes",
-    "fix_htaccess": "Options -Indexes",
-    "fix_notes": "Add to your server config or .htaccess file in the web root."
-  },
-  {
-    "id": "cors_misconfiguration",
-    "keywords": ["cors", "access-control-allow-origin", "cross-origin"],
-    "severity_applies_to": ["High", "Critical"],
-    "title": "Fix CORS Misconfiguration",
-    "explanation": "A wildcard CORS policy (Access-Control-Allow-Origin: *) allows any website to read your API responses, enabling data theft from logged-in users.",
-    "effort": "Medium",
-    "fix_nginx": "add_header Access-Control-Allow-Origin \"https://yourdomain.com\" always;",
-    "fix_notes": "Replace * with your specific frontend domain. Never use * on authenticated APIs."
-  },
-  {
-    "id": "sql_injection",
-    "keywords": ["sql injection", "sqli", "sqlmap", "sql inject"],
-    "severity_applies_to": ["Critical"],
-    "title": "Fix SQL Injection Vulnerability",
-    "explanation": "SQL injection allows attackers to read, modify, or delete your entire database. This is one of the most critical vulnerabilities possible.",
-    "effort": "High",
-    "fix_notes": "Switch to parameterized queries / prepared statements. Never concatenate user input into SQL strings. Python: cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,)) instead of f'SELECT * FROM users WHERE id = {user_id}'"
-  },
-  {
-    "id": "server_version_exposed",
-    "keywords": ["server header", "x-powered-by", "version disclosure", "server version", "server banner"],
-    "severity_applies_to": ["Low", "Medium"],
-    "title": "Hide Server Version Information",
-    "explanation": "Exposing your server version tells attackers exactly which CVEs to use against you.",
-    "effort": "Low",
-    "fix_nginx": "server_tokens off;",
-    "fix_apache": "ServerTokens Prod\nServerSignature Off",
-    "fix_notes": "Also remove X-Powered-By headers from your application framework."
-  },
-  {
-    "id": "weak_tls",
-    "keywords": ["tls 1.0", "tls 1.1", "ssl 3", "sslv3", "weak cipher", "weak tls", "tlsv1.0", "tlsv1.1"],
-    "severity_applies_to": ["High", "Critical"],
-    "title": "Disable Weak TLS Versions",
-    "explanation": "TLS 1.0 and 1.1 have known vulnerabilities (POODLE, BEAST). Only TLS 1.2 and 1.3 should be enabled.",
-    "effort": "Low",
-    "fix_nginx": "ssl_protocols TLSv1.2 TLSv1.3;\nssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;\nssl_prefer_server_ciphers off;",
-    "fix_apache": "SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1\nSSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256",
-    "fix_notes": "Test your TLS config at https://www.ssllabs.com/ssltest/ after applying changes."
-  },
-  {
-    "id": "open_redirect",
-    "keywords": ["open redirect", "open-redirect"],
-    "severity_applies_to": ["Medium", "High"],
-    "title": "Fix Open Redirect Vulnerability",
-    "explanation": "Open redirects allow attackers to use your trusted domain to redirect users to malicious sites, making phishing attacks more convincing.",
-    "effort": "Medium",
-    "fix_notes": "Never redirect to a URL taken directly from user input. Validate that the redirect target is within your own domain. Use a whitelist of allowed redirect destinations."
-  },
-  {
-    "id": "xss",
-    "keywords": ["xss", "cross-site scripting", "cross site scripting", "script injection"],
-    "severity_applies_to": ["High", "Critical"],
-    "title": "Fix Cross-Site Scripting (XSS)",
-    "explanation": "XSS allows attackers to inject JavaScript into your pages, stealing session cookies, redirecting users, and defacing the site.",
-    "effort": "High",
-    "fix_notes": "Escape all user input before rendering in HTML. Use a templating engine that auto-escapes (Jinja2 autoescaping, React JSX). Implement a strict Content-Security-Policy. Set HttpOnly flag on session cookies."
-  },
-  {
-    "id": "missing_cookie_flags",
-    "keywords": ["cookie", "httponly", "secure flag", "samesite"],
-    "severity_applies_to": ["Medium", "High"],
-    "title": "Harden Cookie Security Flags",
-    "explanation": "Cookies without HttpOnly can be stolen via XSS. Cookies without Secure can be sent over plain HTTP. Cookies without SameSite are vulnerable to CSRF.",
-    "effort": "Low",
-    "fix_notes": "Set all session cookies with: HttpOnly; Secure; SameSite=Strict. In Python/Flask: response.set_cookie('session', value, httponly=True, secure=True, samesite='Strict')"
-  },
-  {
-    "id": "exposed_admin_panel",
-    "keywords": ["admin", "/admin", "/wp-admin", "admin panel", "admin login", "administrator"],
-    "severity_applies_to": ["High", "Medium"],
-    "title": "Restrict Access to Admin Panel",
-    "explanation": "A publicly exposed admin panel is a high-value target. Attackers can brute-force it or exploit vulnerabilities in the admin interface directly.",
-    "effort": "Medium",
-    "fix_nginx": "location /admin {\n  allow YOUR_IP;\n  deny all;\n}",
-    "fix_notes": "Restrict /admin, /wp-admin, /dashboard to your IP address only. Add multi-factor authentication to all admin accounts."
-  }
+    {
+        "title": "Strict Transport Security (HSTS) Missing",
+        "keywords": [
+            "hsts",
+            "strict transport security"
+        ],
+        "description": "Ensure the server enforces HTTPS connections to prevent downgrade attacks.",
+        "fix": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains' to server configuration."
+    },
+    {
+        "title": "Content Security Policy (CSP) Not Configured",
+        "keywords": [
+            "csp",
+            "content security policy"
+        ],
+        "description": "A CSP prevents XSS and data injection attacks by restricting resources.",
+        "fix": "Implement a restrictive CSP header: 'Content-Security-Policy: default-src \\'self\\'';"
+    },
+    {
+        "title": "X-Frame-Options Header Missing",
+        "keywords": [
+            "x-frame-options",
+            "clickjacking"
+        ],
+        "description": "Protects against clickjacking attacks by preventing iframe embedding.",
+        "fix": "Set 'X-Frame-Options: DENY' or 'SAMEORIGIN' in the web server response headers."
+    },
+    {
+        "title": "SQL Injection Detection",
+        "keywords": [
+            "sql injection",
+            "sqli",
+            "sql syntax"
+        ],
+        "description": "User input is directly concatenated into SQL queries, leading to data breaches.",
+        "fix": "Use prepared statements, parameterized queries, or ORM frameworks consistently across the codebase."
+    },
+    {
+        "title": "Cross-Site Scripting (XSS)",
+        "keywords": [
+            "xss",
+            "cross-site scripting"
+        ],
+        "description": "Unsanitized input is reflected or stored in the web page, allowing JS execution.",
+        "fix": "Implement strict input validation and context-aware output encoding (e.g. HTML entity encoding)."
+    },
+    {
+        "title": "Open Directory Listing Enabled",
+        "keywords": [
+            "directory listing",
+            "index of"
+        ],
+        "description": "Web server is configured to list directory contents, leaking sensitive files.",
+        "fix": "Disable directory browsing (e.g., 'Options -Indexes' in Apache or 'autoindex off' in Nginx)."
+    },
+    {
+        "title": "Server Version Disclosure",
+        "keywords": [
+            "server token",
+            "version disclosure",
+            "server header"
+        ],
+        "description": "The server leaks its version information, aiding targeted exploitation.",
+        "fix": "Set 'ServerTokens Prod' and 'ServerSignature Off' in Apache, or 'server_tokens off;' in Nginx."
+    },
+    {
+        "title": "Default Credentials Detected",
+        "keywords": [
+            "default credentials",
+            "admin:admin",
+            "default password"
+        ],
+        "description": "System is using manufacturer default credentials.",
+        "fix": "Immediately change default administrative credentials to strong, randomly generated passwords."
+    },
+    {
+        "title": "Exposed Git Repository",
+        "keywords": [
+            "git exposure",
+            ".git"
+        ],
+        "description": "The .git directory is publicly accessible, leaking source code.",
+        "fix": "Deny access to hidden directories (.git) in the web server configuration."
+    },
+    {
+        "title": "Outdated PHP Version",
+        "keywords": [
+            "php version",
+            "outdated php"
+        ],
+        "description": "An unsupported version of PHP is in use, susceptible to known CVEs.",
+        "fix": "Upgrade to a supported PHP version (e.g., PHP 8.2+) and migrate deprecated code."
+    },
+    {
+        "title": "Exposed Environment File (.env)",
+        "keywords": [
+            "env file",
+            ".env",
+            "environment variables"
+        ],
+        "description": "Environment variables file containing database passwords and API keys is public.",
+        "fix": "Block access to .env files and move them outside the web root."
+    },
+    {
+        "title": "CORS Misconfiguration",
+        "keywords": [
+            "cors",
+            "cross-origin resource sharing",
+            "access-control-allow-origin: *"
+        ],
+        "description": "CORS policy allows arbitrary origins to read sensitive data.",
+        "fix": "Configure 'Access-Control-Allow-Origin' to specific trusted domains. Never use '*' with credentials."
+    },
+    {
+        "title": "Open Redirect Vulnerability",
+        "keywords": [
+            "open redirect",
+            "unvalidated redirect"
+        ],
+        "description": "Application redirects users to arbitrary external URLs based on input.",
+        "fix": "Validate redirect targets against a strict allowlist of authorized domains."
+    },
+    {
+        "title": "Weak SSL/TLS Protocols",
+        "keywords": [
+            "tls 1.0",
+            "tls 1.1",
+            "weak cipher",
+            "ssl"
+        ],
+        "description": "Server supports outdated encryption protocols vulnerable to interception.",
+        "fix": "Disable TLS 1.0 and 1.1. Enforce TLS 1.2 or 1.3 with strong AEAD ciphers."
+    },
+    {
+        "title": "Missing HTTPOnly on Cookies",
+        "keywords": [
+            "httponly",
+            "cookie"
+        ],
+        "description": "Session cookies lack the HTTPOnly flag, exposing them to XSS attacks.",
+        "fix": "Set the 'HttpOnly' flag for all authentication and session-related cookies."
+    },
+    {
+        "title": "Missing Secure Flag on Cookies",
+        "keywords": [
+            "secure flag",
+            "cookie secure"
+        ],
+        "description": "Session cookies can be transmitted over unencrypted HTTP connections.",
+        "fix": "Set the 'Secure' flag for all cookies to enforce transmission over HTTPS."
+    },
+    {
+        "title": "Sensitive Information in URL",
+        "keywords": [
+            "token in url",
+            "password in url",
+            "sensitive get parameter"
+        ],
+        "description": "Tokens or passwords are passed in the URL, risking exposure in logs and referrers.",
+        "fix": "Use HTTP POST requests or Authorization headers for transmitting sensitive data."
+    },
+    {
+        "title": "XML External Entity (XXE) Injection",
+        "keywords": [
+            "xxe",
+            "xml external entity"
+        ],
+        "description": "XML parser is configured to resolve external entities, allowing file reads.",
+        "fix": "Disable external entity resolution (DTD) in the XML parsing library."
+    },
+    {
+        "title": "Insecure Direct Object Reference (IDOR)",
+        "keywords": [
+            "idor",
+            "insecure direct object reference",
+            "unauthorized access"
+        ],
+        "description": "Users can access other users' data by modifying IDs in parameters.",
+        "fix": "Implement strict access control checks on every data request to verify ownership."
+    },
+    {
+        "title": "Server-Side Request Forgery (SSRF)",
+        "keywords": [
+            "ssrf",
+            "server side request forgery"
+        ],
+        "description": "Server fetches arbitrary URLs provided by the user, accessing internal networks.",
+        "fix": "Use a strict allowlist for outbound requests and disable unused URI schemes."
+    },
+    {
+        "title": "Unrestricted File Upload",
+        "keywords": [
+            "file upload",
+            "shell upload",
+            "malicious upload"
+        ],
+        "description": "Application allows upload of executable files like PHP or JSP.",
+        "fix": "Validate file extensions, check magic bytes, and store uploaded files outside the web root."
+    },
+    {
+        "title": "Exposed Admin Panel",
+        "keywords": [
+            "admin panel",
+            "cpanel",
+            "wp-admin exposed"
+        ],
+        "description": "Administrative interfaces are publicly accessible.",
+        "fix": "Restrict admin panel access using IP allowlisting and require MFA."
+    },
+    {
+        "title": "Vulnerable WordPress Plugin",
+        "keywords": [
+            "wordpress plugin",
+            "wp-plugin",
+            "cve"
+        ],
+        "description": "An installed WordPress plugin has known vulnerabilities.",
+        "fix": "Update the plugin to the latest version or replace it with a secure alternative."
+    },
+    {
+        "title": "HTTP Methods Options Enabled",
+        "keywords": [
+            "http options",
+            "trace",
+            "track",
+            "put",
+            "delete"
+        ],
+        "description": "Dangerous HTTP methods (PUT, DELETE, TRACE) are enabled on the server.",
+        "fix": "Disable TRACE/TRACK methods and restrict PUT/DELETE to authorized endpoints."
+    },
+    {
+        "title": "Lack of Rate Limiting",
+        "keywords": [
+            "rate limit",
+            "brute force",
+            "no rate limiting"
+        ],
+        "description": "Authentication endpoints lack rate limiting, allowing brute-force attacks.",
+        "fix": "Implement rate limiting and account lockout mechanisms for login attempts."
+    },
+    {
+        "title": "Exposed Database Port",
+        "keywords": [
+            "port 3306",
+            "port 5432",
+            "database exposed"
+        ],
+        "description": "Database services are accessible from the public internet.",
+        "fix": "Bind databases to localhost (127.0.0.1) or restrict access via firewall rules."
+    },
+    {
+        "title": "Missing CSRF Token",
+        "keywords": [
+            "csrf",
+            "cross-site request forgery"
+        ],
+        "description": "State-changing operations do not require a CSRF token.",
+        "fix": "Implement anti-CSRF tokens (Synchronizer Token Pattern) on all forms."
+    },
+    {
+        "title": "Robots.txt Information Disclosure",
+        "keywords": [
+            "robots.txt",
+            "sitemap"
+        ],
+        "description": "The robots.txt file reveals sensitive administrative paths.",
+        "fix": "Remove sensitive paths from robots.txt and rely on proper authentication instead."
+    },
+    {
+        "title": "Outdated jQuery Version",
+        "keywords": [
+            "jquery",
+            "outdated javascript"
+        ],
+        "description": "An old version of jQuery with known XSS vulnerabilities is used.",
+        "fix": "Update jQuery to the latest stable release (e.g., 3.x)."
+    },
+    {
+        "title": "Debug Mode Enabled",
+        "keywords": [
+            "debug mode",
+            "stack trace",
+            "development mode"
+        ],
+        "description": "Application framework is running in debug mode, exposing stack traces.",
+        "fix": "Set environment to 'production' and disable debug output in configuration."
+    },
+    {
+        "title": "Unauthenticated API Endpoint",
+        "keywords": [
+            "unauthenticated",
+            "api bypass"
+        ],
+        "description": "API endpoints handling sensitive data do not enforce authentication.",
+        "fix": "Apply authentication middleware (e.g., JWT, OAuth) to all private API routes."
+    },
+    {
+        "title": "Exposed SSH Port",
+        "keywords": [
+            "port 22",
+            "ssh exposed"
+        ],
+        "description": "SSH service is publicly accessible without restrictions.",
+        "fix": "Restrict SSH access via IP allowlist, disable root login, and use key-based authentication."
+    },
+    {
+        "title": "Information Leakage via Error Messages",
+        "keywords": [
+            "sql error",
+            "verbose error",
+            "stack trace"
+        ],
+        "description": "Verbose error messages reveal database schema or internal logic.",
+        "fix": "Implement generic error messages for end-users and log detailed errors internally."
+    },
+    {
+        "title": "Insecure JWT Implementation",
+        "keywords": [
+            "jwt",
+            "json web token",
+            "none algorithm"
+        ],
+        "description": "JWT accepts 'none' algorithm or uses a weak secret key.",
+        "fix": "Enforce strong signing algorithms (RS256) and use a high-entropy secret key."
+    },
+    {
+        "title": "Exposed Backup Files",
+        "keywords": [
+            "backup file",
+            ".bak",
+            ".old",
+            ".sql"
+        ],
+        "description": "Backup archives or database dumps are publicly accessible.",
+        "fix": "Move backup files outside the web root and restrict access to the backups directory."
+    },
+    {
+        "title": "Insecure Cross-Domain Policy",
+        "keywords": [
+            "crossdomain.xml",
+            "clientaccesspolicy.xml"
+        ],
+        "description": "Flash or Silverlight policy files allow broad cross-domain access.",
+        "fix": "Restrict policy files to trusted domains or remove them if no longer needed."
+    },
+    {
+        "title": "Missing Security TXT",
+        "keywords": [
+            "security.txt"
+        ],
+        "description": "The site lacks a security.txt file for vulnerability reporting.",
+        "fix": "Publish a security.txt file under the /.well-known/ path with contact details."
+    },
+    {
+        "title": "Subdomain Takeover",
+        "keywords": [
+            "subdomain takeover",
+            "cname",
+            "dangling dns"
+        ],
+        "description": "A DNS record points to an unclaimed third-party service.",
+        "fix": "Remove the dangling CNAME record or claim the resource on the third-party provider."
+    },
+    {
+        "title": "Cleartext Authentication",
+        "keywords": [
+            "basic auth",
+            "cleartext",
+            "http login"
+        ],
+        "description": "Credentials are transmitted over unencrypted HTTP.",
+        "fix": "Enforce HTTPS for all authentication pages and redirect HTTP traffic to HTTPS."
+    },
+    {
+        "title": "Exposed Docker API",
+        "keywords": [
+            "docker api",
+            "port 2375",
+            "port 2376"
+        ],
+        "description": "Docker daemon API is accessible, leading to full host compromise.",
+        "fix": "Bind the Docker API to localhost or use mutual TLS (mTLS) for authentication."
+    }
 ]

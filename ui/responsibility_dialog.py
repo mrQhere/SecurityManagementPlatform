@@ -6,8 +6,8 @@ class ResponsibilityDialog(QDialog):
     """Show a disclaimer and require the user to accept responsibility before using the tool."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Responsibility Disclaimer")
-        self.setFixedSize(500, 250)
+        self.setWindowTitle("Legal Responsibility & Usage Terms")
+        self.setFixedSize(500, 350)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
 
         # Dark minimalist style
@@ -84,7 +84,6 @@ class ResponsibilityDialog(QDialog):
         self.lbl_policy_text = QLabel(policy_text)
         self.lbl_policy_text.setWordWrap(True)
         self.lbl_policy_text.setStyleSheet("color: #888888; font-size: 11px; background-color: #151515; padding: 10px; border-radius: 4px;")
-        self.lbl_policy_text.hide()
         layout.addWidget(self.lbl_policy_text)
 
         from datetime import datetime
