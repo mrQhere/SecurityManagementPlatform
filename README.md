@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Security Management Platform (SMP)
+#  Security Management Platform (SMP)
 
 <p><strong>A Premium, Enterprise-Grade Desktop Security Monitoring &amp; Vulnerability Orchestration Platform</strong></p>
 
