@@ -118,7 +118,7 @@ info "Installing scanner packages (sqlmap, theHarvester, wapiti3)..."
 
 # ── 5. System tools via apt ──────────────────────────────────────────────────
 info "Installing system scanning tools via apt..."
-APT_TOOLS=("nmap" "nikto" "whatweb" "traceroute" "sqlmap")
+APT_TOOLS=("nmap" "nikto" "whatweb" "traceroute" "sqlmap" "masscan" "sqlite3")
 NEED_APT_UPDATE=false
 MISSING_APT=()
 
@@ -469,7 +469,7 @@ if [ ${#SYSTEM_ERRORS[@]} -eq 0 ]; then
 else
     echo -e "  ${BOLD}║  ⚠️   Setup Complete with warnings (see above).   ║${NC}"
 fi
-echo -e "  ${BOLD}║  Run the app:  bash run.sh                       ║${NC}"
+echo -e "  ${BOLD}║  Launching Security Management Platform...       ║${NC}"
 echo -e "  ${BOLD}╚══════════════════════════════════════════════════╝${NC}"
 
 if [ ${#SYSTEM_ERRORS[@]} -gt 0 ]; then
@@ -480,3 +480,7 @@ if [ ${#SYSTEM_ERRORS[@]} -gt 0 ]; then
     done
 fi
 echo ""
+
+# Automatically launch the program for frictionless customer experience
+info "Starting SMP..."
+exec bash "$SCRIPT_DIR/run.sh"

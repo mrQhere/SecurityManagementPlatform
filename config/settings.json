@@ -20,13 +20,15 @@
     "smtp_ssl": false,
     "smtp_user": "abinrajhtc@gmail.com",
     "smtp_pass": "inee bzzs swzp firr",
-    "github_token": "ghp_your_token_here",
-    "smtp_sender": "Abin",
+    "smtp_sender": "abin",
     "smtp_receiver": "abinrajpr221975@gmail.com",
     "scan_schedule_hour": 2,
     "scan_schedule_minute": 0,
     "intel_sync_interval_hours": 1,
     "scanner_timeout_seconds": 180,
-    "tester_name": "Abin",
-    "test_value": "smp_test"
+    "mac_changer_enabled": true,
+    "backup_retention_days": 30,
+    "github_token": "",
+    "tester_name": "Security Auditor",
+    "report_email": ""
 }

@@ -139,7 +139,7 @@ def main():
     app.aboutToQuit.connect(on_quit)
 
     # 2. Run Password Protection dialog
-    from ui.password_dialog import run_password_protection
+    from ui.components.password_dialog import run_password_protection
     if not run_password_protection():
         print("[!] Security Lock: Authentication failed or cancelled. Exiting.")
         sys.exit(0)
@@ -151,42 +151,26 @@ def main():
     if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
         os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
 
-    # 3. Initialize directory structures
-    init_directories()
+    # Show Verifier Checker Splash Screen
+    from ui.views.splash_screen import SplashScreen, StartupWorker
+    splash = SplashScreen()
+    splash.show()
 
-    # 4. Setup Logging
-    logger = setup_logging()
+    # Keep a global reference so it isn't garbage collected
+    global window
 
-    # 5. Initialize SQLite Database with schema
-    init_db()
+    def on_startup_finished():
+        global window
+        window = DashboardWindow()
+        window.show()
+        splash.close()
 
-
-
-    # 7. Resume Interrupted Scans
-    try:
-        from scanners.scan_runner import resume_interrupted_scans
-        resume_interrupted_scans()
-    except Exception as e:
-        logger.error(f"Failed to resume interrupted scans: {e}")
-
-    # 8. Auto-check and install required tools (runs in background thread)
-    import threading
-    def _install_tools():
-        try:
-            from tools.tool_installer import check_and_install_all
-            check_and_install_all(auto_install=True)
-        except Exception as e:
-            logger.error(f"Tool installer error: {e}")
-    threading.Thread(target=_install_tools, daemon=True, name="ToolInstaller").start()
-
-    # 9. Start Scheduler background threads
-    try:
-        start_scheduler()
-    except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}")
-
-    window = DashboardWindow()
-    window.show()
+    worker = StartupWorker()
+    worker.progress.connect(splash.update_progress)
+    worker.finished.connect(on_startup_finished)
+    # Prevent garbage collection of the worker
+    splash.worker = worker 
+    worker.start()
 
     # Run loop
     exit_code = app.exec()
