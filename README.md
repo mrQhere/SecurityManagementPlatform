@@ -39,35 +39,13 @@ The frontend is constructed using PySide6. However, unlike traditional desktop a
 ### The DAG Execution Engine
 The true power of SMP lies in its Orchestrator. When a scan starts, a new `multiprocessing.Process` is spawned to bypass Python's Global Interpreter Lock (GIL). Inside this process, the Orchestrator analyzes the dependencies of 35 security tools, builds a Directed Acyclic Graph, and launches a ThreadPool to execute them concurrently. If one tool crashes (e.g. out of memory), the Orchestrator safely catches the SIGSEGV and continues executing the remaining branches of the graph.
 
-```mermaid
-graph TD
-    UI[PySide6 Dashboard UI] <-->|UDP Event Bus :5005| Logic[Controllers / Business Logic]
-    Logic -->|Spawn Process| ScanRunner[Scan Runner Process]
-    ScanRunner --> DAG[DAG Orchestrator]
-    
-    subgraph Parallel Execution Pool
-        DAG --> T1(Nmap)
-        DAG --> T2(Nuclei)
-        DAG --> T3(Subfinder)
-        T1 --> T4(SQLMap)
-    end
-    
-    T1 --> DB[(SQLite WAL Database)]
-    T2 --> DB
-    T3 --> DB
-    T4 --> DB
-    DB -->|Trigger Publish| UDP[UDP IPC Publisher]
-    UDP --> UI
-```
-
 ---
 
 ## 💻 Installation & Quick Start
 
 ### 1. System Requirements
 - **OS**: Linux (Ubuntu 22.04+ recommended)
-- **Python**: 3.11 or higher
-- **Dependencies**: `nmap`, `masscan`, `sqlite3`, `golang`
+- **Dependencies**: Everything is handled automatically.
 
 ### 2. Automated Zero-Friction Setup
 ```bash
@@ -75,17 +53,20 @@ graph TD
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# Run the fully automated, self-healing setup script
-# This will install all dependencies, build the virtual environment, and launch the platform automatically!
+# Run the fully automated setup script
 bash setup.sh
 ```
 
 ### 3. Running Your First Scan
-1. Launch the application via `python3 main.py`.
-2. On first boot, create your **Master Password**. This symmetrically encrypts your database (AES-256).
-3. Navigate to the **Targets** tab and enter a target URL you are authorized to test.
-4. Click **Scan**. Watch the terminal output stream in real-time as the DAG Orchestrator parallelizes the attack surface mapping!
-5. Click **Report** to generate a comprehensive VAPT PDF and HTML document.
+The `setup.sh` script will automatically launch the platform when finished. For future runs, simply execute:
+```bash
+bash run.sh
+```
+
+1. On first boot, create your **Master Password**. This symmetrically encrypts your database (AES-256).
+2. Navigate to the **Targets** tab and enter an authorized target URL.
+3. Click **Scan**. Watch the terminal output stream in real-time as the DAG Orchestrator parallelizes the attack surface mapping!
+4. Click **Report** to generate a comprehensive, executive-ready VAPT PDF.
 
 ---
 

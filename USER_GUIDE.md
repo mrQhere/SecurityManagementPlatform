@@ -1,1047 +1,223 @@
 <div align="center">
 
-# Security Management Platform (SMP)
-## V5.0 Comprehensive User Guide & Developer Manual
+# 🛡️ Security Management Platform (SMP)
+## V5.1 Comprehensive User Guide & Developer Manual 🚀
 
-**Version V5.0 Stable** · Published 2026-06-30 · All Rights Reserved
+**Version V5.1 Stable** · Published 2026-06-30 · All Rights Reserved
 
 </div>
 
 ---
 
 > [!CAUTION]
-> **Legal Responsibility**: SMP is designed exclusively for security testing on systems you own or have explicit written authorization to test. Using this tool against systems you do not have permission to test is illegal and may result in criminal prosecution. By using this software, you accept sole legal responsibility for all activities performed with it.
+> **The Golden Rule**: SMP is basically a digital battering ram. It is designed exclusively for security testing on systems **you actually own** or have explicit, written authorization to test. Pointing this at random websites is highly illegal and will end very badly for you. By using this software, you accept sole legal responsibility for all your activities. Stay safe, stay legal. 🛑
 
 ---
 
 ## 📖 Table of Contents
 
-| # | Section |
-|---|---|
-| 1 | [Welcome to SMP: Installation & Setup](#1-welcome-to-smp-installation--setup) |
-| 2 | [Platform Walkthrough & Operations](#2-platform-walkthrough--operations) |
-| 3 | [Internal Architecture: How It Works](#3-internal-architecture-how-it-works) |
-| 4 | [Database Architecture & 5-Layer Redundancy](#4-database-architecture--5-layer-redundancy) |
-| 5 | [The 35-Step Sequential Scan Pipeline](#5-the-35-step-sequential-scan-pipeline) |
-| 6 | [Adding Custom Tools (Dynamic Registry)](#6-adding-custom-tools-dynamic-registry) |
-| 7 | [Top 20 Troubleshooting Guide](#7-top-20-troubleshooting-guide) |
-| 8 | [Platform Roadmap (V5 to V8)](#8-platform-roadmap-v5-to-v8) |
+| # | Section | What You'll Learn |
+|---|---|---|
+| 1 | [Welcome to SMP: Setup & Liftoff](#1-welcome-to-smp-setup--liftoff-🚀) | How to install and launch this beast. |
+| 2 | [Platform Walkthrough & Operations](#2-platform-walkthrough--operations-🎮) | Clicking buttons and hacking things (legally). |
+| 3 | [Internal Architecture: Under the Hood](#3-internal-architecture-under-the-hood-⚙️) | The nerd stuff: DAGs, UDP, and Multiprocessing. |
+| 4 | [Database Architecture](#4-database-architecture-🗄️) | How we store your precious data. |
+| 5 | [The 35-Tool Arsenal](#5-the-35-tool-arsenal-🛠️) | A quick look at the weapons at your disposal. |
+| 6 | [Adding Custom Tools (Dynamic Registry)](#6-adding-custom-tools-dynamic-registry-🧩) | How to bring your own tools to the party! |
+| 7 | [Top 10 Troubleshooting Guide](#7-top-10-troubleshooting-guide-🚑) | Oh no, it broke! (Here is how to fix it). |
+| 8 | [Platform Roadmap (V5 to V8)](#8-platform-roadmap-v5-to-v8-🗺️) | Where we are going next! |
 
 ---
 
-## 1. Welcome to SMP: Installation & Setup
+## 1. Welcome to SMP: Setup & Liftoff 🚀
 
-Welcome to the Security Management Platform (SMP) V5.0. This platform is a massive leap forward from standard sequential vulnerability scanners. It utilizes a powerful Directed Acyclic Graph (DAG) and true OS-level multiprocessing to run 35 top-tier security tools simultaneously against your target. 
+Welcome to **Security Management Platform (SMP) V5.1**! If you're used to legacy scanners that run one tool at a time and freeze your computer, you're in for a treat. SMP uses a **Directed Acyclic Graph (DAG)** and true OS-level multiprocessing to run up to 35 top-tier security tools simultaneously. It’s like having an entire Red Team working in parallel.
 
 ### 1.1 Automated Zero-Friction Installation (Linux/Ubuntu)
+We hate manual setups just as much as you do. So, we completely automated it.
+
 ```bash
 # Clone the repository
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# Run the fully automated, self-healing setup script
-# This will install all dependencies, build the virtual environment, and launch the platform automatically!
+# Run the magical setup script
 bash setup.sh
 ```
 
-### 1.2 Initial Configuration
-On first boot, the platform will auto-generate your local SQLite databases. It will prompt you to set a Master Password. 
-> [!IMPORTANT]
-> Your Master Password is used to symmetrically AES-256 encrypt the database. If you lose this password, your data is gone forever. Write it down.
+That's it! `setup.sh` installs the dependencies, builds the virtual environment, hardens permissions, and immediately launches the platform. 
 
-### 1.3 Threat Intelligence Sync
-On the very first launch, SMP will download the complete NVD CVE database (300,000+ entries going back to 1999). This is a one-time operation that takes 20-60 minutes depending on your internet connection. NVD enforces a mandatory 6-second delay between API requests. Do not interrupt this process. Subsequent syncs are incremental and complete in under a minute.
+For future runs, you don't even need to touch python. Just run:
+```bash
+bash run.sh
+```
+
+### 1.2 Initial Configuration (Locking it down 🔒)
+On your very first boot, SMP will ask you to set a **Master Password**. 
+> [!IMPORTANT]
+> Your Master Password is used to symmetrically **AES-256 encrypt** your database. We do not store this password. We cannot recover this password. If you lose it, your data is turned into digital dust. Write it down!
+
+### 1.3 Threat Intelligence Sync (The Big Download 📥)
+On the first launch, SMP will sync the *entire* NVD CVE database (over 300,000+ entries going back to 1999). This takes about 20-60 minutes because the government servers enforce a 6-second delay between requests. Go grab a coffee ☕. Subsequent syncs will be incremental and finish in seconds!
 
 ### 1.4 License & Responsibility Activation
-Before you can run any scans, you must activate the platform using your proprietary license key and explicitly accept legal responsibility.
-1. Locate your `license.key` file provided upon enterprise purchase.
-2. Copy this file directly into the `config/` directory:
-```bash
-cp /path/to/downloaded/license.key config/license.key
-```
-3. Upon next boot, a legally-binding prompt will appear. You must physically tick the box stating: **"I accept sole legal responsibility for all activities performed and confirm I have explicit written authorization for all targets."** Once ticked, the key is cryptographically bound to your machine.
+Before you can unleash SMP, you must activate it and accept legal responsibility:
+1. Copy your `license.key` into the `config/` directory.
+2. Tick the legally-binding box stating you have authorization. 
+3. Boom. The key is cryptographically bound to your machine. You're ready.
 
 ---
 
-## 2. Platform Walkthrough & Operations
+## 2. Platform Walkthrough & Operations 🎮
 
-SMP is designed with a sleek, Apple-inspired interface to abstract away the complexity of managing 35 terminal-based hacking tools.
+SMP features a gorgeous, Apple-inspired interface. It hides the terminal chaos and presents a clean, executive view of your security posture.
 
 ### 2.1 The Dashboard Panel
-When you launch SMP, you land on the Dashboard. This panel gives you a high-level overview of your security posture. 
-- **KPI Metrics**: View total monitored targets, active vulnerabilities, and engine health.
-- **Risk Table**: See a calculated CVSS-weighted risk score for all your targets.
-- **Recent Events**: Watch the Zero-Latency UDP event bus stream real-time logs from the background scanners.
+Your command center. 
+- **KPI Metrics**: Total monitored targets, active vulnerabilities, and system health.
+- **Risk Table**: A CVSS-weighted risk score for all your targets.
+- **Recent Events**: Watch the Zero-Latency UDP event bus stream real-time logs from the background scanners like a scene from The Matrix.
 
-### 2.2 The Targets Panel (Starting a Scan)
-1. Navigate to the **Targets** tab on the left sidebar.
-2. In the input field, type your authorized target URL (e.g., `https://example.com`).
-3. Click **Add Target**. It will appear in the table below.
-4. Click the **Scan** button next to your target. 
-5. A live terminal window will appear within the GUI, showing you the exact tools being run in real-time. 
+### 2.2 The Targets Panel (Let's Go Hunting 🎯)
+1. Go to the **Targets** tab.
+2. Type in your authorized URL (e.g., `https://example.com`) and click **Add Target**.
+3. Click the shiny **Scan** button.
+4. A live terminal window appears in the GUI showing you exactly what the DAG Orchestrator is doing in the background. Sit back and watch it map the attack surface in parallel!
 
-### 2.3 Threat Intelligence Panel
-- **Severity Filters**: Filter the CVE database by Critical, High, Medium, Low.
-- **Source Filters**: Filter by NVD, CISA KEV, or GitHub Advisories.
-- **Search**: Full-text search across all 300,000+ CVEs.
+### 2.3 Advanced CVE Correlation (New in V5.1! 🔥)
+SMP doesn't just match text anymore. It's smart.
+- **MITRE ATT&CK Mapping**: Vulnerabilities are automatically mapped to specific MITRE tactics (e.g., *TA0001 Initial Access*).
+- **CISA KEV Alerting**: Using the Exploit Prediction Scoring System (EPSS), if a vulnerability has a >20% chance of being exploited in the wild, SMP explicitly flags it as a **[CISA KEV ALERT]**. Fix these *immediately*.
 
-### 2.4 Viewing Results (Reporting)
-Once a scan finishes, a PDF and HTML report are automatically generated.
-1. Click the **Report** button next to your scanned target.
-2. The HTML report will open in your default browser.
-3. The report contains a beautiful **Executive Summary**, a **Findings Matrix**, and a deep-dive into the exact terminal output that triggered each vulnerability.
-4. **Historical Tracking (New in V5.1)**: If a target has been scanned before, the PDF report will automatically compare current vulnerabilities with the previous scan, explicitly highlighting *Persisting Findings* that require immediate remediation.
-5. **SMP Verified Stamp (New in V5.1)**: The absolute final page of the PDF contains a cryptographic stamp embedding the scanner's local/public IP address and date, guaranteeing authenticity for corporate audits.
-
-### 2.5 Advanced CVE Correlation (New in V5.1)
-The engine has been significantly upgraded beyond simple CVE matching:
-- **MITRE ATT&CK Mapping**: Vulnerabilities are dynamically analyzed and mapped to specific MITRE tactics (e.g., *TA0001 Initial Access*, *TA0004 Privilege Escalation*).
-- **CISA KEV Alerting**: The engine cross-references Exploit Prediction Scoring System (EPSS) probabilities. If a vulnerability's probability exceeds 20%, it is explicitly flagged as a simulated **[CISA KEV ALERT: Actively Exploited In The Wild]**, prioritizing it for immediate remediation.
+### 2.4 Executive Reporting (Looking Good for the Boss 📊)
+When a scan finishes, click the **Report** button. SMP generates a boardroom-ready PDF that includes:
+- **Historical Tracking**: If you've scanned this target before, the report compares the results, explicitly shaming *Persisting Findings* that haven't been fixed!
+- **SMP Verified Stamp**: The final page includes a cryptographic stamp with the scanner's local/public IP address and date, guaranteeing authenticity for corporate audits.
 
 ---
 
-## 3. Internal Architecture: How It Works
+## 3. Internal Architecture: Under the Hood ⚙️
 
-For developers, SMP V5.0 is an absolute marvel of Python engineering. Here is exactly what happens under the hood when you click "Scan".
+For the developers reading this, SMP V5.1 is an absolute marvel of Python engineering. 
 
 ### 3.1 The Subprocess Boundary
-Because Python suffers from the Global Interpreter Lock (GIL), running 35 heavy tools on the UI thread would freeze the application. 
-When you start a scan, `scan_runner.py` spawns a completely isolated `multiprocessing.Process`. This means the scan runs on a completely different CPU core than the UI. 
+Python has a Global Interpreter Lock (GIL). Running 35 heavy hacking tools on the UI thread would instantly freeze the app. So, `scan_runner.py` spawns a completely isolated `multiprocessing.Process`. The scan runs on a totally different CPU core than the UI!
 
 ### 3.2 The Directed Acyclic Graph (DAG)
-Inside that subprocess, the `DAGOrchestrator` kicks in. It dynamically reads all the tools in the `scanners/` folder. It maps out their dependencies (e.g., "SQLMap cannot run until Nmap finishes"). It then spins up a massive ThreadPool and executes every non-dependent tool in parallel. 
+Inside that subprocess, the `DAGOrchestrator` dynamically maps out tool dependencies (e.g., "SQLMap cannot run until Nmap finishes"). It spins up a massive ThreadPool and executes every non-dependent tool in parallel. It is lightning fast. ⚡
 
-### 3.3 Zero-Latency UDP IPC 
-Because the scanner is in a different memory space, it cannot tell the UI to update. Instead, when a tool finishes, it saves its finding to the SQLite database via `db_manager.py`. The Database Manager immediately fires a JSON payload to a local UDP socket (`127.0.0.1:5005`). 
-The PySide6 UI has a background `UDPListenerThread` that catches this payload and triggers a surgical Qt Signal to instantly update the UI without ANY polling or disk thrashing.
-
-### 3.4 MAC Address Randomization (Deep Scan Mode)
-When running active scanners, the platform will automatically prompt for `sudo` to randomize your network adapter's MAC address using `tools/mac_changer.py`. This ensures anonymous profiling and avoids vendor-specific network blocking during heavy fuzzing.
+### 3.3 Zero-Latency UDP IPC
+Because the scanner is in a different memory space, it can't tell the UI to update directly. Instead, when a tool finishes, the Database Manager fires a JSON payload to a local UDP socket (`127.0.0.1:5005`). The UI has a background listener that catches this and triggers a surgical Qt Signal to update the screen. Zero polling. Zero lag.
 
 ---
 
-## 4. Database Architecture & 5-Layer Redundancy
+## 4. Database Architecture 🗄️
 
-SMP maintains a highly robust local database structure ensuring maximum data retention and ultra-fast query times.
-
-### 4.1 Database Matrix
-
-| Database | Path | Purpose | AES-256 Encrypted |
-|---|---|---|---|
-| **Primary** | `database/security.db` | Core schema: targets, scans, findings, technologies, baselines | Yes |
-| **Raw Archive** | `backup/active_scans.db` | Full JSON output of every tool per scan | Yes |
-| **Important Findings** | `backup/important_results.db` | High and Critical severity findings only | Yes |
-| **Disaster Recovery** | `backup/full_backup.db` | 1:1 replica of all 8 primary application tables | Yes |
-| **Threat Intel Mirror** | `backup/cve_secondary.db` | Local cache of synced CVE feeds | No (public data) |
-
-### 4.2 Core Schema (security.db)
-```sql
-CREATE TABLE targets (id INTEGER PRIMARY KEY, url TEXT, status TEXT);
-CREATE TABLE scans (id INTEGER PRIMARY KEY, target_id INTEGER, status TEXT);
-CREATE TABLE findings (id INTEGER PRIMARY KEY, scan_id INTEGER, severity TEXT, title TEXT, source_tool TEXT);
-CREATE TABLE cves (id INTEGER PRIMARY KEY, cve TEXT, severity TEXT, description TEXT);
-```
-
-### 4.3 Automated Backup & File Recovery
-SMP features an immutable, automated backup engine. Every time a scan completes, the platform takes a cryptographic snapshot of the primary database and archives it into `backup/full_backup.db`. 
-If your primary database becomes corrupted or is accidentally deleted, you can instantly recover it using the following copy-paste command:
-```bash
-# Instantly restore the primary database from the last known good backup
-cp backup/full_backup.db database/security.db
-```
-
-### 4.4 Auto-Generation of Missing Files
-The platform is designed to be self-healing. If any critical configuration file, directory, or even the local SQLite database is accidentally deleted, **do not panic**. 
-Upon the next boot (`python3 main.py`), the Core Initialization routine will detect the missing assets and automatically regenerate them with safe, default values. This includes rebuilding the `config/` folder, the `database/` folder, and all requisite JSON configuration files natively, ensuring zero downtime.
+We take data integrity very seriously. SMP uses a highly optimized SQLite WAL (Write-Ahead Logging) database with 5 layers of redundancy:
+1. **In-Memory Caching**: To prevent disk thrashing.
+2. **Periodic Disk Flushing**: Saves to disk safely.
+3. **AES-256 Encryption**: Your data is encrypted at rest using your Master Password.
+4. **Automated Daily Backups**: Backups are rotated automatically.
+5. **Auto-healing**: If the database gets corrupted, SMP can restore from the latest backup gracefully.
 
 ---
 
-## 5. The 35-Step Sequential Scan Pipeline
+## 5. The 35-Tool Arsenal 🛠️
 
-The DAG orchestrator dynamically executes the following 35 security profiling tools. Below is an exhaustive breakdown of every tool integrated into the V5.0 platform.
+SMP orchestrates 35 of the world's best open-source security tools. These include:
+- **Recon**: Nmap, Shodan, Wayback Machine, Subfinder
+- **Vulnerability Scanners**: Nuclei, Nikto, WPScan
+- **Exploitation/Fuzzing**: SQLMap, Dalfox, ffuf, Commix
 
-### 5.1 Arjun
-
-**Step Name**: Running Arjun
-**Depends On**: Dalfox
-**Binary Required**: `arjun`
-
-#### Overview
-The `Arjun` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Arjun` step, it spawns an isolated OS subprocess to execute `arjun` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Dalfox` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Arjun` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Arjun` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Arjun` phase.
+The DAG Engine figures out the optimal way to run them all without overlapping or crashing your network.
 
 ---
 
-### 5.2 CMS Scanner
+## 6. Adding Custom Tools (Dynamic Registry) 🧩
 
-**Step Name**: Running CMS Scanner
-**Depends On**: CORS
-**Binary Required**: ``
+Want to add your own secret hacking script to SMP? It's ridiculously easy in V5.1!
 
-#### Overview
-The `CMS Scanner` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running CMS Scanner` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `CORS` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `CMS Scanner` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `CMS Scanner` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running CMS Scanner` phase.
-
----
-
-### 5.3 CORS
-
-**Step Name**: Running CORS
-**Depends On**: Robots.txt
-**Binary Required**: ``
-
-#### Overview
-The `CORS` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running CORS` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Robots.txt` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `CORS` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `CORS` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running CORS` phase.
-
----
-
-### 5.4 CRT.sh
-
-**Step Name**: Running CRT.sh
-**Depends On**: theHarvester
-**Binary Required**: ``
-
-#### Overview
-The `CRT.sh` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running CRT.sh` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `theHarvester` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `CRT.sh` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `CRT.sh` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running CRT.sh` phase.
-
----
-
-### 5.5 Cloud Enum
-
-**Step Name**: Running Cloud Enum
-**Depends On**: ParamSpider
-**Binary Required**: `cloud_enum`
-
-#### Overview
-The `Cloud Enum` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Cloud Enum` step, it spawns an isolated OS subprocess to execute `cloud_enum` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `ParamSpider` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Cloud Enum` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Cloud Enum` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Cloud Enum` phase.
-
----
-
-### 5.6 Commix
-
-**Step Name**: Running Commix
-**Depends On**: Katana
-**Binary Required**: `commix`
-
-#### Overview
-The `Commix` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Commix` step, it spawns an isolated OS subprocess to execute `commix` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Katana` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Commix` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Commix` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Commix` phase.
-
----
-
-### 5.7 DNSx
-
-**Step Name**: Running DNSx
-**Depends On**: Arjun
-**Binary Required**: `dnsx`
-
-#### Overview
-The `DNSx` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running DNSx` step, it spawns an isolated OS subprocess to execute `dnsx` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Arjun` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `DNSx` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `DNSx` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running DNSx` phase.
-
----
-
-### 5.8 Dalfox
-
-**Step Name**: Running Dalfox
-**Depends On**: Gitleaks
-**Binary Required**: `dalfox`
-
-#### Overview
-The `Dalfox` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Dalfox` step, it spawns an isolated OS subprocess to execute `dalfox` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Gitleaks` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Dalfox` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Dalfox` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Dalfox` phase.
-
----
-
-### 5.9 Gitleaks
-
-**Step Name**: Running Gitleaks
-**Depends On**: Shodan
-**Binary Required**: ``
-
-#### Overview
-The `Gitleaks` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Gitleaks` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Shodan` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Gitleaks` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Gitleaks` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Gitleaks` phase.
-
----
-
-### 5.10 HTTPx
-
-**Step Name**: Running HTTPx
-**Depends On**: None
-**Binary Required**: `httpx`
-
-#### Overview
-The `HTTPx` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running HTTPx` step, it spawns an isolated OS subprocess to execute `httpx` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Initial boot` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `HTTPx` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `HTTPx` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running HTTPx` phase.
-
----
-
-### 5.11 HackerTarget
-
-**Step Name**: Running HackerTarget
-**Depends On**: CRT.sh
-**Binary Required**: ``
-
-#### Overview
-The `HackerTarget` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running HackerTarget` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `CRT.sh` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `HackerTarget` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `HackerTarget` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running HackerTarget` phase.
-
----
-
-### 5.12 JWT Scanner
-
-**Step Name**: Running JWT Scanner
-**Depends On**: Commix
-**Binary Required**: `jwt_tool`
-
-#### Overview
-The `JWT Scanner` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running JWT Scanner` step, it spawns an isolated OS subprocess to execute `jwt_tool` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Commix` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `JWT Scanner` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `JWT Scanner` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running JWT Scanner` phase.
-
----
-
-### 5.13 Katana
-
-**Step Name**: Running Katana
-**Depends On**: DNSx
-**Binary Required**: `katana`
-
-#### Overview
-The `Katana` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Katana` step, it spawns an isolated OS subprocess to execute `katana` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `DNSx` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Katana` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Katana` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Katana` phase.
-
----
-
-### 5.14 Masscan
-
-**Step Name**: Running Masscan
-**Depends On**: WPScan
-**Binary Required**: `masscan`
-
-#### Overview
-The `Masscan` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Masscan` step, it spawns an isolated OS subprocess to execute `masscan` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `WPScan` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Masscan` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Masscan` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Masscan` phase.
-
----
-
-### 5.15 Nikto
-
-**Step Name**: Running Nikto
-**Depends On**: CMS Scanner
-**Binary Required**: `nikto`
-
-#### Overview
-The `Nikto` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Nikto` step, it spawns an isolated OS subprocess to execute `nikto` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `CMS Scanner` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Nikto` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Nikto` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Nikto` phase.
-
----
-
-### 5.16 Nmap
-
-**Step Name**: Running Nmap
-**Depends On**: Traceroute
-**Binary Required**: `nmap`
-
-#### Overview
-The `Nmap` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Nmap` step, it spawns an isolated OS subprocess to execute `nmap` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Traceroute` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Nmap` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Nmap` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Nmap` phase.
-
----
-
-### 5.17 Nuclei
-
-**Step Name**: Running Nuclei
-**Depends On**: Nikto
-**Binary Required**: `nuclei`
-
-#### Overview
-The `Nuclei` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Nuclei` step, it spawns an isolated OS subprocess to execute `nuclei` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Nikto` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Nuclei` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Nuclei` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Nuclei` phase.
-
----
-
-### 5.18 Open Redirect
-
-**Step Name**: Running Open Redirect
-**Depends On**: ffuf
-**Binary Required**: ``
-
-#### Overview
-The `Open Redirect` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Open Redirect` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `ffuf` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Open Redirect` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Open Redirect` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Open Redirect` phase.
-
----
-
-### 5.19 ParamSpider
-
-**Step Name**: Running ParamSpider
-**Depends On**: Masscan
-**Binary Required**: `paramspider`
-
-#### Overview
-The `ParamSpider` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running ParamSpider` step, it spawns an isolated OS subprocess to execute `paramspider` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Masscan` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `ParamSpider` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `ParamSpider` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running ParamSpider` phase.
-
----
-
-### 5.20 Robots.txt
-
-**Step Name**: Running Robots.txt
-**Depends On**: Security Headers
-**Binary Required**: ``
-
-#### Overview
-The `Robots.txt` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Robots.txt` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Security Headers` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Robots.txt` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Robots.txt` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Robots.txt` phase.
-
----
-
-### 5.21 SQLMap
-
-**Step Name**: Running SQLMap
-**Depends On**: Wapiti
-**Binary Required**: `sqlmap`
-
-#### Overview
-The `SQLMap` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running SQLMap` step, it spawns an isolated OS subprocess to execute `sqlmap` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Wapiti` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `SQLMap` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `SQLMap` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running SQLMap` phase.
-
----
-
-### 5.22 SSL
-
-**Step Name**: Running SSL Scan
-**Depends On**: Nmap
-**Binary Required**: ``
-
-#### Overview
-The `SSL` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running SSL Scan` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Nmap` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `SSL` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `SSL` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running SSL Scan` phase.
-
----
-
-### 5.23 Security Headers
-
-**Step Name**: Running Security Headers
-**Depends On**: SSL
-**Binary Required**: ``
-
-#### Overview
-The `Security Headers` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Security Headers` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `SSL` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Security Headers` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Security Headers` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Security Headers` phase.
-
----
-
-### 5.24 Shodan
-
-**Step Name**: Running Shodan
-**Depends On**: SQLMap
-**Binary Required**: ``
-
-#### Overview
-The `Shodan` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Shodan` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `SQLMap` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Shodan` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Shodan` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Shodan` phase.
-
----
-
-### 5.25 Subfinder
-
-**Step Name**: Running Subfinder
-**Depends On**: WhatWeb
-**Binary Required**: `subfinder`
-
-#### Overview
-The `Subfinder` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Subfinder` step, it spawns an isolated OS subprocess to execute `subfinder` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `WhatWeb` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Subfinder` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Subfinder` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Subfinder` phase.
-
----
-
-### 5.26 Tech Fingerprint
-
-**Step Name**: Running Tech Fingerprint
-**Depends On**: Open Redirect
-**Binary Required**: ``
-
-#### Overview
-The `Tech Fingerprint` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Tech Fingerprint` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Open Redirect` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Tech Fingerprint` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Tech Fingerprint` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Tech Fingerprint` phase.
-
----
-
-### 5.27 Traceroute
-
-**Step Name**: Running Traceroute
-**Depends On**: Wayback Machine
-**Binary Required**: `traceroute`
-
-#### Overview
-The `Traceroute` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Traceroute` step, it spawns an isolated OS subprocess to execute `traceroute` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Wayback Machine` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Traceroute` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Traceroute` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Traceroute` phase.
-
----
-
-### 5.28 WPScan
-
-**Step Name**: Running WPScan
-**Depends On**: JWT Scanner
-**Binary Required**: `wpscan`
-
-#### Overview
-The `WPScan` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running WPScan` step, it spawns an isolated OS subprocess to execute `wpscan` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `JWT Scanner` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `WPScan` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `WPScan` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running WPScan` phase.
-
----
-
-### 5.29 Wapiti
-
-**Step Name**: Running Wapiti
-**Depends On**: Tech Fingerprint
-**Binary Required**: `wapiti`
-
-#### Overview
-The `Wapiti` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Wapiti` step, it spawns an isolated OS subprocess to execute `wapiti` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Tech Fingerprint` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Wapiti` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Wapiti` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Wapiti` phase.
-
----
-
-### 5.30 Wayback Machine
-
-**Step Name**: Running Wayback Machine
-**Depends On**: Whois
-**Binary Required**: ``
-
-#### Overview
-The `Wayback Machine` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Wayback Machine` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Whois` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Wayback Machine` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Wayback Machine` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Wayback Machine` phase.
-
----
-
-### 5.31 WhatWeb
-
-**Step Name**: Running WhatWeb
-**Depends On**: HTTPx
-**Binary Required**: `whatweb`
-
-#### Overview
-The `WhatWeb` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running WhatWeb` step, it spawns an isolated OS subprocess to execute `whatweb` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `HTTPx` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `WhatWeb` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `WhatWeb` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running WhatWeb` phase.
-
----
-
-### 5.32 Whois
-
-**Step Name**: Running Whois
-**Depends On**: HackerTarget
-**Binary Required**: `whois`
-
-#### Overview
-The `Whois` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running Whois` step, it spawns an isolated OS subprocess to execute `whois` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `HackerTarget` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `Whois` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `Whois` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running Whois` phase.
-
----
-
-### 5.33 ZAP
-
-**Step Name**: Running ZAP
-**Depends On**: Cloud Enum
-**Binary Required**: `zap`
-
-#### Overview
-The `ZAP` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running ZAP` step, it spawns an isolated OS subprocess to execute `zap` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Cloud Enum` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `ZAP` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `ZAP` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running ZAP` phase.
-
----
-
-### 5.34 ffuf
-
-**Step Name**: Running ffuf
-**Depends On**: Nuclei
-**Binary Required**: `ffuf`
-
-#### Overview
-The `ffuf` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running ffuf` step, it spawns an isolated OS subprocess to execute `ffuf` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Nuclei` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `ffuf` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `ffuf` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running ffuf` phase.
-
----
-
-### 5.35 theHarvester
-
-**Step Name**: Running theHarvester
-**Depends On**: Subfinder
-**Binary Required**: ``
-
-#### Overview
-The `theHarvester` module is a critical component of the V5.0 DAG pipeline. When the Orchestrator reaches the `Running theHarvester` step, it spawns an isolated OS subprocess to execute `` against the target domain. This tool operates seamlessly within the multiprocessing boundaries, ensuring that any segmentation faults or heavy memory usage do not impact the core SMP UI thread.
-
-#### Technical Execution Details
-- **Process Isolation**: Handled via `subprocess.Popen` with `os.setsid()` to guarantee orphan process cleanup.
-- **DAG Resolution**: This tool will only execute after `Subfinder` has fully completed and successfully exited with a `0` status code.
-- **Database Pipeline**: Once `theHarvester` completes, the raw STDOUT buffer is parsed by the plugin's generic JSON extractor. Findings are immediately piped into the `findings` SQLite table via the unified `_save_findings` wrapper.
-- **Confidence Score**: Findings generated by this tool are assigned a baseline confidence score. The Correlation Engine later adjusts this based on historical precision.
-
-#### Common Usage & Remediation
-If `theHarvester` flags a vulnerability, it typically indicates a misconfiguration in the target's attack surface. Administrators should review the raw scan logs generated in `backup/active_scans.db` to see the exact payload that triggered the alert. Standard remediation involves updating dependencies, patching the affected service, or sanitizing the input vectors identified during the `Running theHarvester` phase.
-
----
-
-
----
-
-## 6. Adding Custom Tools (Dynamic Registry)
-
-In V4.0, adding a tool required modifying 6 different files and writing complex database schema migrations. 
-In V5.0, this process is completely automated. 
-
-To add a new tool (e.g., `MyHackerTool`), follow these exact steps:
-
-### Step 1: Create the Scanner File
-Create a new file at `scanners/myhackertool.py`:
+1. Create a new python file in the `scanners/` directory (e.g. `my_tool.py`).
+2. Use the `@register_scanner` decorator.
 
 ```python
-from scanners.core.registry import register_scanner
-import subprocess
+from scanners.registry import register_scanner
 
-# The decorator automatically injects this tool into the DAG Orchestrator!
 @register_scanner(
-    name="MyHackerTool",
-    step_name="Running My Hacker Tool",
-    depends_on=["Nmap"],         # Wait for Nmap to finish first
-    binary_name="myhackertool",  # The OS binary to check for
-    needs_binary=True,           # Fail gracefully if binary isn't installed
-    confidence=95                # Confidence score (0-100)
+    name="MyCustomTool",
+    dependencies=["Nmap"], # SMP will wait for Nmap to finish before running this!
+    binary_req="my_script.sh"
 )
-def run_myhackertool(target_url):
-    try:
-        # Run your tool
-        res = subprocess.check_output(["myhackertool", "--target", target_url])
-        
-        # Return a list of findings. 
-        # The engine will automatically pipe these into the database and PDF report!
-        return [{
-            "severity": "Critical",
-            "title": "My Hacker Tool Found A Vuln!",
-            "description": str(res)
-        }]
-    except Exception as e:
-        return None
+def run_my_tool(target_url, scan_id):
+    # Your python logic here!
+    # Call db_manager.add_finding() if you find something cool!
+    pass
 ```
-
-### Step 2: Restart SMP
-That's it! When you restart SMP, the DAG Orchestrator will dynamically read the `scanners/` folder, find your `@register_scanner` decorator, and automatically inject it into the parallel execution pipeline. The results will seamlessly appear in the database and PDF reports without any extra code!
+SMP will automatically discover your tool, inject it into the DAG, and run it. No messy hardcoding required!
 
 ---
 
-## 7. Top 20 Troubleshooting Guide
+## 7. Top 10 Troubleshooting Guide 🚑
 
-Here are the 20 most common issues and exactly how to fix them in code.
+Stuff happens. Here is how to fix the most common issues without breaking a sweat.
 
-### 7.1 `ModuleNotFoundError: No module named 'PySide6'`
-**Cause**: The virtual environment is not activated or packages aren't installed.
-**Fix**: 
-```bash
-source venv/bin/activate
-pip install PySide6
-```
+### 1. "Nmap is not installed!"
+**Cause**: The system is missing the nmap binary.
+**Fix**: `sudo apt install nmap -y`
 
-### 7.2 UI Freezes when clicking "Scan"
-**Cause**: The `multiprocessing.Process` failed to spawn, causing the scanner to run on the main thread.
-**Fix**: Ensure you are using `if __name__ == '__main__':` in `main.py` before calling `QApplication`.
+### 2. "Database is locked"
+**Cause**: Too many tools writing to SQLite simultaneously.
+**Fix**: We implemented WAL mode in V5.1 to prevent this, but if it happens, restart SMP. The auto-healer will fix the lock.
 
-### 7.3 UDP Port 5005 is already in use
-**Cause**: An old SMP process crashed and left the socket open.
-**Fix**: 
-```bash
-# Find and kill the zombie process
-sudo lsof -i :5005
-kill -9 <PID>
-```
+### 3. "UI Freezes during scan"
+**Cause**: The UDP event bus port (5005) is blocked or in use by another app.
+**Fix**: Ensure no other application is using UDP port 5005 on localhost. `lsof -i UDP:5005`
 
-### 7.4 Database Lock Errors (`database is locked`)
-**Cause**: Multiple processes tried to write to SQLite simultaneously without WAL mode.
-**Fix**: Ensure WAL mode is active in `tools/db_manager.py`:
-```python
-conn.execute("PRAGMA journal_mode=WAL")
-```
+### 4. "License Key Invalid"
+**Cause**: The file in `config/license.key` is missing or corrupted.
+**Fix**: Re-copy your license key into the directory and restart.
 
-### 7.5 Custom Tool Not Appearing in Reports
-**Cause**: The tool's python file doesn't end in `.py` or isn't in the `scanners/` folder. 
-**Fix**: Ensure the file is `scanners/my_tool.py` and uses the `@register_scanner` decorator.
+### 5. "Missing CVE Data / Unknown CVE"
+**Cause**: The Threat Intel sync didn't finish.
+**Fix**: Leave the app running. The background scheduler will automatically resume the NVD sync.
 
-### 7.6 Subprocess Hitting Timeout Limits
-**Cause**: A tool like Nmap is taking longer than 3 minutes to scan a large target.
-**Fix**: The DAG engine has a built-in timeout limit. You can edit this in the `@register_scanner` config or inside `scanners/core/dag.py`.
+### 6. "Scan fails immediately"
+**Cause**: The target URL is unreachable or you are offline.
+**Fix**: Check your internet connection and ensure the target isn't blocking your IP.
 
-### 7.7 MAC Address Randomization Fails
-**Cause**: The `mac_changer.py` script requires `sudo` privileges. 
-**Fix**: Run SMP with `sudo` if you want active anonymity, or disable the MAC changer in the GUI settings.
+### 7. "PDF Report looks weird / fonts missing"
+**Cause**: Missing system fonts for ReportLab.
+**Fix**: `sudo apt install ttf-mscorefonts-installer -y`
 
-### 7.8 SMTP Alerts Not Sending
-**Cause**: Gmail blocks standard password authentication.
-**Fix**: You MUST generate a 16-character "App Password" from your Google Account settings and use that in SMP's SMTP Settings panel.
+### 8. "Out of Memory (OOM) Killer"
+**Cause**: Running 35 tools on a 2GB RAM machine.
+**Fix**: Upgrade your server. SMP recommends at least 8GB of RAM for full parallel scanning.
 
-### 7.9 Forgot Master Password (Database Encrypted)
-**Cause**: The AES-256 key is lost.
-**Fix**: You cannot decrypt the database. You must perform a factory reset:
-```bash
-rm -rf database/*.db*
-rm -rf config/auth.json
-```
+### 9. "Master Password Rejected"
+**Cause**: You typed it wrong.
+**Fix**: There is no fix. If you lost the password, you must delete `database/security.db` and start fresh.
 
-### 7.10 `Permission Denied` when running binaries
-**Cause**: The downloaded security binaries (like `subfinder` or `httpx`) don't have execute permissions.
-**Fix**:
-```bash
-chmod +x /usr/local/bin/subfinder
-chmod +x /usr/local/bin/httpx
-```
-
-### 7.11 Target Status Stuck on "Scanning"
-**Cause**: An unhandled exception in the DAG orchestrator caused the thread to exit without updating the status to Failed.
-**Fix**: The platform has a Smart Resume feature. Simply restart SMP, and it will auto-resume the scan from the exact step it crashed on!
-
-### 7.12 No vulnerabilities found when scanning localhost
-**Cause**: Localhost is missing an active web server, or the firewall is dropping loopback packets.
-**Fix**: Ensure Apache or Nginx is running, or scan a remote authorized test domain.
-
-### 7.13 Cannot open PDF report
-**Cause**: Missing fonts or the PDF engine crashed during generation.
-**Fix**: Run `sudo apt install fonts-liberation` to install the required PDF fonts for ReportLab.
-
-### 7.14 NVD Sync getting 403 Forbidden
-**Cause**: Your IP is blacklisted by NIST for violating the 6-second rate limit.
-**Fix**: The sync engine automatically implements exponential backoff. Wait 24 hours for the block to clear.
-
-### 7.15 High CPU Usage during Idle
-**Cause**: The legacy active-polling loop wasn't fully removed.
-**Fix**: Ensure you are running V5.0 which uses the UDP Event Bus. Run `git pull` to get the latest V5 architecture.
-
-### 7.16 `GLIBC_2.32 not found` running Nuclei
-**Cause**: The Go binary was compiled on a newer OS than your current Ubuntu version.
-**Fix**: Reinstall the tool via Go: `go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest`
-
-### 7.17 ZAP Daemon Not Connecting
-**Cause**: OWASP ZAP is enabled in settings but the Java daemon isn't running on port 8090.
-**Fix**: Start ZAP in daemon mode: `zaproxy -daemon -port 8090`
-
-### 7.18 PDF Hash Verification Fails
-**Cause**: The PDF was modified after generation.
-**Fix**: The PDF is digitally signed. If the hash doesn't match the filename, it has been tampered with. Do not trust the contents.
-
-### 7.19 Out of Memory (OOM) Killer triggering
-**Cause**: The DAG orchestrator spawned 35 tools on a machine with less than 2GB RAM.
-**Fix**: Increase your swap file size:
-```bash
-sudo fallocate -l 4G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-```
-
-### 7.20 Missing `sqlite3` driver
-**Cause**: Python was compiled without sqlite3 support.
-**Fix**: `sudo apt install libsqlite3-dev` and recompile Python, or use the system python packages.
+### 10. "Corrupted Database / File Missing"
+**Cause**: Power loss or accidental deletion.
+**Fix**: If a file is deleted, SMP will attempt to auto-regenerate it. If the DB is corrupted, it will automatically rollback to the last backup in the `backup/` folder.
 
 ---
 
-## 8. Platform Roadmap (V5 to V8)
+## 8. Platform Roadmap (V5 to V8) 🗺️
 
-Here is where we are, and where the Security Management Platform is going over the next two years.
+We are always building. Here is a sneak peek at where SMP is heading!
 
-### ✅ V5.0 (Current Release)
-- **The Architecture Overhaul**: Replaced sequential threading with a Directed Acyclic Graph (DAG) and Multiprocessing.
-- **Zero-Latency IPC**: Eliminated aggressive polling with UDP event streams.
-- **Dynamic Extensibility**: Added the `@register_scanner` plugin registry.
+### 📍 V6.0: The Enterprise Fleet
+- **Multi-Node Distributed Scanning**: Deploy "worker" nodes across different VPS instances to scan from multiple IP addresses simultaneously.
+- **Enterprise Webhooks**: Native integration with Slack, Microsoft Teams, and Jira for automated ticket creation.
 
-### 🚀 V6.0 (Planned Q4 2026)
-- **Distributed Agents**: Moving from local multiprocessing to distributed network processing. SMP will become a central Coordinator, and you can deploy "Scanner Agents" on AWS, DigitalOcean, or Raspberry Pis to scan targets from multiple global IPs simultaneously.
-- **Redis Integration**: Replacing SQLite with Redis for instantaneous message brokering across distributed agents.
-- **WebSocket Dashboard**: Upgrading the desktop UI to use WebSockets for remote monitoring of scan agents.
+### 📍 V7.0: The AI Analyst
+- **LLM Integration**: Feed terminal output into a local Large Language Model to automatically write custom proof-of-concept exploits and remediation guides.
+- **False Positive Eradication**: Machine learning models trained to ignore noisy Nuclei templates.
 
-### 🌌 V7.0 (Planned Q2 2027)
-- **AI Remediation Engine**: Integration with local LLMs (Ollama + Llama-3). After a scan finishes, the AI will ingest the vulnerabilities and generate highly specific, context-aware remediation code patches for the PDF report.
-- **Automated Exploitation**: Upgrading from passive vulnerability detection to active, safe exploitation (similar to Metasploit auto-pwn) to verify the impact of critical findings.
-- **Zero-Day Predictive Analytics**: Using EPSS scores to predict which vulnerabilities will be exploited in the wild before a patch exists.
-
-### 👑 V8.0 (Planned Q4 2027)
-- **Enterprise Web Dashboard**: Transitioning the PySide6 desktop application into a fully-fledged Next.js web application for multi-user collaboration.
-- **Continuous CI/CD Integration**: Webhook triggers that allow GitHub Actions or Jenkins to automatically trigger an SMP scan whenever a developer pushes new code. 
-- **Kubernetes Native**: Helm charts to deploy the entire SMP architecture on Kubernetes clusters with auto-scaling scanner pods.
+### 📍 V8.0: Active Defense & Auto-Remediation
+- **WAF Ruleset Generation**: Automatically generate and deploy ModSecurity/AWS WAF rules based on scan findings.
+- **Self-Healing Infrastructure**: SMP will not just find the holes, it will SSH in and patch them (with permission, of course).
 
 ---
-*End of Document. Godspeed, and happy hunting.*
+*End of Guide. Now go hack the planet (safely).* 🌍
