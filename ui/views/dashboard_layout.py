@@ -1191,8 +1191,8 @@ class DashboardLayoutMixin:
         # Reports table
         self.tbl_reports = QTableWidget()
         self.tbl_reports.setObjectName("reports_table")
-        self.tbl_reports.setColumnCount(5)
-        self.tbl_reports.setHorizontalHeaderLabels(["Filename", "Type", "Date Modified", "Size", "Action"])
+        self.tbl_reports.setColumnCount(6)
+        self.tbl_reports.setHorizontalHeaderLabels(["Filename", "Type", "Date Modified", "Size", "Hash Signature", "Action"])
         self.tbl_reports.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.tbl_reports.setSelectionBehavior(QTableWidget.SelectRows)
         self.tbl_reports.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -1294,11 +1294,20 @@ class DashboardLayoutMixin:
             btn_del.setFixedHeight(22)
             btn_del.setStyleSheet("background-color: #3A0A0A; color: #EF4444; border: 1px solid #7F1D1D; border-radius: 4px; font-size: 11px; padding: 0 8px;")
             btn_del.clicked.connect(lambda _, p=fpath: self._delete_report(p))
+            
+            # Extract Hash from filename
+            import re
+            match = re.search(r'_([a-f0-9]{8})\.pdf$', fname, re.IGNORECASE)
+            file_hash = match.group(1) if match else "N/A"
+            
+            hash_item = QTableWidgetItem(f"SHA256: {file_hash}")
+            hash_item.setForeground(QColor("#88BBFF"))
+            self.tbl_reports.setItem(row_idx, 4, hash_item)
 
             action_layout.addWidget(btn_open)
             action_layout.addWidget(btn_del)
             action_layout.addStretch()
-            self.tbl_reports.setCellWidget(row_idx, 4, action_widget)
+            self.tbl_reports.setCellWidget(row_idx, 5, action_widget)
 
         self.tbl_reports.resizeRowsToContents()
 

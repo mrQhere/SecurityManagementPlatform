@@ -1091,7 +1091,7 @@ def _generate_vapt_pdf(filepath, ctx):
         scanner_ip = "127.0.0.1"
 
     stamp_data = [
-        [Paragraph(f"<b>✔ Security Management Platform Verified</b>", st["attest"])],
+        [Paragraph(f"<b>✔ SMP ({c['url']}) Verified Report</b>", st["attest"])],
         [Paragraph(f"Date: {c['scan_time']}", st["attest"])],
         [Paragraph(f"Scanner IP: {scanner_ip}", st["attest"])],
     ]
