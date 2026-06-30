@@ -559,7 +559,17 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Security Management Platform")
+        import json
+        import os
+        version = "V5.0"
+        try:
+            metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+                version = metadata.get("version", "V5.0")
+        except Exception:
+            pass
+        self.setWindowTitle(f"Security Management Platform • {version}")
         self.setStyleSheet(APPLE_STYLESHEET)
         # Set window dimensions
         self.setMinimumSize(1200, 800)

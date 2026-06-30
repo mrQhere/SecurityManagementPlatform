@@ -93,7 +93,18 @@ class SplashScreen(QWidget):
         self.lbl_title.setStyleSheet("color: #FFFFFF; font-size: 36px; font-weight: 800; letter-spacing: 2px;")
         layout.addWidget(self.lbl_title)
 
-        self.lbl_subtitle = QLabel("SECURITY PLATFORM • V5.0")
+        import json
+        import os
+        version = "V5.0"
+        try:
+            metadata_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "metadata.json")
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+                version = metadata.get("version", "V5.0")
+        except Exception:
+            pass
+
+        self.lbl_subtitle = QLabel(f"SECURITY PLATFORM • {version}")
         self.lbl_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.lbl_subtitle.setStyleSheet("color: #007AFF; font-size: 12px; font-weight: 600; letter-spacing: 1px;")
         layout.addWidget(self.lbl_subtitle)

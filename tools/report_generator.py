@@ -624,17 +624,21 @@ def _generate_vapt_pdf(filepath, ctx):
     story.append(_spacer(12))
 
     # Historical Trend Analysis
+    story.append(Paragraph("Historical Scan Trend Analysis", st["h3"]))
     if c.get("trend_deltas") and c["trend_deltas"].get("previous_scan_id"):
-        story.append(Paragraph("Historical Scan Trend Analysis", st["h3"]))
         td = c["trend_deltas"]
         trend_text = (
             f"Compared to the previous assessment (Scan ID: {td['previous_scan_id']}), the following changes were observed:<br/><br/>"
             f"<b><font color='{_P['crit']}'>[+] New Findings:</font></b> {td['new']}<br/>"
             f"<b><font color='{_P['green']}'>[-] Resolved Findings:</font></b> {td['resolved']}<br/>"
-            f"<b><font color='{_P['med']}'>[=] Persisting Findings:</font></b> {td['persisting']}"
+            f"<b><font color='{_P['med']}'>[=] Persisting Findings:</font></b> {td['persisting']} "
+            f"<i>(These vulnerabilities have not been updated or fixed since the last scan. Immediate attention is required.)</i>"
         )
-        story.append(Paragraph(trend_text, st["body"]))
-        story.append(_spacer(12))
+    else:
+        trend_text = "No previous data found. This is the first recorded assessment for this target."
+    
+    story.append(Paragraph(trend_text, st["body"]))
+    story.append(_spacer(12))
 
     # Risk Metric Dashboard — severity counts table
     story.append(Paragraph("Risk Metric Dashboard", st["h3"]))
@@ -1075,6 +1079,34 @@ def _generate_vapt_pdf(filepath, ctx):
     ]))
     story.append(sig_t)
     story.append(_spacer(20))
+    
+    # SMP Verified Stamp
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        scanner_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        scanner_ip = "127.0.0.1"
+
+    stamp_data = [
+        [Paragraph(f"<b>✔ Security Management Platform Verified</b>", st["attest"])],
+        [Paragraph(f"Date: {c['scan_time']}", st["attest"])],
+        [Paragraph(f"Scanner IP: {scanner_ip}", st["attest"])],
+    ]
+    stamp_t = Table(stamp_data, colWidths=[220], hAlign="RIGHT")
+    stamp_t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), _c("#EFF6FF")),  # Very light blue
+        ("BOX",           (0, 0), (-1, -1), 1.5, _c(_P["accent"])),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(stamp_t)
+    story.append(_spacer(30))
+
     story.append(Paragraph(
         f"Document Reference: VAPT-{c['url'].replace('https://','').replace('http://','')[:20].upper()}-{c['scan_time'][:10]}  |  "
         f"Version: {c['doc_version']}  |  Status: {c['doc_status']}",

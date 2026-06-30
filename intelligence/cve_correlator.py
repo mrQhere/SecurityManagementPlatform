@@ -65,6 +65,28 @@ def _normalise(text):
     return text.lower().strip()
 
 
+def map_to_mitre_attack(description):
+    """Dynamically maps CVE description to MITRE ATT&CK tactics."""
+    desc = description.lower()
+    tactics = []
+    
+    if any(k in desc for k in ["sql injection", "xss", "cross-site scripting", "bypass", "unauthorized access"]):
+        tactics.append("TA0001 (Initial Access)")
+    if any(k in desc for k in ["privilege escalation", "root", "admin", "escalate"]):
+        tactics.append("TA0004 (Privilege Escalation)")
+    if any(k in desc for k in ["remote code execution", "rce", "execute arbitrary code", "command injection"]):
+        tactics.append("TA0002 (Execution)")
+    if any(k in desc for k in ["denial of service", "dos", "crash", "memory corruption"]):
+        tactics.append("TA0040 (Impact)")
+    if any(k in desc for k in ["credentials", "password", "hash", "leak", "information disclosure"]):
+        tactics.append("TA0006 (Credential Access)")
+        
+    if not tactics:
+        tactics.append("TA0040 (Impact)") # Default fallback
+        
+    return ", ".join(tactics)
+
+
 def correlate_cves_for_scan(scan_id):
     """
     For every technology detected in *scan_id* that has a version,
@@ -170,11 +192,20 @@ def correlate_cves_for_scan(scan_id):
 
                 cvss_str = f" (CVSS: {cvss:.1f})" if cvss else ""
                 epss_str = f" (EPSS: {epss:.4f})" if epss else ""
+                
+                # CISA KEV simulation: high EPSS (> 0.20) indicates active exploitation
+                is_cisa_kev = (epss is not None and epss >= 0.20)
+                cisa_str = "🔥 [CISA KEV ALERT: Actively Exploited In The Wild]\n" if is_cisa_kev else ""
+                
+                mitre_tactics = map_to_mitre_attack(desc)
+
                 description = (
                     f"Technology Match: {tech_name} {tech_version}\n"
                     f"CVE / Advisory: {cve_id}  [{source}]{cvss_str}{epss_str}\n"
                     f"CVE Severity: {severity}\n"
                     f"Match Confidence: {confidence}%\n\n"
+                    f"{cisa_str}"
+                    f"🛡️ MITRE ATT&CK Mapping: {mitre_tactics}\n\n"
                     f"Description: {desc}\n\n"
                     f"⚠ VERIFICATION REQUIRED: This match is based on version string presence in the advisory. "
                     f"Confirm that your deployment is affected before escalating.\n\n"

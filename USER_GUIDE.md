@@ -89,7 +89,14 @@ When you launch SMP, you land on the Dashboard. This panel gives you a high-leve
 Once a scan finishes, a PDF and HTML report are automatically generated.
 1. Click the **Report** button next to your scanned target.
 2. The HTML report will open in your default browser.
-3. The report contains a beautiful **Executive Summary**, a **Findings Matrix**, and a deep-dive into the exact terminal output that triggered each vulnerability. 
+3. The report contains a beautiful **Executive Summary**, a **Findings Matrix**, and a deep-dive into the exact terminal output that triggered each vulnerability.
+4. **Historical Tracking (New in V5.1)**: If a target has been scanned before, the PDF report will automatically compare current vulnerabilities with the previous scan, explicitly highlighting *Persisting Findings* that require immediate remediation.
+5. **SMP Verified Stamp (New in V5.1)**: The absolute final page of the PDF contains a cryptographic stamp embedding the scanner's local/public IP address and date, guaranteeing authenticity for corporate audits.
+
+### 2.5 Advanced CVE Correlation (New in V5.1)
+The engine has been significantly upgraded beyond simple CVE matching:
+- **MITRE ATT&CK Mapping**: Vulnerabilities are dynamically analyzed and mapped to specific MITRE tactics (e.g., *TA0001 Initial Access*, *TA0004 Privilege Escalation*).
+- **CISA KEV Alerting**: The engine cross-references Exploit Prediction Scoring System (EPSS) probabilities. If a vulnerability's probability exceeds 20%, it is explicitly flagged as a simulated **[CISA KEV ALERT: Actively Exploited In The Wild]**, prioritizing it for immediate remediation.
 
 ---
 
