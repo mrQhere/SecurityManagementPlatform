@@ -1,0 +1,142 @@
+PROPRIETARY SOFTWARE LICENSE
+
+Security Management Platform (SMP)
+Copyright (c) 2024–2026 mrQhere. All Rights Reserved.
+
+================================================================================
+                        PROPRIETARY LICENSE AGREEMENT
+================================================================================
+
+This software and all associated documentation, source code, binaries, assets,
+configuration files, scripts, and intellectual property ("Software") are the
+exclusive property of mrQhere ("Owner"). This License governs all use of the
+Software.
+
+BY DOWNLOADING, CLONING, ACCESSING, OR USING THIS SOFTWARE IN ANY WAY, YOU
+AGREE TO BE BOUND BY THE TERMS OF THIS LICENSE. IF YOU DO NOT AGREE TO THESE
+TERMS, DO NOT ACCESS OR USE THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+1. GRANT OF USE
+--------------------------------------------------------------------------------
+
+Subject to the terms of this License, the Owner grants you a LIMITED,
+NON-EXCLUSIVE, NON-TRANSFERABLE, REVOCABLE license to:
+
+  (a) Download and use the Software solely for personal, internal, non-commercial
+      security assessment purposes on systems that you own or have explicit,
+      documented written authorization to test.
+
+  (b) Reference the source code for educational study.
+
+--------------------------------------------------------------------------------
+2. RESTRICTIONS
+--------------------------------------------------------------------------------
+
+You are EXPLICITLY PROHIBITED from:
+
+  (a) REDISTRIBUTION: Copying, distributing, sublicensing, selling, renting,
+      leasing, or otherwise transferring the Software or any portion thereof to
+      any third party, with or without modification.
+
+  (b) MODIFICATION FOR DISTRIBUTION: Creating derivative works based on the
+      Software and distributing those derivative works publicly.
+
+  (c) REVERSE ENGINEERING: Decompiling, disassembling, or reverse engineering
+      any part of the Software beyond what is permitted by applicable law.
+
+  (d) COMMERCIAL USE: Using the Software or any derivative for any commercial
+      purpose, including paid security consulting services, without express
+      written permission from the Owner.
+
+  (e) UNAUTHORIZED SCANNING: Using the Software to scan, probe, or test any
+      network, system, website, or infrastructure that you do not own or for
+      which you do not possess explicit written authorization. Unauthorized
+      scanning is ILLEGAL under computer crime laws in most jurisdictions.
+
+  (f) REMOVAL OF NOTICES: Removing, altering, or obscuring any copyright,
+      trademark, proprietary, or attribution notices in the Software.
+
+  (g) AI TRAINING: Using the Software, its source code, logic, or
+      documentation to train, fine-tune, evaluate, or otherwise develop any
+      artificial intelligence, machine learning, or large language model system
+      without express written permission from the Owner.
+
+--------------------------------------------------------------------------------
+3. ATTRIBUTION REQUIREMENTS
+--------------------------------------------------------------------------------
+
+Any permitted use of the Software must retain:
+
+  - The original copyright notice
+  - This License agreement
+  - All proprietary headers and banners in source files
+
+--------------------------------------------------------------------------------
+4. INTELLECTUAL PROPERTY
+--------------------------------------------------------------------------------
+
+The Software, including all source code, algorithms, design patterns,
+documentation, and associated materials, is and remains the sole intellectual
+property of mrQhere. No title or ownership of the Software is transferred
+to you under this License.
+
+The cryptographic license key mechanism embedded in the Software is protected
+intellectual property. Any attempt to bypass, circumvent, or remove this
+mechanism constitutes a violation of this License and applicable copyright law.
+
+--------------------------------------------------------------------------------
+5. DISCLAIMER OF WARRANTIES
+--------------------------------------------------------------------------------
+
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+THE OWNER EXPRESSLY DISCLAIMS ALL LIABILITY FOR:
+  - Damages, data loss, or security incidents arising from use of the Software
+  - Consequences of unauthorized modifications made by third parties
+  - Legal liability arising from misuse of scanning capabilities
+
+--------------------------------------------------------------------------------
+6. LIMITATION OF LIABILITY
+--------------------------------------------------------------------------------
+
+IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING FROM THE USE OF OR
+INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGES.
+
+THE USER BEARS SOLE LEGAL RESPONSIBILITY FOR ALL ACTIVITIES CONDUCTED USING
+THIS SOFTWARE.
+
+--------------------------------------------------------------------------------
+7. GOVERNING LAW
+--------------------------------------------------------------------------------
+
+This License shall be governed by applicable copyright and intellectual property
+law. Any disputes shall be resolved under the jurisdiction of the Owner's
+domicile.
+
+--------------------------------------------------------------------------------
+8. TERMINATION
+--------------------------------------------------------------------------------
+
+This License is effective until terminated. Your rights under this License
+terminate automatically without notice from the Owner if you fail to comply with
+any term of this License.
+
+Upon termination, you must destroy all copies of the Software in your possession.
+
+--------------------------------------------------------------------------------
+9. CONTACT
+--------------------------------------------------------------------------------
+
+For licensing inquiries, commercial use permissions, or to report violations:
+
+  GitHub: https://github.com/mrQhere
+  Repository: https://github.com/mrQhere/SecurityManagementPlatform
+
+================================================================================
+                    © 2024–2026 mrQhere. ALL RIGHTS RESERVED.
+================================================================================

@@ -1,0 +1,99 @@
+# =============================================================================
+# Security Management Platform (SMP) — .gitignore
+# Owner: mrQhere — All Rights Reserved
+# =============================================================================
+
+# ─── Sensitive / Personal Data ───────────────────────────────────────────────
+# Contains SMTP credentials — NEVER commit
+config/settings.json
+# Local active license key — NEVER commit
+config/license.key
+# SQLite database — local only
+database/security.db
+database/*.db
+# Local auth file (master password hash) — NEVER commit
+config/auth.json
+# Legal responsibility acknowledgement (local state) — NEVER commit
+config/responsibility.json
+# Local planning artifacts
+task.md
+walkthrough.md
+implementation_plan.md
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ─── Reports (generated output) ──────────────────────────────────────────────
+reports/html/
+reports/pdf/
+reports/html/*.html
+reports/pdf/*.pdf
+
+# ─── Intel Cache ─────────────────────────────────────────────────────────────
+cache/intel_cache.json
+
+# ─── Backup Databases (runtime-generated — never commit) ─────────────────────
+backup/
+
+# ─── Python Virtual Environment ──────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+
+# ─── Project-local Binaries ──────────────────────────────────────────────────
+bin/
+*.exe
+*.bin
+
+# ─── OS / IDE Artifacts ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── VS Code (keep launch.json for dev convenience, ignore workspace) ─────────
+.vscode/*.code-workspace
+.vscode/settings.json
+
+# ─── Temporary Files ─────────────────────────────────────────────────────────
+*.tmp
+*.temp
+scanners/*.tmp
+ffuf_out_*.json
+/tmp/
+
+# ─── Build / Distribution ────────────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+site/
+
+# ─── Test Artifacts ──────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ─── Developer Reference Note (way.md is personal) ───────────────────────────
+way.md
+
+# ─── Developer Reference Note (working is personal) ─────────────────────────
+working
+database/raw_outputs/
+

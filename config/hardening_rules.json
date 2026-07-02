@@ -1,0 +1,386 @@
+[
+    {
+        "title": "Strict Transport Security (HSTS) Missing",
+        "keywords": [
+            "hsts",
+            "strict transport security"
+        ],
+        "description": "Ensure the server enforces HTTPS connections to prevent downgrade attacks.",
+        "fix": "Add 'Strict-Transport-Security: max-age=31536000; includeSubDomains' to server configuration."
+    },
+    {
+        "title": "Content Security Policy (CSP) Not Configured",
+        "keywords": [
+            "csp",
+            "content security policy"
+        ],
+        "description": "A CSP prevents XSS and data injection attacks by restricting resources.",
+        "fix": "Implement a restrictive CSP header: 'Content-Security-Policy: default-src \\'self\\'';"
+    },
+    {
+        "title": "X-Frame-Options Header Missing",
+        "keywords": [
+            "x-frame-options",
+            "clickjacking"
+        ],
+        "description": "Protects against clickjacking attacks by preventing iframe embedding.",
+        "fix": "Set 'X-Frame-Options: DENY' or 'SAMEORIGIN' in the web server response headers."
+    },
+    {
+        "title": "SQL Injection Detection",
+        "keywords": [
+            "sql injection",
+            "sqli",
+            "sql syntax"
+        ],
+        "description": "User input is directly concatenated into SQL queries, leading to data breaches.",
+        "fix": "Use prepared statements, parameterized queries, or ORM frameworks consistently across the codebase."
+    },
+    {
+        "title": "Cross-Site Scripting (XSS)",
+        "keywords": [
+            "xss",
+            "cross-site scripting"
+        ],
+        "description": "Unsanitized input is reflected or stored in the web page, allowing JS execution.",
+        "fix": "Implement strict input validation and context-aware output encoding (e.g. HTML entity encoding)."
+    },
+    {
+        "title": "Open Directory Listing Enabled",
+        "keywords": [
+            "directory listing",
+            "index of"
+        ],
+        "description": "Web server is configured to list directory contents, leaking sensitive files.",
+        "fix": "Disable directory browsing (e.g., 'Options -Indexes' in Apache or 'autoindex off' in Nginx)."
+    },
+    {
+        "title": "Server Version Disclosure",
+        "keywords": [
+            "server token",
+            "version disclosure",
+            "server header"
+        ],
+        "description": "The server leaks its version information, aiding targeted exploitation.",
+        "fix": "Set 'ServerTokens Prod' and 'ServerSignature Off' in Apache, or 'server_tokens off;' in Nginx."
+    },
+    {
+        "title": "Default Credentials Detected",
+        "keywords": [
+            "default credentials",
+            "admin:admin",
+            "default password"
+        ],
+        "description": "System is using manufacturer default credentials.",
+        "fix": "Immediately change default administrative credentials to strong, randomly generated passwords."
+    },
+    {
+        "title": "Exposed Git Repository",
+        "keywords": [
+            "git exposure",
+            ".git"
+        ],
+        "description": "The .git directory is publicly accessible, leaking source code.",
+        "fix": "Deny access to hidden directories (.git) in the web server configuration."
+    },
+    {
+        "title": "Outdated PHP Version",
+        "keywords": [
+            "php version",
+            "outdated php"
+        ],
+        "description": "An unsupported version of PHP is in use, susceptible to known CVEs.",
+        "fix": "Upgrade to a supported PHP version (e.g., PHP 8.2+) and migrate deprecated code."
+    },
+    {
+        "title": "Exposed Environment File (.env)",
+        "keywords": [
+            "env file",
+            ".env",
+            "environment variables"
+        ],
+        "description": "Environment variables file containing database passwords and API keys is public.",
+        "fix": "Block access to .env files and move them outside the web root."
+    },
+    {
+        "title": "CORS Misconfiguration",
+        "keywords": [
+            "cors",
+            "cross-origin resource sharing",
+            "access-control-allow-origin: *"
+        ],
+        "description": "CORS policy allows arbitrary origins to read sensitive data.",
+        "fix": "Configure 'Access-Control-Allow-Origin' to specific trusted domains. Never use '*' with credentials."
+    },
+    {
+        "title": "Open Redirect Vulnerability",
+        "keywords": [
+            "open redirect",
+            "unvalidated redirect"
+        ],
+        "description": "Application redirects users to arbitrary external URLs based on input.",
+        "fix": "Validate redirect targets against a strict allowlist of authorized domains."
+    },
+    {
+        "title": "Weak SSL/TLS Protocols",
+        "keywords": [
+            "tls 1.0",
+            "tls 1.1",
+            "weak cipher",
+            "ssl"
+        ],
+        "description": "Server supports outdated encryption protocols vulnerable to interception.",
+        "fix": "Disable TLS 1.0 and 1.1. Enforce TLS 1.2 or 1.3 with strong AEAD ciphers."
+    },
+    {
+        "title": "Missing HTTPOnly on Cookies",
+        "keywords": [
+            "httponly",
+            "cookie"
+        ],
+        "description": "Session cookies lack the HTTPOnly flag, exposing them to XSS attacks.",
+        "fix": "Set the 'HttpOnly' flag for all authentication and session-related cookies."
+    },
+    {
+        "title": "Missing Secure Flag on Cookies",
+        "keywords": [
+            "secure flag",
+            "cookie secure"
+        ],
+        "description": "Session cookies can be transmitted over unencrypted HTTP connections.",
+        "fix": "Set the 'Secure' flag for all cookies to enforce transmission over HTTPS."
+    },
+    {
+        "title": "Sensitive Information in URL",
+        "keywords": [
+            "token in url",
+            "password in url",
+            "sensitive get parameter"
+        ],
+        "description": "Tokens or passwords are passed in the URL, risking exposure in logs and referrers.",
+        "fix": "Use HTTP POST requests or Authorization headers for transmitting sensitive data."
+    },
+    {
+        "title": "XML External Entity (XXE) Injection",
+        "keywords": [
+            "xxe",
+            "xml external entity"
+        ],
+        "description": "XML parser is configured to resolve external entities, allowing file reads.",
+        "fix": "Disable external entity resolution (DTD) in the XML parsing library."
+    },
+    {
+        "title": "Insecure Direct Object Reference (IDOR)",
+        "keywords": [
+            "idor",
+            "insecure direct object reference",
+            "unauthorized access"
+        ],
+        "description": "Users can access other users' data by modifying IDs in parameters.",
+        "fix": "Implement strict access control checks on every data request to verify ownership."
+    },
+    {
+        "title": "Server-Side Request Forgery (SSRF)",
+        "keywords": [
+            "ssrf",
+            "server side request forgery"
+        ],
+        "description": "Server fetches arbitrary URLs provided by the user, accessing internal networks.",
+        "fix": "Use a strict allowlist for outbound requests and disable unused URI schemes."
+    },
+    {
+        "title": "Unrestricted File Upload",
+        "keywords": [
+            "file upload",
+            "shell upload",
+            "malicious upload"
+        ],
+        "description": "Application allows upload of executable files like PHP or JSP.",
+        "fix": "Validate file extensions, check magic bytes, and store uploaded files outside the web root."
+    },
+    {
+        "title": "Exposed Admin Panel",
+        "keywords": [
+            "admin panel",
+            "cpanel",
+            "wp-admin exposed"
+        ],
+        "description": "Administrative interfaces are publicly accessible.",
+        "fix": "Restrict admin panel access using IP allowlisting and require MFA."
+    },
+    {
+        "title": "Vulnerable WordPress Plugin",
+        "keywords": [
+            "wordpress plugin",
+            "wp-plugin",
+            "cve"
+        ],
+        "description": "An installed WordPress plugin has known vulnerabilities.",
+        "fix": "Update the plugin to the latest version or replace it with a secure alternative."
+    },
+    {
+        "title": "HTTP Methods Options Enabled",
+        "keywords": [
+            "http options",
+            "trace",
+            "track",
+            "put",
+            "delete"
+        ],
+        "description": "Dangerous HTTP methods (PUT, DELETE, TRACE) are enabled on the server.",
+        "fix": "Disable TRACE/TRACK methods and restrict PUT/DELETE to authorized endpoints."
+    },
+    {
+        "title": "Lack of Rate Limiting",
+        "keywords": [
+            "rate limit",
+            "brute force",
+            "no rate limiting"
+        ],
+        "description": "Authentication endpoints lack rate limiting, allowing brute-force attacks.",
+        "fix": "Implement rate limiting and account lockout mechanisms for login attempts."
+    },
+    {
+        "title": "Exposed Database Port",
+        "keywords": [
+            "port 3306",
+            "port 5432",
+            "database exposed"
+        ],
+        "description": "Database services are accessible from the public internet.",
+        "fix": "Bind databases to localhost (127.0.0.1) or restrict access via firewall rules."
+    },
+    {
+        "title": "Missing CSRF Token",
+        "keywords": [
+            "csrf",
+            "cross-site request forgery"
+        ],
+        "description": "State-changing operations do not require a CSRF token.",
+        "fix": "Implement anti-CSRF tokens (Synchronizer Token Pattern) on all forms."
+    },
+    {
+        "title": "Robots.txt Information Disclosure",
+        "keywords": [
+            "robots.txt",
+            "sitemap"
+        ],
+        "description": "The robots.txt file reveals sensitive administrative paths.",
+        "fix": "Remove sensitive paths from robots.txt and rely on proper authentication instead."
+    },
+    {
+        "title": "Outdated jQuery Version",
+        "keywords": [
+            "jquery",
+            "outdated javascript"
+        ],
+        "description": "An old version of jQuery with known XSS vulnerabilities is used.",
+        "fix": "Update jQuery to the latest stable release (e.g., 3.x)."
+    },
+    {
+        "title": "Debug Mode Enabled",
+        "keywords": [
+            "debug mode",
+            "stack trace",
+            "development mode"
+        ],
+        "description": "Application framework is running in debug mode, exposing stack traces.",
+        "fix": "Set environment to 'production' and disable debug output in configuration."
+    },
+    {
+        "title": "Unauthenticated API Endpoint",
+        "keywords": [
+            "unauthenticated",
+            "api bypass"
+        ],
+        "description": "API endpoints handling sensitive data do not enforce authentication.",
+        "fix": "Apply authentication middleware (e.g., JWT, OAuth) to all private API routes."
+    },
+    {
+        "title": "Exposed SSH Port",
+        "keywords": [
+            "port 22",
+            "ssh exposed"
+        ],
+        "description": "SSH service is publicly accessible without restrictions.",
+        "fix": "Restrict SSH access via IP allowlist, disable root login, and use key-based authentication."
+    },
+    {
+        "title": "Information Leakage via Error Messages",
+        "keywords": [
+            "sql error",
+            "verbose error",
+            "stack trace"
+        ],
+        "description": "Verbose error messages reveal database schema or internal logic.",
+        "fix": "Implement generic error messages for end-users and log detailed errors internally."
+    },
+    {
+        "title": "Insecure JWT Implementation",
+        "keywords": [
+            "jwt",
+            "json web token",
+            "none algorithm"
+        ],
+        "description": "JWT accepts 'none' algorithm or uses a weak secret key.",
+        "fix": "Enforce strong signing algorithms (RS256) and use a high-entropy secret key."
+    },
+    {
+        "title": "Exposed Backup Files",
+        "keywords": [
+            "backup file",
+            ".bak",
+            ".old",
+            ".sql"
+        ],
+        "description": "Backup archives or database dumps are publicly accessible.",
+        "fix": "Move backup files outside the web root and restrict access to the backups directory."
+    },
+    {
+        "title": "Insecure Cross-Domain Policy",
+        "keywords": [
+            "crossdomain.xml",
+            "clientaccesspolicy.xml"
+        ],
+        "description": "Flash or Silverlight policy files allow broad cross-domain access.",
+        "fix": "Restrict policy files to trusted domains or remove them if no longer needed."
+    },
+    {
+        "title": "Missing Security TXT",
+        "keywords": [
+            "security.txt"
+        ],
+        "description": "The site lacks a security.txt file for vulnerability reporting.",
+        "fix": "Publish a security.txt file under the /.well-known/ path with contact details."
+    },
+    {
+        "title": "Subdomain Takeover",
+        "keywords": [
+            "subdomain takeover",
+            "cname",
+            "dangling dns"
+        ],
+        "description": "A DNS record points to an unclaimed third-party service.",
+        "fix": "Remove the dangling CNAME record or claim the resource on the third-party provider."
+    },
+    {
+        "title": "Cleartext Authentication",
+        "keywords": [
+            "basic auth",
+            "cleartext",
+            "http login"
+        ],
+        "description": "Credentials are transmitted over unencrypted HTTP.",
+        "fix": "Enforce HTTPS for all authentication pages and redirect HTTP traffic to HTTPS."
+    },
+    {
+        "title": "Exposed Docker API",
+        "keywords": [
+            "docker api",
+            "port 2375",
+            "port 2376"
+        ],
+        "description": "Docker daemon API is accessible, leading to full host compromise.",
+        "fix": "Bind the Docker API to localhost or use mutual TLS (mTLS) for authentication."
+    }
+]
