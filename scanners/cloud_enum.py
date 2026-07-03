@@ -55,6 +55,12 @@ def run_cloud_enum_scan(url):
     settings = load_settings()
     bin_path = settings.get("cloud_enum_path", "cloud_enum")
 
+    import shutil
+    if not shutil.which(bin_path):
+        logger.warning(f"Cloud Enum not found at '{bin_path}'. Skipping.")
+        add_log_entry("WARNING", f"Cloud Enum not installed ('{bin_path}' not found). Skipping.")
+        return None
+
     parsed = urlparse(url)
     domain = parsed.hostname or url.replace("https://", "").replace("http://", "").split("/")[0]
 

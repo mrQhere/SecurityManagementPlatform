@@ -44,7 +44,7 @@ logger = logging.getLogger("smp.scan")
 DNSX_TIMEOUT = 180
 
 
-@register_scanner(name="DNSx", step_name="Running DNSx", depends_on=['Arjun'], binary_name="dnsx", needs_binary=True, confidence=95)
+@register_scanner(name="DNSx", step_name="Running DNSx", depends_on=['Subfinder'], binary_name="dnsx", needs_binary=True, confidence=95)
 def run_dnsx_scan(url):
     """
     Runs DNSx against the target domain for DNS record enumeration.

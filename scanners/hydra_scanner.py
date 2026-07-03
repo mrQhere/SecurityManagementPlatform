@@ -22,7 +22,7 @@ def run_hydra_scanner(url):
         target = base + path
         # Check if login path exists
         try:
-            req = urllib.request.Request(target, headers={"User-Agent": "SMP/5.2"})
+            req = urllib.request.Request(target, headers={"User-Agent": "SMP/5.4"})
             with urllib.request.urlopen(req, timeout=5) as resp:
                 if resp.status != 200:
                     continue
@@ -37,7 +37,7 @@ def run_hydra_scanner(url):
                     target, data=data,
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
-                        "User-Agent": "SMP/5.2",
+                        "User-Agent": "SMP/5.4",
                     },
                     method="POST",
                 )

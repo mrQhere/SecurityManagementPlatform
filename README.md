@@ -1,27 +1,27 @@
 <div align="center">
 
-# 🛡️ Security Management Platform (SMP) v5.3
+# 🛡️ Security Management Platform (SMP) v5.4
 
-![Platform Overview](https://via.placeholder.com/1200x400.png?text=Security+Management+Platform+v5.3+Enterprise)
+![Platform Overview](https://via.placeholder.com/1200x400.png?text=Security+Management+Platform+v5.4+Enterprise)
 
 **An enterprise-grade, multi-process Security Management Platform utilizing a Directed Acyclic Graph (DAG) for high-performance concurrent vulnerability scanning.**
 
-[![Version](https://img.shields.io/badge/version-5.3-blue.svg)](#) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#) [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#) [![Architecture](https://img.shields.io/badge/architecture-DAG%20%7C%20MVC-success.svg)](#) [![Database](https://img.shields.io/badge/database-SQLite%20WAL%20AES--256-orange.svg)](#) [![Self--Healing](https://img.shields.io/badge/tools-Self--Healing%20Installer-brightgreen.svg)](#)
+[![Version](https://img.shields.io/badge/version-5.4-blue.svg)](#) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#) [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#) [![Architecture](https://img.shields.io/badge/architecture-DAG%20%7C%20MVC-success.svg)](#) [![Database](https://img.shields.io/badge/database-SQLite%20WAL%20AES--256-orange.svg)](#) [![Self--Healing](https://img.shields.io/badge/tools-Self--Healing%20Installer-brightgreen.svg)](#)
 
 </div>
 
 ---
 
-## 🚀 Welcome to V5.3: The Stability & Intelligence Update
+## 🚀 Welcome to V5.4: The Stability & Intelligence Update
 
-Building on V5.2's concurrency engine, V5.3 focuses on robustness, professionalism, and security hardening. The DAG Orchestrator now has a **global 60-minute watchdog** that prevents hanging scanners from freezing the pipeline. Email alerts are fully redesigned with responsive HTML templates and dynamic metadata injection. Reports now carry proper company, tester, and QA reviewer metadata on the cover page. All hardcoded tool lists have been replaced with dynamic registry lookups — add a new scanner once and it automatically appears everywhere.
+Building on V5.4's concurrency engine, V5.4 focuses on robustness, professionalism, and security hardening. The DAG Orchestrator now has a **global 60-minute watchdog** that prevents hanging scanners from freezing the pipeline. Email alerts are fully redesigned with responsive HTML templates and dynamic metadata injection. Reports now carry proper company, tester, and QA reviewer metadata on the cover page. All hardcoded tool lists have been replaced with dynamic registry lookups — add a new scanner once and it automatically appears everywhere.
 
 > [!NOTE]
 > **First time here?** Jump straight to the [Quick Start](#-installation--quick-start) section. The entire setup is automated — one `bash setup.sh` and you're done. ☕
 
 ---
 
-### 🔥 Key V5.3 Features & New Additions
+### 🔥 Key V5.4 Features & New Additions
 
 | Feature | What it does |
 |---|---|
@@ -40,13 +40,13 @@ Building on V5.2's concurrency engine, V5.3 focuses on robustness, professionali
 
 ## 🏗️ System Architecture Deep Dive
 
-SMP V5.3 is built on a highly modular, decoupled architecture designed for scale and stability.
+SMP V5.4 is built on a highly modular, decoupled architecture designed for scale and stability.
 
 ### 🖥️ The UI & Event Bus
 The frontend is constructed using PySide6. The UI acts purely as a "dumb" terminal that listens for events. When a background scan completes a task, the Database Manager emits a JSON payload over a local UDP socket (`127.0.0.1:5005`). The UI catches this payload and triggers a Qt Signal, refreshing the screen instantly.
 
-### 🧠 The DAG Execution Engine (V5.3 Enhanced)
-The Orchestrator analyses tool dependencies, builds a Directed Acyclic Graph, and launches a thread pool to execute scanners concurrently. **New in V5.3**: each plugin thread has a 60-minute watchdog — if any scanner hangs beyond that, it is marked `failed` and the pipeline continues without losing all subsequent dependent steps.
+### 🧠 The DAG Execution Engine (V5.4 Enhanced)
+The Orchestrator analyses tool dependencies, builds a Directed Acyclic Graph, and launches a thread pool to execute scanners concurrently. **New in V5.4**: each plugin thread has a 60-minute watchdog — if any scanner hangs beyond that, it is marked `failed` and the pipeline continues without losing all subsequent dependent steps.
 
 ### 🔧 Self-Healing at Runtime
 
@@ -156,7 +156,7 @@ SMP acts as a centralized orchestrator for the world's best open-source security
 
 ## 📖 Comprehensive Documentation
 
-For a deep dive into the platform's inner workings, troubleshooting guides, the self-healing installer, the redundancy database lifecycle, and instructions on how to add your own custom tools using the new Plugin Registry, please consult the **[V5.3 USER GUIDE](./USER_GUIDE.md)**.
+For a deep dive into the platform's inner workings, troubleshooting guides, the self-healing installer, the redundancy database lifecycle, and instructions on how to add your own custom tools using the new Plugin Registry, please consult the **[V5.4 USER GUIDE](./USER_GUIDE.md)**.
 
 The User Guide contains **detailed technical documentation** covering every aspect of the platform, with copy-paste code examples, beautiful diagrams, and step-by-step troubleshooting guides.
 
@@ -171,9 +171,9 @@ The User Guide contains **detailed technical documentation** covering every aspe
 *Security Management Platform (SMP) © Authorised Personnel Only. All Rights Reserved.*
 
 
-## Changelog — V5.3 Stability & Intelligence Update
+## Changelog — V5.4 Stability & Intelligence Update
 
-> This release resolves every architectural flaw documented in the V5.3 audit. For the full technical details, see [USER_GUIDE.md Part 8](./USER_GUIDE.md).
+> This release resolves every architectural flaw documented in the V5.4 audit. For the full technical details, see [USER_GUIDE.md Part 8](./USER_GUIDE.md).
 
 ### 🔒 Security & Reliability
 | Change | Details |

@@ -412,9 +412,9 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path)).get("version", "V5.2") if os.path.exists(_meta_path) else "V5.2"
+        _smp_ver = _json.load(open(_meta_path)).get("version", "V5.4") if os.path.exists(_meta_path) else "V5.4"
     except Exception:
-        _smp_ver = "V5.2"
+        _smp_ver = "V5.4"
 
     content_hash = derive_content_hash(
         url            = url,
@@ -609,9 +609,9 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path)).get("version", "V5.2") if os.path.exists(_meta_path) else "V5.2"
+        _smp_version = _json.load(open(_meta_path)).get("version", "V5.4") if os.path.exists(_meta_path) else "V5.4"
     except Exception:
-        _smp_version = "V5.2"
+        _smp_version = "V5.4"
 
     cover_meta = [
         ("Document Title",           "Security Assessment Report"),
@@ -1602,7 +1602,7 @@ def _generate_html_fallback(filepath, ctx):
     h16    = c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
-    smp_ver = c.get("smp_version", "V5.2")
+    smp_ver = c.get("smp_version", "V5.4")
 
     target  = c.get("target", {})
     company = target.get("company_name") or c["settings"].get("company_name") or "—"

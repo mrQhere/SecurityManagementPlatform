@@ -72,6 +72,12 @@ def run_wpscan_scan(url):
     settings = load_settings()
     bin_path = settings.get("wpscan_path", "wpscan")
 
+    import shutil
+    if not shutil.which(bin_path) and not shutil.which("docker"):
+        logger.warning(f"WPScan not found at '{bin_path}' and Docker not available. Skipping.")
+        add_log_entry("WARNING", f"WPScan not installed ('{bin_path}' not found). Skipping.")
+        return None
+
     logger.info(f"WPScan Started: WordPress vulnerability scan for {url}")
     add_log_entry("INFO", f"WPScan Started: WordPress detection and scanning for {url}")
 

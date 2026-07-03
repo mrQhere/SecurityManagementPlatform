@@ -68,6 +68,12 @@ def run_paramspider_scan(url):
     """
     settings = load_settings()
     bin_path = settings.get("paramspider_path", "paramspider")
+    
+    import shutil
+    if not shutil.which(bin_path):
+        logger.warning(f"ParamSpider not found at '{bin_path}'. Skipping.")
+        add_log_entry("WARNING", f"ParamSpider not installed ('{bin_path}' not found). Skipping.")
+        return None
 
     parsed = urlparse(url)
     domain = parsed.hostname or url.replace("https://", "").replace("http://", "").split("/")[0]

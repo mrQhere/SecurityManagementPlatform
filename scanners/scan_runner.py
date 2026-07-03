@@ -369,31 +369,105 @@ def is_target_scanning(target_id):
 # ── Internal helpers ───────────────────────────────────────────────────────────
 
 def _should_run_step(step_name, resume_status):
-    """Returns True if this step should execute (not yet completed before interruption and matches scan profile)."""
-    # 1. Check scan profile constraints
+    """
+    Returns True if this step should execute given the selected scan profile.
+
+    Scan Profiles (V5.4)
+    ────────────────────
+    osint    — Purely passive, zero traffic to target. Safe for un-permissioned recon.
+               Covers: OSINT APIs, certificate transparency, Whois, Wayback, Shodan.
+    standard — Normal VAPT: OSINT + active network/web scanning. Recommended for engagements.
+               Adds: Nmap, SSL, Headers, CMS, Nikto, Nuclei, ffuf, WPScan, DNSx, Katana.
+    full     — Maximum coverage. Intrusive. Requires explicit written permission.
+               Adds: All exploitation tools (SQLMap, Dalfox, Wapiti, Commix, Hydra, ZAP,
+               SSRF, XXE, path traversal, JWT attacks, ParamSpider, Arjun, TruffleHog,
+               Trivy, Semgrep, Feroxbuster, Masscan, GraphQL, API Fuzzer, etc.)
+    """
+    # ── 1. Load profile ──────────────────────────────────────────────────────
     settings = load_settings()
-    profile = settings.get("scan_profile", "standard")
-    
-    fast_steps = {
-        "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running theHarvester", "Running CRT.sh",
-        "Running HackerTarget", "Running Whois", "Running Wayback Machine", "Running Robots.txt", "Running Shodan",
-        "Correlating CVEs", "Report Pending"
-    }
-    
-    standard_steps = fast_steps.union({
-        "Running Traceroute", "Running Nmap", "Running SSL Scan", "Running Security Headers", "Running CORS",
-        "Running CMS Scanner", "Running Nikto", "Running Nuclei", "Running Tech Fingerprint", "Running Gitleaks",
-        "Running WPScan", "Running Cloud Enum"
-    })
-    
+    profile = settings.get("scan_profile", "standard").lower()
+    # Allow legacy 'fast' alias to resolve to 'osint'
     if profile == "fast":
-        if step_name not in fast_steps:
+        profile = "osint"
+
+    # ── 2. Profile step allowlists ────────────────────────────────────────────
+
+    # OSINT — Passive only, no active network requests to target
+    _OSINT_STEPS = {
+        "Running HTTPx",           # HTTP probe — minimal, just checks if site is up
+        "Running WhatWeb",         # Passive fingerprint from public HTTP response
+        "Running Subfinder",       # DNS-based subdomain enum (no target traffic)
+        "Running Amass",           # Passive OSINT subdomain enum
+        "Running theHarvester",    # Email/DNS OSINT (search engine queries)
+        "Running SpiderFoot OSINT",# SpiderFoot passive mode
+        "Running CRT.sh",          # Certificate transparency lookup
+        "Running HackerTarget",    # Reverse DNS OSINT API
+        "Running Whois",           # Domain registration lookup
+        "Running Wayback Machine", # Historical URL archive lookup
+        "Running Shodan",          # Shodan InternetDB (passive IP intelligence)
+        "Running Cloud Enum",      # Cloud storage bucket enum (passive DNS)
+        "Running Gitleaks",        # Git secret scanning (remote repo analysis)
+        "Correlating CVEs",        # Offline CVE correlation
+        "Report Pending",          # Report generation
+    }
+
+    # Standard — Active web/network scanning, typical VAPT engagement
+    _STANDARD_STEPS = _OSINT_STEPS | {
+        "Running Traceroute",      # Network path (UDP-based, no root needed)
+        "Running Nmap",            # Port + service scan
+        "Running DNSx",            # Active DNS resolution of found subdomains
+        "Running SSL Scan",        # TLS/certificate analysis
+        "Running Security Headers",# HTTP response header analysis
+        "Running Robots.txt",      # robots.txt / sitemap analysis
+        "Running CORS",            # CORS misconfiguration check
+        "Running CMS Scanner",     # CMS detection and admin panels
+        "Running Katana",          # Web crawler (follows discovered links)
+        "Running Nikto",           # Classic web vulnerability scanner
+        "Running Nuclei",          # Template-based vuln scan
+        "Running ffuf",            # Directory fuzzing (standard wordlist)
+        "Running Tech Fingerprint",# Deep response-based tech detection
+        "Running Open Redirect",   # Open redirect parameter testing
+        "Running CRLF Scanner",    # CRLF/header injection testing
+        "Running Retire.js Scanner",# Outdated JS library detection
+        "Running WPScan",          # WordPress vulnerability scan
+        "Running JWT Scanner",     # JWT weakness detection
+        "Running API Fuzzer",      # Swagger/OpenAPI endpoint detection
+        "Running GraphQL Scanner", # GraphQL introspection check
+    }
+
+    # Full — Deep/intrusive exploitation testing. Requires explicit written permission.
+    # All steps run in full mode (no allowlist restriction needed — return True always)
+    _FULL_STEPS = _STANDARD_STEPS | {
+        "Running Wapiti",          # OWASP web app scan (active)
+        "Running SQLMap",          # SQL injection exploitation
+        "Running Dalfox",          # XSS parameter scanning
+        "Running Commix",          # Command injection testing
+        "Running SSRF Scanner",    # Server-Side Request Forgery testing
+        "Running XXE Scanner",     # XML External Entity injection
+        "Running Path Traversal Scanner",  # LFI/path traversal testing
+        "Running ParamSpider",     # Parameter discovery from Wayback URLs
+        "Running Arjun",           # Hidden HTTP parameter discovery
+        "Running Feroxbuster",     # Deep directory fuzzing
+        "Running Masscan",         # High-speed port scanner
+        "Running Auth Brute-Force Test",   # Auth brute force (Hydra)
+        "Running HTTP Smuggling Scanner",  # HTTP request smuggling
+        "Running TruffleHog",      # Secret scanning in history/repos
+        "Running Trivy",           # Container/image vulnerability scan
+        "Running Semgrep",         # Static analysis (source code mode)
+        "Running ZAP",             # OWASP ZAP active scan
+        "Running WPScan",          # (already in standard; run deeper in full)
+    }
+
+    # ── 3. Check profile gating ───────────────────────────────────────────────
+    if profile == "osint":
+        if step_name not in _OSINT_STEPS:
             return False
     elif profile == "standard":
-        if step_name not in standard_steps:
+        if step_name not in _STANDARD_STEPS:
             return False
-            
-    # 2. Check resume status constraints
+    # 'full' — all steps run; no filtering needed
+
+    # ── 4. Resume / skip-already-done logic ───────────────────────────────────
     if not resume_status:
         return True
     if step_name not in _PIPELINE_STEPS:
@@ -401,6 +475,7 @@ def _should_run_step(step_name, resume_status):
     if resume_status not in _PIPELINE_STEPS:
         return True
     return _PIPELINE_STEPS.index(step_name) >= _PIPELINE_STEPS.index(resume_status)
+
 
 
 def _save_findings(scan_id, results, source_tool, severity_override=None, confidence=50):

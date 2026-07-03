@@ -101,12 +101,12 @@ class SplashScreen(QWidget):
 
         import json
         import os
-        version = "V5.2"
+        version = "V5.4"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V5.2")
+                version = metadata.get("version", "V5.4")
         except Exception:
             pass
 

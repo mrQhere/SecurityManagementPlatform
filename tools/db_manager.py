@@ -167,8 +167,40 @@ def _initialize_cve_db_schema(conn):
             cvss_vector TEXT,
             affected_products TEXT,
             references_json TEXT,
-            keywords TEXT
+            keywords TEXT,
+            cisa_known_exploited INTEGER DEFAULT 0
         );
+    """)
+
+    # Create FTS5 virtual table for rapid full-text search
+    cursor.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS cves_fts 
+        USING fts5(
+            cve, title, description, affected_products, keywords,
+            content='cves', content_rowid='id'
+        );
+    """)
+    
+    # Create triggers to keep FTS table in sync with cves table
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS cves_ai AFTER INSERT ON cves BEGIN
+            INSERT INTO cves_fts(rowid, cve, title, description, affected_products, keywords) 
+            VALUES (new.id, new.cve, new.title, new.description, new.affected_products, new.keywords);
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS cves_ad AFTER DELETE ON cves BEGIN
+            INSERT INTO cves_fts(cves_fts, rowid, cve, title, description, affected_products, keywords) 
+            VALUES('delete', old.id, old.cve, old.title, old.description, old.affected_products, old.keywords);
+        END;
+    """)
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS cves_au AFTER UPDATE ON cves BEGIN
+            INSERT INTO cves_fts(cves_fts, rowid, cve, title, description, affected_products, keywords) 
+            VALUES('delete', old.id, old.cve, old.title, old.description, old.affected_products, old.keywords);
+            INSERT INTO cves_fts(rowid, cve, title, description, affected_products, keywords) 
+            VALUES (new.id, new.cve, new.title, new.description, new.affected_products, new.keywords);
+        END;
     """)
 
     # Migrate existing cves table columns if needed
@@ -181,6 +213,7 @@ def _initialize_cve_db_schema(conn):
         ("keywords", "TEXT"),
         ("epss_score", "REAL DEFAULT NULL"),
         ("added_date", "TEXT"),
+        ("cisa_known_exploited", "INTEGER DEFAULT 0"),
     ]:
         try:
             cursor.execute(f"SELECT {col} FROM cves LIMIT 1")

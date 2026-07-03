@@ -61,6 +61,12 @@ def run_commix_scan(url):
     settings = load_settings()
     bin_path = settings.get("commix_path", "commix")
 
+    import shutil
+    if not shutil.which(bin_path):
+        logger.warning(f"Commix not found at '{bin_path}'. Skipping.")
+        add_log_entry("WARNING", f"Commix not installed ('{bin_path}' not found). Skipping.")
+        return None
+
     logger.info(f"Commix Started: Command injection scan for {url}")
     add_log_entry("INFO", f"Commix Started: Testing command injection on {url}")
 
