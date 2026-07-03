@@ -417,7 +417,7 @@ _download_extra_binary "trufflehog" "https://github.com/trufflesecurity/truffleh
 { warn "trufflehog install failed (non-critical)."; SYSTEM_ERRORS+=("trufflehog install failed"); }
 
 # Trivy
-_download_extra_binary "trivy" "https://github.com/aquasecurity/trivy/releases/download/v0.58.1/trivy_0.58.1_Linux-64bit.tar.gz" || \
+_download_extra_binary "trivy" "https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-64bit.tar.gz" || \
 { warn "trivy install failed (non-critical)."; SYSTEM_ERRORS+=("trivy install failed"); }
 
 # Amass
@@ -508,11 +508,11 @@ _dl_wordlist "$WL_DIR/big.txt" \
     "SecLists big.txt"
 
 _dl_wordlist "$WL_DIR/directory-list-2.3-small.txt" \
-    "$SECLISTS_RAW/Discovery/Web-Content/directory-list-2.3-small.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-small.txt" \
     "directory-list-2.3-small.txt"
 
 _dl_wordlist "$WL_DIR/directory-list-2.3-medium.txt" \
-    "$SECLISTS_RAW/Discovery/Web-Content/directory-list-2.3-medium.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt" \
     "directory-list-2.3-medium.txt"
 
 _dl_wordlist "$WL_DIR/raft-large-directories.txt" \
@@ -534,7 +534,7 @@ _dl_wordlist "$WL_DIR/api-seen-in-wild.txt" \
 
 # ── 3. Fuzzing / parameters ───────────────────────────────────────────────────
 _dl_wordlist "$WL_DIR/LFI-linux-etc.txt" \
-    "$SECLISTS_RAW/Fuzzing/LFI/LFI-linux-etc.txt" \
+    "$SECLISTS_RAW/Fuzzing/LFI/LFI-Jhaddix.txt" \
     "LFI Linux paths"
 
 _dl_wordlist "$WL_DIR/burp-parameter-names.txt" \
@@ -542,7 +542,7 @@ _dl_wordlist "$WL_DIR/burp-parameter-names.txt" \
     "Burp parameter names"
 
 _dl_wordlist "$WL_DIR/params.txt" \
-    "$SECLISTS_RAW/Discovery/Web-Content/SVNDigger/all.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/File-Extensions-Universal-SVNDigger-Project/all.txt" \
     "SVNDigger all paths"
 
 # ── 4. Subdomains / DNS ───────────────────────────────────────────────────────
@@ -568,7 +568,7 @@ _dl_wordlist "$WL_DIR/10k-most-common.txt" \
     "10k most common passwords"
 
 _dl_wordlist "$WL_DIR/10-million-password-list-top-1000.txt" \
-    "$SECLISTS_RAW/Passwords/Common-Credentials/10-million-password-list-top-1000.txt" \
+    "$SECLISTS_RAW/Passwords/Common-Credentials/xato-net-10-million-passwords-1000.txt" \
     "10M password list top 1000"
 
 # ── 6. Web shells / backdoors (detection wordlist) ───────────────────────────
@@ -577,7 +577,7 @@ _dl_wordlist "$WL_DIR/web-shells.txt" \
     "Web extensions / shells"
 
 _dl_wordlist "$WL_DIR/sensitive-files.txt" \
-    "$SECLISTS_RAW/Discovery/Web-Content/Combined_Words.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/combined_words.txt" \
     "Sensitive files combined"
 
 # ── 7. Symlink system wordlists → project wordlists (best-effort) ─────────────
