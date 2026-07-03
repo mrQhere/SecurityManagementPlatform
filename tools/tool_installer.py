@@ -107,6 +107,24 @@ TOOLS = [
     ("TruffleHog",        "trufflehog",  "binary", ""),
     ("Trivy",             "trivy",       "binary", ""),
 
+    # Internal Pure-Python Modules (No external dependencies)
+    ("SSRF Scanner",      None,          "internal", ""),
+    ("XXE Scanner",       None,          "internal", ""),
+    ("Path Traversal",    None,          "internal", ""),
+    ("CRLF Scanner",      None,          "internal", ""),
+    ("GraphQL Scanner",   None,          "internal", ""),
+    ("API Fuzzer",        None,          "internal", ""),
+    ("Hydra (Auth)",      None,          "internal", ""),
+    ("HTTP Smuggling",    None,          "internal", ""),
+    ("Security Headers",  None,          "internal", ""),
+    ("Robots.txt",        None,          "internal", ""),
+    ("CORS Scanner",      None,          "internal", ""),
+    ("CMS Scanner",       None,          "internal", ""),
+    ("Tech Fingerprint",  None,          "internal", ""),
+    ("Open Redirect",     None,          "internal", ""),
+    ("Retire.js",         None,          "internal", ""),
+    ("CVE Correlator",    None,          "internal", ""),
+
     # Optional / manual-only
     ("OWASP ZAP",  "zaproxy",  "manual", "Download from https://www.zaproxy.org/download/"),
 ]
@@ -217,6 +235,8 @@ def _is_tool_available(display_name, binary, method, arg):
             return True
         except ImportError:
             pass
+    if method == "internal":
+        return True
     return False
 
 
