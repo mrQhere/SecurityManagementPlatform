@@ -1084,12 +1084,8 @@ class DashboardLogicMixin:
 
     def refresh_ongoing_scans(self):
         active = get_active_scans()
-        s_hash = hashlib.md5(str(active).encode('utf-8')).hexdigest()
-        if self._cache_scans_hash == s_hash:
-            return
-        self._cache_scans_hash = s_hash
-
-        # Update the scan count badge in the Active Scan Monitor header
+        
+        # Update the scan count badge
         count = len(active)
         self.lbl_scan_count.setText(f"{count} running")
         if count > 0:
@@ -1105,14 +1101,24 @@ class DashboardLogicMixin:
             )
             self.lbl_scan_pulse.setStyleSheet("color: #34C759; font-size: 10px; padding-right: 6px;")
 
-        self.lst_scans.clear()
+        active_target_ids = [scan["target_id"] for scan in active]
+        
+        # Remove old items
+        for idx in range(self.lst_scans.count() - 1, -1, -1):
+            item = self.lst_scans.item(idx)
+            tid = item.data(Qt.UserRole)
+            if tid is None and not active:
+                pass # keep "No scans" message
+            elif tid not in active_target_ids:
+                self.lst_scans.takeItem(idx)
+                
         if not active:
-            item = QListWidgetItem("  No scans currently running.")
-            item.setForeground(QBrush(QColor("#8E8E93")))
-            self.lst_scans.addItem(item)
+            if self.lst_scans.count() == 0:
+                item = QListWidgetItem("  No scans currently running.")
+                item.setForeground(QBrush(QColor("#8E8E93")))
+                self.lst_scans.addItem(item)
             return
 
-        # Full 34-step V4.8 pipeline status map
         status_map = {
             "Running HTTPx":            "⬤  [1/34] HTTPx — HTTP probe",
             "Running WhatWeb":          "⬤  [2/34] WhatWeb — fingerprinting",
@@ -1138,7 +1144,6 @@ class DashboardLogicMixin:
             "Running Shodan":           "⬤  [22/34] Shodan — passive profiling",
             "Running Gitleaks":         "⬤  [23/34] Gitleaks — secret scanning",
             "Running theHarvester":     "⬤  [24/34] theHarvester — OSINT profiling",
-            # V4.8 New Scanners
             "Running Dalfox":           "⬤  [25/34] Dalfox — XSS parameter scan",
             "Running Arjun":            "⬤  [26/34] Arjun — HTTP parameter discovery",
             "Running DNSx":             "⬤  [27/34] DNSx — DNS enumeration",
@@ -1155,7 +1160,12 @@ class DashboardLogicMixin:
             "Completed":                "✓  Completed",
             "Failed":                   "✗  Failed",
         }
+
+        if self.lst_scans.count() == 1 and self.lst_scans.item(0).data(Qt.UserRole) is None:
+            self.lst_scans.takeItem(0)
+
         for scan in active:
+            target_id = scan["target_id"]
             dur_str = "00:00:00"
             try:
                 start_dt = datetime.strptime(scan["start_time"], "%Y-%m-%d %H:%M:%S")
@@ -1165,35 +1175,50 @@ class DashboardLogicMixin:
                 dur_str = f"{int(h):02}:{int(m):02}:{int(s):02}"
             except Exception:
                 pass
+            
             current_status = scan.get("scanner_status") or scan["status"]
             prog = status_map.get(current_status, f"⬤  {current_status}")
+            
             text = f"{scan['url']}   {prog}   [{dur_str}]"
-            
-            item = QListWidgetItem()
-            self.lst_scans.addItem(item)
-            
-            widget = QWidget()
-            layout = QHBoxLayout(widget)
-            layout.setContentsMargins(5, 2, 5, 2)
-            
-            lbl_text = QLabel(text)
             color = "#007AFF" if "Running" in prog else "#FF9500" if "◌" in prog else "#34C759"
-            lbl_text.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
-            layout.addWidget(lbl_text)
             
-            layout.addStretch()
-            
-            btn_cancel = QPushButton("Cancel")
-            btn_cancel.setFixedSize(60, 20)
-            btn_cancel.setStyleSheet("background-color: #DC2626; color: white; border: none; border-radius: 3px; font-size: 10px;")
-            btn_cancel.setCursor(Qt.PointingHandCursor)
-            
-            # Using default argument in lambda to capture the current target_id
-            btn_cancel.clicked.connect(lambda checked=False, tid=scan["target_id"]: self.cancel_scan(tid))
-            layout.addWidget(btn_cancel)
-            
-            item.setSizeHint(widget.sizeHint())
-            self.lst_scans.setItemWidget(item, widget)
+            existing_item = None
+            for idx in range(self.lst_scans.count()):
+                it = self.lst_scans.item(idx)
+                if it.data(Qt.UserRole) == target_id:
+                    existing_item = it
+                    break
+                    
+            if existing_item:
+                widget = self.lst_scans.itemWidget(existing_item)
+                if widget:
+                    lbl = widget.findChild(QLabel)
+                    if lbl:
+                        lbl.setText(text)
+                        lbl.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
+            else:
+                item = QListWidgetItem()
+                item.setData(Qt.UserRole, target_id)
+                self.lst_scans.addItem(item)
+                
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.setContentsMargins(5, 2, 5, 2)
+                
+                lbl_text = QLabel(text)
+                lbl_text.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
+                layout.addWidget(lbl_text)
+                layout.addStretch()
+                
+                btn_cancel = QPushButton("Cancel")
+                btn_cancel.setFixedSize(60, 20)
+                btn_cancel.setStyleSheet("background-color: #DC2626; color: white; border: none; border-radius: 3px; font-size: 10px;")
+                btn_cancel.setCursor(Qt.PointingHandCursor)
+                btn_cancel.clicked.connect(lambda checked=False, tid=target_id: self.cancel_scan(tid))
+                layout.addWidget(btn_cancel)
+                
+                item.setSizeHint(QSize(0, 36))
+                self.lst_scans.setItemWidget(item, widget)
 
     def refresh_intel_feed(self):
         stats = get_cve_stats()
