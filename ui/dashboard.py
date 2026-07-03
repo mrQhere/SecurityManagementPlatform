@@ -587,6 +587,20 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         self._cache_error_log_mtime = None
 
         self._setup_ui()
+        
+        # ── V5.3 — Restore Splitter States ──
+        try:
+            from tools.config_manager import load_settings
+            import base64
+            from PySide6.QtCore import QByteArray
+            s = load_settings()
+            if hasattr(self, 'dashboard_splitter') and 'dashboard_splitter' in s:
+                self.dashboard_splitter.restoreState(QByteArray(base64.b64decode(s['dashboard_splitter'])))
+            if hasattr(self, 'targets_splitter') and 'targets_splitter' in s:
+                self.targets_splitter.restoreState(QByteArray(base64.b64decode(s['targets_splitter'])))
+        except Exception as e:
+            pass
+
         self.load_smtp_fields()
 
         # Phase 6 IPC Integration: Replace SQLite polling timer with real-time UDP pipe
@@ -659,6 +673,19 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             import scanners.scan_runner as _sr
             _sr.signal_app_shutdown()
         except Exception:
+            pass
+
+        # ── V5.3 — Save Splitter States ──
+        try:
+            from tools.config_manager import load_settings, save_settings
+            import base64
+            s = load_settings()
+            if hasattr(self, 'dashboard_splitter'):
+                s['dashboard_splitter'] = base64.b64encode(self.dashboard_splitter.saveState().data()).decode('utf-8')
+            if hasattr(self, 'targets_splitter'):
+                s['targets_splitter'] = base64.b64encode(self.targets_splitter.saveState().data()).decode('utf-8')
+            save_settings(s)
+        except Exception as e:
             pass
 
         # 2. Stop UI timers so no further DB reads race with shutdown

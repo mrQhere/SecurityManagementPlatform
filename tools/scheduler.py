@@ -38,6 +38,43 @@ from tools.db_manager import (
 )
 from scanners.watchdog import run_watchdog
 
+def trigger_soft_delete_gc_job():
+    """V5.3 - Garbage Collector: Hard deletes soft-deleted targets older than 30 days."""
+    logger.info("Scheduler Triggered: Target soft-delete Garbage Collector.")
+    from tools.db_manager import get_db_connection
+    try:
+        conn = get_db_connection()
+        # Find targets deleted > 30 days ago
+        rows = conn.execute(
+            "SELECT id FROM targets WHERE is_deleted = 1 AND deleted_at <= date('now', '-30 days')"
+        ).fetchall()
+        
+        for r in rows:
+            target_id = r["id"]
+            # Same cleanup logic as the old delete_target
+            outputs = conn.execute(
+                "SELECT stdout, stderr FROM raw_scan_output WHERE scan_id IN (SELECT id FROM scans WHERE target_id = ?)",
+                (target_id,)
+            ).fetchall()
+            import os
+            for out in outputs:
+                if out["stdout"] and os.path.exists(out["stdout"]):
+                    try: os.remove(out["stdout"])
+                    except Exception: pass
+                if out["stderr"] and os.path.exists(out["stderr"]):
+                    try: os.remove(out["stderr"])
+                    except Exception: pass
+            
+            # Hard delete
+            conn.execute("DELETE FROM targets WHERE id = ?", (target_id,))
+        
+        conn.commit()
+        conn.close()
+        if rows:
+            logger.info(f"GC: Permanently deleted {len(rows)} expired soft-deleted targets.")
+    except Exception as e:
+        logger.error(f"GC Error: {e}")
+
 logger = logging.getLogger("smp")
 
 # Global reference to scheduler
@@ -130,6 +167,18 @@ def trigger_watchdog_job():
     except Exception as e:
         logger.error(f"Watchdog job failed: {e}")
 
+def trigger_nuclei_update_job():
+    """Weekly job: auto-update nuclei templates."""
+    try:
+        import subprocess
+        logger.info("[Nuclei Update] Starting nuclei template auto-update...")
+        subprocess.run(["nuclei", "-update-templates"], capture_output=True, text=True, timeout=120)
+        logger.info("[Nuclei Update] Templates updated successfully.")
+        add_log_entry("INFO", "Nuclei Update: Templates updated successfully.")
+    except Exception as e:
+        logger.error(f"[Nuclei Update] Job failed: {e}")
+        add_log_entry("ERROR", f"Nuclei Update failed: {e}")
+
 def start_scheduler():
     """Initialize and start the background scheduler."""
     global _scheduler
@@ -179,6 +228,24 @@ def start_scheduler():
         trigger_db_purge_job,
         trigger=purge_trigger,
         id="weekly_db_purge_job",
+        replace_existing=True
+    )
+
+    # ── V5.3 — Schedule Weekly Nuclei Templates Update Job ──────────────
+    nuclei_update_trigger = IntervalTrigger(hours=168)
+    _scheduler.add_job(
+        trigger_nuclei_update_job,
+        trigger=nuclei_update_trigger,
+        id="weekly_nuclei_update_job",
+        replace_existing=True
+    )
+
+    # ── V5.3 — Schedule Daily GC for Soft-Deleted Targets ──────────────
+    gc_trigger = IntervalTrigger(hours=24)
+    _scheduler.add_job(
+        trigger_soft_delete_gc_job,
+        trigger=gc_trigger,
+        id="daily_soft_delete_gc_job",
         replace_existing=True
     )
 
@@ -233,6 +300,10 @@ def reschedule_jobs():
         # Reschedule Weekly DB Purge
         purge_trigger = IntervalTrigger(hours=168)
         _scheduler.reschedule_job("weekly_db_purge_job", trigger=purge_trigger)
+
+        # Reschedule Weekly Nuclei Update
+        nuclei_trigger = IntervalTrigger(hours=168)
+        _scheduler.reschedule_job("weekly_nuclei_update_job", trigger=nuclei_trigger)
 
         # Reschedule Watchdog
         watchdog_trigger = IntervalTrigger(hours=2)

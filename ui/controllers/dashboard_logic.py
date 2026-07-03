@@ -623,8 +623,16 @@ class DashboardLogicMixin:
         self.txt_smtp_receiver.setText(settings.get("smtp_receiver", ""))
         self.chk_smtp_ssl.setChecked(settings.get("smtp_ssl", False))
         self.txt_tester_name.setText(settings.get("tester_name", "Security Auditor"))
+        if hasattr(self, "txt_qa_reviewer"):
+            self.txt_qa_reviewer.setText(settings.get("qa_reviewer", "QA Manager"))
         self.txt_report_email.setText(settings.get("report_email", ""))
         self.chk_zap_enabled.setChecked(settings.get("zap_enabled", False))
+        # ── V5.3 — Load API Keys & Proxies ──
+        if hasattr(self, "txt_shodan_key"): self.txt_shodan_key.setText(settings.get("shodan_api_key", ""))
+        if hasattr(self, "txt_censys_key"): self.txt_censys_key.setText(settings.get("censys_api_key", ""))
+        if hasattr(self, "txt_github_token"): self.txt_github_token.setText(settings.get("github_token", ""))
+        if hasattr(self, "txt_http_proxy"): self.txt_http_proxy.setText(settings.get("http_proxy", ""))
+        if hasattr(self, "txt_https_proxy"): self.txt_https_proxy.setText(settings.get("https_proxy", ""))
 
     def save_smtp_settings(self):
         host = self.txt_smtp_host.text().strip()
@@ -635,12 +643,21 @@ class DashboardLogicMixin:
         receiver = self.txt_smtp_receiver.text().strip()
         ssl_val = self.chk_smtp_ssl.isChecked()
         tester = self.txt_tester_name.text().strip() or "Security Auditor"
+        qa_reviewer = self.txt_qa_reviewer.text().strip() or "QA Manager" if hasattr(self, "txt_qa_reviewer") else "QA Manager"
         report_email = self.txt_report_email.text().strip()
 
         current_settings = load_settings()
         current_settings["tester_name"] = tester
+        current_settings["qa_reviewer"] = qa_reviewer
         current_settings["report_email"] = report_email
         current_settings["zap_enabled"] = self.chk_zap_enabled.isChecked()
+
+        # ── V5.3 — Save API Keys & Proxies ──
+        if hasattr(self, "txt_shodan_key"): current_settings["shodan_api_key"] = self.txt_shodan_key.text().strip()
+        if hasattr(self, "txt_censys_key"): current_settings["censys_api_key"] = self.txt_censys_key.text().strip()
+        if hasattr(self, "txt_github_token"): current_settings["github_token"] = self.txt_github_token.text().strip()
+        if hasattr(self, "txt_http_proxy"): current_settings["http_proxy"] = self.txt_http_proxy.text().strip()
+        if hasattr(self, "txt_https_proxy"): current_settings["https_proxy"] = self.txt_https_proxy.text().strip()
 
         smtp_configured = True
         if not host and not port_text and not user and not pw and not receiver:
@@ -676,22 +693,52 @@ class DashboardLogicMixin:
 
     def verify_shasum(self, file_path):
         try:
+            # Compute raw file SHA256 (for display purposes)
+            raw_sha256 = hashlib.sha256()
             with open(file_path, "rb") as f:
-                sha256_hash = hashlib.sha256()
                 for byte_block in iter(lambda: f.read(4096), b""):
-                    sha256_hash.update(byte_block)
-            file_hash = sha256_hash.hexdigest()
-            
-            # Check against database
+                    raw_sha256.update(byte_block)
+            raw_file_hash = raw_sha256.hexdigest()
+
+            # Extract the SMP content hash that was embedded in the report at generation time
+            from tools.verify_report import extract_embedded_hash
+            embedded_hash = extract_embedded_hash(file_path)
+
+            if not embedded_hash:
+                QMessageBox.warning(
+                    self, "No Embedded Hash",
+                    f"No SMP verification hash was found in this file.\n\n"
+                    f"This may be an older report (pre-V5.2) or not an SMP report.\n\n"
+                    f"Raw file SHA256:\n{raw_file_hash}"
+                )
+                return
+
+            # Check embedded content hash against the database
             from tools.db_manager import get_db_connection
             conn = get_db_connection()
-            row = conn.execute("SELECT id FROM scans WHERE report_hash = ?", (file_hash,)).fetchone()
+            row = conn.execute("SELECT id FROM scans WHERE report_hash = ?", (embedded_hash,)).fetchone()
             conn.close()
 
             if row:
-                QMessageBox.information(self, "SHASUM Valid", f"The report is VALID and legitimate.\n\nHash: {file_hash}\nMatched Scan ID: {row['id']}")
+                QMessageBox.information(
+                    self, "✅ SHASUM Valid",
+                    f"Report is VALID and authentic.\n\n"
+                    f"Content Hash (embedded): {embedded_hash[:32]}…\n"
+                    f"Matched Scan ID: {row['id']}\n\n"
+                    f"Raw file SHA256:\n{raw_file_hash}"
+                )
             else:
-                QMessageBox.warning(self, "SHASUM Invalid", f"The report hash does NOT match any known signature in the database.\n\nHash: {file_hash}")
+                QMessageBox.warning(
+                    self, "⚠️ Hash Not in Database",
+                    f"The report's embedded content hash was NOT found in the scan database.\n\n"
+                    f"This can happen if:\n"
+                    f"  • The database was reset after the report was generated\n"
+                    f"  • The report was generated on a different machine\n\n"
+                    f"Content Hash (embedded): {embedded_hash[:32]}…\n"
+                    f"Raw file SHA256:\n{raw_file_hash}\n\n"
+                    f"To verify authenticity without the DB, use:\n"
+                    f"  python3 tools/verify_report.py <report_file>"
+                )
         except Exception as e:
             QMessageBox.critical(self, "SHASUM Error", f"Failed to verify file: {e}")
 
@@ -708,7 +755,8 @@ class DashboardLogicMixin:
                 conn.execute("DELETE FROM scan_results")
                 conn.commit()
                 conn.close()
-                self.load_targets_table()
+                self._cache_targets_hash = None
+                self.poll_updates()
 
                 self.chk_zap_enabled.setChecked(False)
                 current_settings = load_settings()
@@ -750,7 +798,10 @@ class DashboardLogicMixin:
                     shutil.rmtree(logs_dir)
                 os.makedirs(logs_dir)
 
-                self.load_targets_table()
+                self._cache_targets_hash = None
+                self._cache_scans_hash = None
+                self.poll_updates()
+
                 
                 QMessageBox.information(self, "Full Reset Complete", "The platform has been reset to its factory state.\nPlease restart the application.")
                 sys.exit(0)
@@ -1037,6 +1088,22 @@ class DashboardLogicMixin:
         if self._cache_scans_hash == s_hash:
             return
         self._cache_scans_hash = s_hash
+
+        # Update the scan count badge in the Active Scan Monitor header
+        count = len(active)
+        self.lbl_scan_count.setText(f"{count} running")
+        if count > 0:
+            self.lbl_scan_count.setStyleSheet(
+                "color: #FF9500; font-size: 11px; padding: 2px 8px; "
+                "background: #2A1800; border-radius: 8px; font-weight: 700;"
+            )
+            self.lbl_scan_pulse.setStyleSheet("color: #FF9500; font-size: 10px; padding-right: 6px;")
+        else:
+            self.lbl_scan_count.setStyleSheet(
+                "color: #555555; font-size: 11px; padding: 2px 8px; "
+                "background: #1A1A1A; border-radius: 8px;"
+            )
+            self.lbl_scan_pulse.setStyleSheet("color: #34C759; font-size: 10px; padding-right: 6px;")
 
         self.lst_scans.clear()
         if not active:
@@ -1357,10 +1424,15 @@ class DashboardLogicMixin:
             return
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
-        success = add_target(url)
+        # Read company metadata fields from the UI
+        company_name = self.txt_company_name.text().strip() or None
+        submitted_to = self.txt_submitted_to.text().strip() or None
+        success = add_target(url, company_name=company_name, submitted_to=submitted_to)
         if success:
             logger.info(f"Target Added: {url}")
             self.txt_url.clear()
+            self.txt_company_name.clear()
+            self.txt_submitted_to.clear()
             self._cache_targets_hash = None
             self.poll_updates()
         else:

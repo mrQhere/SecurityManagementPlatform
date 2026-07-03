@@ -24,11 +24,6 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 from scanners.core.registry import register_scanner
-# =============================================================================
-# PROPRIETARY SOFTWARE — ALL RIGHTS RESERVED
-# Security Management Platform (SMP) — V4.8
-# Owner: Authorised Personnel Only
-# =============================================================================
 """
 ParamSpider — Parameter Mining from Web Archives
 =================================================
@@ -135,7 +130,7 @@ def run_paramspider_scan(url):
         general_params = set()
 
         for mined_url in mined_urls:
-            from urllib.parse import urlparse, parse_qs
+            from urllib.parse import parse_qs
             try:
                 parsed_u = urlparse(mined_url)
                 params = parse_qs(parsed_u.query)

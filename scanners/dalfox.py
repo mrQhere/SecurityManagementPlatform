@@ -24,11 +24,6 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 from scanners.core.registry import register_scanner
-# =============================================================================
-# PROPRIETARY SOFTWARE — ALL RIGHTS RESERVED
-# Security Management Platform (SMP) — V4.8
-# Owner: Authorised Personnel Only
-# =============================================================================
 """
 Dalfox — XSS Parameter Scanner
 ================================

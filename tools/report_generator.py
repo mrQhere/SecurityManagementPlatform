@@ -65,7 +65,11 @@ except ImportError:
     logger.warning("ReportLab not available. PDF reports will not be generated.")
 
 
-# ── Palette (White Theme) ───────────────────────────────────────────────────────
+# ── V5.3 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
+# Load visual constants (colors, fonts, sizes, text) from config to allow custom branding
+_REPORT_TEMPLATE_CONFIG_PATH = os.path.join(BASE_DIR, "config", "report_template.json")
+_TEMPLATE_CONFIG = {}
+
 _P = {
     "bg":       "#FFFFFF",
     "surface":  "#F9FAFB",
@@ -83,6 +87,22 @@ _P = {
     "info":     "#4B5563",
     "green":    "#059669",
 }
+
+if os.path.exists(_REPORT_TEMPLATE_CONFIG_PATH):
+    try:
+        with open(_REPORT_TEMPLATE_CONFIG_PATH, "r") as f:
+            _TEMPLATE_CONFIG = json.load(f)
+            if "palette" in _TEMPLATE_CONFIG:
+                _P.update(_TEMPLATE_CONFIG["palette"])
+    except Exception as e:
+        logger.warning(f"Failed to load report_template.json: {e}")
+
+def _get_font(key, default):
+    return _TEMPLATE_CONFIG.get("fonts", {}).get(key, default)
+    
+def _get_text(key, default):
+    return _TEMPLATE_CONFIG.get("text", {}).get(key, default)
+
 
 _SEV_CSS = {
     "Critical": _P["crit"],
@@ -143,7 +163,7 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.setStrokeColor(_c(_P["crit"]))
         canvas.rect(0, H - 24, W, 24, fill=1, stroke=0)
         canvas.setFillColor(colors.white)
-        canvas.setFont("Helvetica-Bold", 8)
+        canvas.setFont(_get_font("primary_bold", "Helvetica-Bold"), 8)
         canvas.drawCentredString(W / 2, H - 15, "CONFIDENTIAL — INTERNAL USE ONLY — NOT FOR DISTRIBUTION")
 
         # Bottom bar
@@ -152,12 +172,15 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.setFillColor(_c(_P["dim"]))
         
         # Text logo footer
-        canvas.setFont("Helvetica-Bold", 8)
+        canvas.setFont(_get_font("primary_bold", "Helvetica-Bold"), 8)
         canvas.drawString(18, 10, "SMP | Security Management Platform")
         
-        canvas.setFont("Helvetica", 7)
+        canvas.setFont(_get_font("primary", "Helvetica"), 7)
         canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
-        canvas.drawRightString(W - 18, 10, f"v{self.doc_version}  |  Page {canvas.getPageNumber()}")
+        
+        # ── V5.3 — Dynamic config text footer ──
+        right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
+        canvas.drawRightString(W - 18, 10, right_text)
 
         canvas.restoreState()
 
@@ -170,97 +193,102 @@ def _styles():
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
+    # ── V5.3 — Dynamic Fonts ───────────────────────────────────────────
+    font_bold = _get_font("primary_bold", "Helvetica-Bold")
+    font_reg = _get_font("primary", "Helvetica")
+    font_mono = _get_font("mono", "Courier")
+
     return {
         "cover_title": S("CoverTitle",
-            fontName="Helvetica-Bold", fontSize=30, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=30, textColor=_c(_P["white"]),
             alignment=TA_LEFT, leading=38, spaceAfter=8),
 
         "cover_sub": S("CoverSub",
-            fontName="Helvetica", fontSize=13, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=13, textColor=_c(_P["muted"]),
             alignment=TA_LEFT, spaceAfter=6),
 
         "cover_kv_key": S("CoverKVK",
-            fontName="Helvetica-Bold", fontSize=9, textColor=_c(_P["muted"]),
+            fontName=font_bold, fontSize=9, textColor=_c(_P["muted"]),
             leading=14, spaceAfter=2),
 
         "cover_kv_val": S("CoverKVV",
-            fontName="Helvetica-Bold", fontSize=11, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=11, textColor=_c(_P["white"]),
             leading=14, spaceAfter=6),
 
         "conf_stamp": S("ConfStamp",
-            fontName="Helvetica-Bold", fontSize=10, textColor=_c(_P["crit"]),
+            fontName=font_bold, fontSize=10, textColor=_c(_P["crit"]),
             alignment=TA_CENTER, spaceAfter=4),
 
         "section_num": S("SecNum",
-            fontName="Helvetica-Bold", fontSize=8, textColor=_c(_P["accent"]),
+            fontName=font_bold, fontSize=8, textColor=_c(_P["accent"]),
             leading=12, spaceAfter=2),
 
         "section_title": S("SecTitle",
-            fontName="Helvetica-Bold", fontSize=17, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=17, textColor=_c(_P["white"]),
             leading=22, spaceAfter=4, spaceBefore=20),
 
         "h3": S("H3",
-            fontName="Helvetica-Bold", fontSize=11, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=11, textColor=_c(_P["white"]),
             leading=16, spaceBefore=12, spaceAfter=4),
 
         "h4": S("H4",
-            fontName="Helvetica-Bold", fontSize=9, textColor=_c(_P["muted"]),
+            fontName=font_bold, fontSize=9, textColor=_c(_P["muted"]),
             leading=13, spaceBefore=8, spaceAfter=3),
 
         "body": S("Body",
-            fontName="Helvetica", fontSize=9, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=9, textColor=_c(_P["muted"]),
             leading=14, spaceAfter=4),
 
         "body_white": S("BodyW",
-            fontName="Helvetica", fontSize=9, textColor=_c(_P["white"]),
+            fontName=font_reg, fontSize=9, textColor=_c(_P["white"]),
             leading=14, spaceAfter=4),
 
         "mono": S("Mono",
-            fontName="Courier", fontSize=8, textColor=_c(_P["green"]),
+            fontName=font_mono, fontSize=8, textColor=_c(_P["green"]),
             leading=12, spaceAfter=2),
 
         "cell": S("Cell",
-            fontName="Helvetica", fontSize=8, textColor=_c(_P["white"]),
+            fontName=font_reg, fontSize=8, textColor=_c(_P["white"]),
             leading=11),
 
         "cell_dim": S("CellDim",
-            fontName="Helvetica", fontSize=8, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=8, textColor=_c(_P["muted"]),
             leading=11),
 
         "cell_bold": S("CellBold",
-            fontName="Helvetica-Bold", fontSize=8, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=8, textColor=_c(_P["white"]),
             leading=11),
 
         "cell_accent": S("CellAccent",
-            fontName="Helvetica-Bold", fontSize=8, textColor=_c(_P["accent"]),
+            fontName=font_bold, fontSize=8, textColor=_c(_P["accent"]),
             leading=11),
 
         "toc_entry": S("TOCEntry",
-            fontName="Helvetica", fontSize=10, textColor=_c(_P["white"]),
+            fontName=font_reg, fontSize=10, textColor=_c(_P["white"]),
             leading=20, leftIndent=0),
 
         "toc_sub": S("TOCSub",
-            fontName="Helvetica", fontSize=9, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=9, textColor=_c(_P["muted"]),
             leading=16, leftIndent=20),
 
         "exec_narrative": S("ExecNarrative",
-            fontName="Helvetica", fontSize=10, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=10, textColor=_c(_P["muted"]),
             leading=17, spaceAfter=8),
 
         "finding_id": S("FindingID",
-            fontName="Helvetica-Bold", fontSize=13, textColor=_c(_P["white"]),
+            fontName=font_bold, fontSize=13, textColor=_c(_P["white"]),
             leading=18, spaceAfter=2),
 
         "label": S("Label",
-            fontName="Helvetica-Bold", fontSize=7, textColor=_c(_P["muted"]),
+            fontName=font_bold, fontSize=7, textColor=_c(_P["muted"]),
             leading=10, spaceAfter=1),
 
         "value": S("Value",
-            fontName="Helvetica", fontSize=9, textColor=_c(_P["white"]),
+            fontName=font_reg, fontSize=9, textColor=_c(_P["white"]),
             leading=14, spaceAfter=3),
 
         "attest": S("Attest",
-            fontName="Helvetica", fontSize=9, textColor=_c(_P["muted"]),
+            fontName=font_reg, fontSize=9, textColor=_c(_P["muted"]),
             leading=15, spaceAfter=4),
     }
 
@@ -367,8 +395,8 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
 
     from tools.db_manager import get_scan, get_technologies_for_scan, get_risk_score, get_scan_trend_deltas
     scan_rec   = get_scan(scan_id)
-    scanned_by = (scan_rec.get("scanned_by") if scan_rec else None) or \
-                 load_settings().get("tester_name", "Security Auditor")
+    scanned_by = (scan_rec.get("scanned_by") if scan_rec and scan_rec.get("scanned_by") else None) or \
+                 load_settings().get("tester_name") or "Security Auditor"
     technologies = get_technologies_for_scan(scan_id)
     risk_data    = get_risk_score(scan_id)
     trend_deltas = get_scan_trend_deltas(url, scan_id)
@@ -573,8 +601,9 @@ def _generate_vapt_pdf(filepath, ctx):
     ]
 
     # Cover metadata grid
-    company_name = c["target"].get("company_name") or "Unknown Company"
-    submitted_to = c["target"].get("submitted_to") or "Internal Security Team"
+    target = c.get("target", {})
+    company_name = target.get("company_name") or c["settings"].get("company_name") or "—"
+    submitted_to = target.get("submitted_to") or c["settings"].get("submitted_to") or "Internal Security Team"
 
     # Load SMP version dynamically from metadata.json
     try:
@@ -927,7 +956,7 @@ def _generate_vapt_pdf(filepath, ctx):
 
     if sorted_findings:
         matrix_data = [["ID", "Vulnerability Title", "Component / Tool",
-                         "Severity", "CVSS", "Status"]]
+                         "Severity", "CVSS", "MITRE"]]
         for idx, f in enumerate(sorted_findings, 1):
             sev  = f.get("severity", "Info")
             label, color = _SEV_LABEL.get(sev, ("INFO", _P["info"]))
@@ -939,7 +968,7 @@ def _generate_vapt_pdf(filepath, ctx):
                 Paragraph(_esc(f.get("source_tool", "")[:20]), st["cell_dim"]),
                 sev_cell,
                 Paragraph(str(f.get("cvss_score") or "N/A"), st["cell_dim"]),
-                Paragraph('<font color="#D97706">Open</font>', st["cell"]),
+                Paragraph(_esc(f.get("mitre_id") or "—"), st["cell_dim"]),
             ])
 
         matrix_t = Table(matrix_data,
@@ -1033,8 +1062,11 @@ def _generate_vapt_pdf(filepath, ctx):
             owasp_cat = f.get("owasp_category") or _get_owasp_hint(tool)
             affected = f.get("affected_component") or "Global target application scope"
 
+            mitre_id = f.get("mitre_id") or "—"
+
             story.append(_kv_table([
                 ("OWASP Category",  owasp_cat),
+                ("MITRE ATT&CK",    mitre_id),
                 ("CVE Identifier",  cve_val),
                 ("CVSS v4.0 Score", cvss_score_str),
                 ("CVSS Vector",     cvss_vec),
@@ -1561,7 +1593,8 @@ def _get_remediation(tool, sev, title):
 # ── HTML Report (Single File) ───────────────────────────────────────────────────
 
 def _generate_html_fallback(filepath, ctx):
-    """Full-featured HTML report generated entirely in memory (no external templates)."""
+    """Professional-grade HTML VAPT report — fully self-contained, no external deps."""
+    import json as _json
     c      = ctx
     counts = c["counts"]
     site   = c.get("site_name", c["url"])
@@ -1569,217 +1602,553 @@ def _generate_html_fallback(filepath, ctx):
     h16    = c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
+    smp_ver = c.get("smp_version", "V5.2")
 
+    target  = c.get("target", {})
+    company = target.get("company_name") or c["settings"].get("company_name") or "—"
+    submitted_to = target.get("submitted_to") or c["settings"].get("submitted_to") or "Internal Security Team"
+    tester  = _esc(c.get("scanned_by", "—"))
+    qa_rev  = _esc(c["settings"].get("qa_reviewer", "QA Manager"))
+    scan_dt = c["scan_time"][:10]
+    total_f = c.get("total", 0)
+    risk    = c.get("risk_data") or {}
+    risk_score = risk.get("score", 0) if isinstance(risk, dict) else 0
+    risk_label = risk.get("label", "Low") if isinstance(risk, dict) else "Low"
+
+    crit_n = counts["Critical"]; high_n = counts["High"]
+    med_n  = counts["Medium"];   low_n  = counts["Low"]; info_n = counts["Info"]
+
+    # ── Derive executive summary text dynamically ────────────────────────────
+    if total_f == 0:
+        exec_para = (
+            f"The security assessment of <strong>{_esc(c['url'])}</strong> completed with "
+            f"<strong>no exploitable vulnerabilities</strong> identified. The target presented "
+            f"a strong security posture across all tested domains including network services, "
+            f"web application behaviour, SSL/TLS configuration, and HTTP security headers. "
+            f"Continued monitoring and periodic re-assessment are recommended to maintain this posture."
+        )
+    else:
+        sev_txt = []
+        if crit_n: sev_txt.append(f"<strong>{crit_n} Critical</strong>")
+        if high_n: sev_txt.append(f"<strong>{high_n} High</strong>")
+        if med_n:  sev_txt.append(f"<strong>{med_n} Medium</strong>")
+        if low_n:  sev_txt.append(f"{low_n} Low")
+        if info_n: sev_txt.append(f"{info_n} Informational")
+        sev_str = ", ".join(sev_txt) if sev_txt else f"{total_f} total"
+        urgency = "immediate remediation is required" if crit_n > 0 else \
+                  "prompt remediation is strongly recommended" if high_n > 0 else \
+                  "remediation should be planned within the next release cycle"
+        exec_para = (
+            f"A comprehensive Vulnerability Assessment and Penetration Test (VAPT) was conducted against "
+            f"<strong>{_esc(c['url'])}</strong> on <strong>{scan_dt}</strong>. "
+            f"The engagement revealed <strong>{total_f} security finding(s)</strong>: {sev_str}. "
+            f"The overall risk score is <strong>{risk_score:.1f}/100 ({_esc(risk_label)})</strong>. "
+            f"Based on the findings, {urgency}. "
+            f"Critical and High findings represent direct attack vectors that can lead to data exfiltration, "
+            f"service disruption, or full system compromise if left unaddressed. "
+            f"A detailed remediation action plan is provided in Section 5 of this report."
+        )
+
+    # ── Sorted findings ──────────────────────────────────────────────────────
+    sorted_f = sorted(c["findings"], key=lambda f: _sev_rank(f.get("severity", "Info")))
+
+    # ── MITRE ATT&CK colour map ──────────────────────────────────────────────
+    sev_hex = {"Critical": "#dc2626", "High": "#ea580c", "Medium": "#d97706", "Low": "#2563eb", "Info": "#4b5563"}
+
+    # ── Tools used ──────────────────────────────────────────────────────────
+    tools_used = sorted({f.get("source_tool", "") for f in c["findings"] if f.get("source_tool")})
+
+    CSS = """
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --crit:#dc2626;--high:#ea580c;--med:#d97706;--low:#2563eb;--info:#4b5563;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --accent:#1e3a5f;--accent2:#2563eb;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
+.page{max-width:1080px;margin:0 auto;padding:32px 20px 60px;}
+/* ── Cover ── */
+.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1d4ed8 100%);color:#f8fafc;
+  border-radius:16px;padding:56px 48px 48px;margin-bottom:36px;position:relative;overflow:hidden;}
+.cover::before{content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;
+  border-radius:50%;background:rgba(255,255,255,.04);}
+.cover-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.cover-logo-icon{width:40px;height:40px;background:#2563eb;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;}
+.cover-logo-text{font-size:13px;font-weight:700;letter-spacing:.05em;color:#94a3b8;text-transform:uppercase;}
+.cover h1{font-size:2.4rem;font-weight:800;line-height:1.15;margin-bottom:6px;letter-spacing:-.02em;}
+.cover .tagline{color:#93c5fd;font-size:1rem;margin-bottom:36px;}
+.cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;margin-bottom:28px;}
+.cover-kv{display:flex;flex-direction:column;gap:2px;}
+.cover-kv .k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b;}
+.cover-kv .v{font-size:13px;font-weight:600;color:#f1f5f9;}
+.cover-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:20px 0;}
+.hash-row{display:flex;align-items:flex-start;gap:12px;background:rgba(0,0,0,.25);
+  border-radius:10px;padding:14px 16px;}
+.hash-icon{font-size:18px;margin-top:1px;}
+.hash-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#34d399;margin-bottom:4px;}
+.hash-value{font-family:'Courier New',monospace;font-size:11px;color:#a7f3d0;word-break:break-all;line-height:1.5;}
+/* ── KPI Strip ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:32px;}
+.kpi-card{background:var(--card);border-radius:12px;padding:18px 16px;text-align:center;
+  border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+.kpi-card.crit::before{background:var(--crit);}
+.kpi-card.high::before{background:var(--high);}
+.kpi-card.med::before{background:var(--med);}
+.kpi-card.low::before{background:var(--low);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-num{font-size:2.2rem;font-weight:800;line-height:1;}
+.kpi-card.crit .kpi-num{color:var(--crit);}
+.kpi-card.high .kpi-num{color:var(--high);}
+.kpi-card.med .kpi-num{color:var(--med);}
+.kpi-card.low .kpi-num{color:var(--low);}
+.kpi-card.info .kpi-num{color:var(--info);}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:4px;}
+/* ── Sections ── */
+.section{background:var(--card);border-radius:12px;padding:28px 32px;margin-bottom:24px;
+  border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  padding-bottom:14px;border-bottom:2px solid var(--border);}
+.section-num{font-size:11px;font-weight:700;color:var(--accent2);background:#eff6ff;
+  border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;letter-spacing:.05em;}
+.section-title{font-size:1.05rem;font-weight:700;color:var(--text);}
+/* ── Tables ── */
+.data-table{border-collapse:collapse;width:100%;font-size:13px;}
+.data-table th{background:#f8fafc;color:var(--muted);padding:9px 12px;text-align:left;
+  border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.data-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:#f8fafc;}
+/* ── Severity Badge ── */
+.sev{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-weight:700;font-size:11px;color:#fff;letter-spacing:.03em;}
+.sev-Critical{background:var(--crit);}
+.sev-High{background:var(--high);}
+.sev-Medium{background:var(--med);}
+.sev-Low{background:var(--low);}
+.sev-Info{background:var(--info);}
+/* ── Finding Cards ── */
+.finding-card{border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden;}
+.finding-card-header{padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#f8fafc;}
+.finding-card-header.sev-Critical-bg{border-left:5px solid var(--crit);background:#fff5f5;}
+.finding-card-header.sev-High-bg{border-left:5px solid var(--high);background:#fff8f3;}
+.finding-card-header.sev-Medium-bg{border-left:5px solid var(--med);background:#fffdf0;}
+.finding-card-header.sev-Low-bg{border-left:5px solid var(--low);background:#f0f5ff;}
+.finding-card-header.sev-Info-bg{border-left:5px solid var(--info);background:#f8fafc;}
+.finding-id{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;font-family:monospace;}
+.finding-title{font-size:14px;font-weight:700;color:var(--text);flex:1;}
+.finding-body{padding:16px 18px;}
+.finding-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.tag{display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;color:#475569;
+  border-radius:5px;padding:3px 9px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;}
+.tag-mitre{background:#1e3a5f;color:#93c5fd;border-color:#1e3a5f;}
+.tag-cve{background:#7c3aed;color:#ede9fe;border-color:#6d28d9;}
+.tag-cvss{background:#0f766e;color:#ccfbf1;border-color:#0d9488;}
+.sub-heading{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin:14px 0 6px;display:flex;align-items:center;gap:6px;}
+.sub-heading::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--accent2);}
+.prose{font-size:13px;color:#334155;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.code-block{background:#0f172a;color:#e2e8f0;padding:14px 16px;border-radius:8px;
+  font-family:'Courier New',monospace;font-size:12px;line-height:1.6;overflow-x:auto;
+  white-space:pre-wrap;word-break:break-all;margin:6px 0;}
+.evidence-block{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;
+  padding:12px 14px;font-family:'Courier New',monospace;font-size:12px;color:#14532d;
+  overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:6px 0;}
+.impact-block{background:#fef9ec;border:1px solid #fcd34d;border-radius:8px;
+  padding:12px 14px;font-size:13px;color:#92400e;margin:6px 0;}
+.remd-block{background:#f0fdf4;border-left:3px solid #22c55e;
+  padding:12px 14px;font-size:13px;color:#15803d;border-radius:0 8px 8px 0;margin:6px 0;}
+.ref-list{list-style:none;margin:6px 0;display:flex;flex-direction:column;gap:4px;}
+.ref-list li::before{content:'↗ ';}
+.ref-list a{font-size:12px;word-break:break-all;}
+/* ── Methodology table ── */
+.method-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.method-item{background:#f8fafc;border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;font-size:12px;}
+.method-item .tool-name{font-weight:700;color:var(--text);}
+.method-item .tool-type{color:var(--muted);font-size:11px;margin-top:2px;}
+.method-item.used{border-left:3px solid #22c55e;}
+/* ── Risk gauge ── */
+.risk-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.risk-score{font-size:3rem;font-weight:800;line-height:1;}
+.risk-score.Critical{color:var(--crit);}
+.risk-score.High{color:var(--high);}
+.risk-score.Medium{color:var(--med);}
+.risk-score.Low{color:var(--low);}
+.risk-bar-wrap{flex:1;background:#e2e8f0;border-radius:999px;height:12px;overflow:hidden;}
+.risk-bar{height:100%;border-radius:999px;transition:width .4s;}
+.risk-bar.Critical{background:var(--crit);}
+.risk-bar.High{background:var(--high);}
+.risk-bar.Medium{background:var(--med);}
+.risk-bar.Low{background:var(--low);}
+/* ── Action Plan ── */
+.action-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
+.action-row:last-child{border-bottom:none;}
+.action-window{min-width:80px;text-align:center;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:6px;color:#fff;}
+.aw-imm{background:var(--crit);}
+.aw-72h{background:var(--high);}
+.aw-2w{background:var(--med);}
+.aw-q{background:#0891b2;}
+.aw-ong{background:var(--info);}
+.action-text{font-size:13px;color:#334155;flex:1;}
+/* ── Footer ── */
+.report-footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;
+  padding-top:24px;border-top:1px solid var(--border);}
+.report-footer strong{color:var(--text);}
+/* ── TOC ── */
+.toc-list{list-style:none;counter-reset:toc;}
+.toc-list li{counter-increment:toc;padding:6px 0;border-bottom:1px dotted var(--border);
+  display:flex;justify-content:space-between;font-size:13px;}
+.toc-list li .toc-num{color:var(--accent2);font-weight:700;margin-right:8px;}
+/* ── Attrib banner ── */
+.confidential-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;
+  padding:10px 16px;font-size:12px;font-weight:600;color:#991b1b;text-align:center;
+  margin-bottom:28px;letter-spacing:.04em;}
+"""
+
+    def _kv_cover(label, val):
+        return f"<div class='cover-kv'><div class='k'>{label}</div><div class='v'>{_esc(str(val)) if val else '—'}</div></div>"
+
+    # Start building HTML
     lines = [
         "<!DOCTYPE html><html lang='en'>",
-        "<head><meta charset='utf-8'>",
-        f"<title>SMP Security Report — {_esc(site)}</title>",
-        "<style>",
-        "*{box-sizing:border-box;margin:0;padding:0}",
-        "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;color:#111827;}",
-        ".page{max-width:960px;margin:0 auto;padding:40px 20px;}",
-        ".cover{background:#111827;color:#f9fafb;padding:48px 40px;border-radius:12px;margin-bottom:32px;}",
-        ".cover h1{font-size:2rem;font-weight:800;margin-bottom:8px;}",
-        ".cover .sub{color:#9ca3af;font-size:1rem;margin-bottom:24px;}",
-        ".cover-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;}",
-        ".cover-meta .kv{display:flex;flex-direction:column;}",
-        ".cover-meta .k{font-size:0.72rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:2px;}",
-        ".cover-meta .v{font-size:0.9rem;color:#f9fafb;font-weight:500;word-break:break-all;}",
-        ".hash-box{margin-top:20px;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:12px 16px;}",
-        ".hash-box .k{font-size:0.72rem;text-transform:uppercase;letter-spacing:.08em;color:#10b981;margin-bottom:4px;}",
-        ".hash-box .v{font-family:monospace;font-size:0.78rem;color:#a7f3d0;word-break:break-all;}",
-        ".kpi{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px;}",
-        ".kpi-card{flex:1;min-width:100px;padding:16px;border-radius:10px;color:#fff;text-align:center;}",
-        ".kpi-card .num{font-size:2rem;font-weight:800;line-height:1;}",
-        ".kpi-card .lbl{font-size:0.75rem;text-transform:uppercase;margin-top:4px;opacity:0.85;}",
-        ".crit-bg{background:#dc2626;} .high-bg{background:#ea580c;}",
-        ".med-bg{background:#d97706;} .low-bg{background:#2563eb;} .info-bg{background:#4b5563;}",
-        "section{background:#fff;border-radius:10px;padding:28px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);}",
-        "section h2{font-size:1.15rem;font-weight:700;color:#111827;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e5e7eb;}",
-        "section h3{font-size:0.95rem;font-weight:700;color:#374151;margin:16px 0 8px;}",
-        "p{line-height:1.7;color:#374151;margin-bottom:10px;font-size:0.9rem;}",
-        "table{border-collapse:collapse;width:100%;}",
-        "th{background:#f9fafb;color:#374151;padding:10px 12px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:0.82rem;}",
-        "td{padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:0.85rem;vertical-align:top;}",
-        "tr:hover td{background:#f9fafb;}",
-        ".sev{display:inline-block;padding:3px 9px;border-radius:4px;font-weight:700;font-size:0.78rem;color:#fff;}",
-        ".sev-Critical{background:#dc2626;} .sev-High{background:#ea580c;}",
-        ".sev-Medium{background:#d97706;} .sev-Low{background:#2563eb;} .sev-Info{background:#4b5563;}",
-        ".finding-block{border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;}",
-        ".finding-block.Critical{border-left:4px solid #dc2626;}",
-        ".finding-block.High{border-left:4px solid #ea580c;}",
-        ".finding-block.Medium{border-left:4px solid #d97706;}",
-        ".finding-block.Low{border-left:4px solid #2563eb;}",
-        ".finding-block.Info{border-left:4px solid #4b5563;}",
-        ".tag{display:inline-block;background:#f3f4f6;color:#374151;border-radius:4px;padding:2px 8px;font-size:0.75rem;margin-right:6px;}",
-        "pre{background:#111827;color:#e5e7eb;padding:12px;border-radius:6px;overflow-x:auto;font-size:0.78rem;line-height:1.5;white-space:pre-wrap;word-break:break-all;}",
-        ".action-table td:first-child{font-weight:600;white-space:nowrap;}",
-        ".action-window{padding:3px 8px;border-radius:4px;font-size:0.75rem;font-weight:700;color:#fff;}",
-        ".aw-critical{background:#dc2626;} .aw-72h{background:#ea580c;} .aw-2w{background:#d97706;} .aw-ongoing{background:#4b5563;}",
-        ".footer{text-align:center;color:#9ca3af;font-size:0.82rem;margin-top:40px;padding:20px;border-top:1px solid #e5e7eb;}",
-        "</style></head><body><div class='page'>",
+        "<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
+        f"<title>VAPT Report — {_esc(site)} — {scan_dt}</title>",
+        f"<style>{CSS}</style>",
+        "</head><body><div class='page'>",
 
-        # ── Hidden verification block (parsed by verify_report.py) ──────────────
+        # Hidden verification tokens (parsed by verify_report.py)
         f"<!-- {h_tok} -->",
         f"<!-- {meta_b} -->",
 
-        # ── Cover ────────────────────────────────────────────────────────────────
+        # ── Cover ──────────────────────────────────────────────────────────
         "<div class='cover'>",
-        f"<h1>Security Assessment Report</h1>",
-        f"<div class='sub'>{_esc(c['url'])}</div>",
-        "<div class='cover-meta'>",
-        f"<div class='kv'><div class='k'>Generated By</div><div class='v'>Security Management Platform (SMP)</div></div>",
-        f"<div class='kv'><div class='k'>Target Company</div><div class='v'>{_esc(c['settings'].get('company_name',''))}</div></div>",
-        f"<div class='kv'><div class='k'>Date of Assessment</div><div class='v'>{c['scan_time'][:10]}</div></div>",
-        f"<div class='kv'><div class='k'>Submitted To</div><div class='v'>{_esc(c['settings'].get('submitted_to',''))}</div></div>",
-        f"<div class='kv'><div class='k'>Lead Tester</div><div class='v'>{_esc(c['scanned_by'])}</div></div>",
-        f"<div class='kv'><div class='k'>QA Reviewer</div><div class='v'>{_esc(c['settings'].get('qa_reviewer',''))}</div></div>",
+        "<div class='cover-logo'><div class='cover-logo-icon'>🛡</div>"
+        "<div class='cover-logo-text'>Security Management Platform</div></div>",
+        "<h1>Vulnerability Assessment &amp;<br>Penetration Testing Report</h1>",
+        f"<div class='tagline'>{_esc(c['url'])}</div>",
+        "<div class='cover-grid'>",
+        _kv_cover("Target Company", company),
+        _kv_cover("Submitted To", submitted_to),
+        _kv_cover("Date of Assessment", scan_dt),
+        _kv_cover("Lead Penetration Tester", tester),
+        _kv_cover("QA Reviewer", qa_rev),
+        f"<div class='cover-kv'><div class='k'>SMP Version</div><div class='v'>{_esc(smp_ver)} Stable</div></div>",
+        _kv_cover("Data Classification", "CONFIDENTIAL — INTERNAL USE ONLY"),
+        _kv_cover("Total Findings", str(total_f)),
         "</div>",
-        f"<div class='hash-box'><div class='k'>&#x2705; Verification Hash (SHA-256) &mdash; verify with: python3 tools/verify_report.py &lt;this-file&gt;</div>"
-        f"<div class='v'>{_esc(c_hash or '&mdash;')}</div></div>",
+        "<hr class='cover-divider'>",
+        "<div class='hash-row'>",
+        "<div class='hash-icon'>✅</div>",
+        "<div><div class='hash-label'>Verification Hash (SHA-256 Content Signature)</div>",
+        f"<div class='hash-value'>{_esc(c_hash or '—')}</div>",
+        "<div style='font-size:10px;color:#64748b;margin-top:6px;'>Verify with: <code>python3 tools/verify_report.py &lt;this-file&gt;</code></div>",
+        "</div></div>",
         "</div>",  # end .cover
 
-        # ── KPI Strip ────────────────────────────────────────────────────────────
-        "<div class='kpi'>",
-        f"<div class='kpi-card crit-bg'><div class='num'>{counts['Critical']}</div><div class='lbl'>Critical</div></div>",
-        f"<div class='kpi-card high-bg'><div class='num'>{counts['High']}</div><div class='lbl'>High</div></div>",
-        f"<div class='kpi-card med-bg'><div class='num'>{counts['Medium']}</div><div class='lbl'>Medium</div></div>",
-        f"<div class='kpi-card low-bg'><div class='num'>{counts['Low']}</div><div class='lbl'>Low</div></div>",
-        f"<div class='kpi-card info-bg'><div class='num'>{counts['Info']}</div><div class='lbl'>Info</div></div>",
+        # ── Confidential Banner ─────────────────────────────────────────────
+        "<div class='confidential-banner'>⚠ CONFIDENTIAL — AUTHORISED RECIPIENTS ONLY — NOT FOR EXTERNAL DISTRIBUTION</div>",
+
+        # ── KPI Strip ──────────────────────────────────────────────────────
+        "<div class='kpi-strip'>",
+        f"<div class='kpi-card crit'><div class='kpi-num'>{crit_n}</div><div class='kpi-label'>Critical</div></div>",
+        f"<div class='kpi-card high'><div class='kpi-num'>{high_n}</div><div class='kpi-label'>High</div></div>",
+        f"<div class='kpi-card med'><div class='kpi-num'>{med_n}</div><div class='kpi-label'>Medium</div></div>",
+        f"<div class='kpi-card low'><div class='kpi-num'>{low_n}</div><div class='kpi-label'>Low</div></div>",
+        f"<div class='kpi-card info'><div class='kpi-num'>{info_n}</div><div class='kpi-label'>Informational</div></div>",
         "</div>",
     ]
 
-    # ── Section 1: Executive Summary ─────────────────────────────────────────
-    exec_summary = c.get("executive_summary", "No executive summary available.")
+    # ── Section 1: Table of Contents ─────────────────────────────────────────
     lines += [
-        "<section>",
-        "<h2>&#128202; Executive Summary</h2>",
-        f"<p>{_esc(exec_summary)}</p>",
-        "</section>",
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 1</span>",
+        "<span class='section-title'>Table of Contents</span>",
+        "</div>",
+        "<ol class='toc-list'>",
+        "<li><span><span class='toc-num'>1.</span> Table of Contents</span><span>This page</span></li>",
+        "<li><span><span class='toc-num'>2.</span> Executive Summary &amp; Risk Score</span><span></span></li>",
+        "<li><span><span class='toc-num'>3.</span> Engagement Scope &amp; Methodology</span><span></span></li>",
+        "<li><span><span class='toc-num'>4.</span> Findings Overview Matrix</span><span></span></li>",
+        "<li><span><span class='toc-num'>5.</span> Technical Findings — Detail</span><span></span></li>",
+        "<li><span><span class='toc-num'>6.</span> Action Plan &amp; Remediation Timeline</span><span></span></li>",
+        "<li><span><span class='toc-num'>7.</span> Attestation &amp; Verification</span><span></span></li>",
+        "</ol>",
+        "</div>",
     ]
 
-    # ── Section 2: Findings Overview Table ───────────────────────────────────
-    sorted_f = sorted(c["findings"], key=lambda f: _sev_rank(f.get("severity", "Info")))
+    # ── Section 2: Executive Summary & Risk Score ────────────────────────────
+    risk_pct = min(int(risk_score), 100)
     lines += [
-        "<section>",
-        "<h2>&#128270; Findings Overview</h2>",
-        "<table><tr><th>#</th><th>Title</th><th>Severity</th><th>CVSS</th><th>Tool</th></tr>",
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 2</span>",
+        "<span class='section-title'>Executive Summary &amp; Risk Score</span>",
+        "</div>",
+        "<div class='risk-row'>",
+        f"<div class='risk-score {_esc(risk_label)}'>{risk_score:.1f}</div>",
+        "<div style='flex:1'>",
+        f"<div style='font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;'>Overall Risk Score / 100 — <strong style='color:inherit'>{_esc(risk_label)}</strong></div>",
+        f"<div class='risk-bar-wrap'><div class='risk-bar {_esc(risk_label)}' style='width:{risk_pct}%'></div></div>",
+        "</div></div>",
+        f"<p style='font-size:13.5px;line-height:1.8;color:#334155;'>{exec_para}</p>",
+        "</div>",
     ]
-    for idx, f in enumerate(sorted_f, 1):
-        sev  = f.get("severity", "Info")
-        cvss = f.get("cvss_score", "") or ""
+
+    # ── Section 3: Scope & Methodology ──────────────────────────────────────
+    all_tools = [
+        ("HTTPx", "HTTP Probing"), ("WhatWeb", "Tech Fingerprint"), ("Subfinder", "Subdomain Enum"),
+        ("theHarvester", "OSINT"), ("CRT.sh", "Certificate Transparency"), ("HackerTarget", "Network Intel"),
+        ("Whois", "Domain Intel"), ("Wayback Machine", "Historical URLs"), ("Traceroute", "Network Path"),
+        ("Nmap", "Port / Service Scan"), ("SSL Scan", "TLS Analysis"), ("Security Headers", "HTTP Headers"),
+        ("Robots.txt", "Disclosure"), ("CORS", "CORS Misconfiguration"), ("CMS Scanner", "CMS Detect"),
+        ("Nikto", "Web Vuln Scan"), ("Nuclei", "Template-based CVE"), ("ffuf", "Directory Brute-force"),
+        ("Open Redirect", "Redirect Chains"), ("Tech Fingerprint", "Stack Identification"),
+        ("Wapiti", "DAST"), ("SQLMap", "SQL Injection"), ("Shodan", "Internet Exposure"),
+        ("Gitleaks", "Secret Leaks"), ("ZAP", "DAST / OWASP"),
+        ("Dalfox", "XSS Detection"), ("Arjun", "Param Discovery"), ("DNSx", "DNS Enum"),
+        ("Katana", "Web Crawling"), ("Commix", "Command Injection"), ("JWT Scanner", "JWT Weakness"),
+        ("WPScan", "WordPress"), ("Masscan", "Fast Port Scan"), ("ParamSpider", "Param Mining"),
+        ("Cloud Enum", "Cloud Assets"), ("CVE Correlation", "Threat Intel Match"),
+    ]
+    used_set = set(tools_used)
+    lines += [
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 3</span>",
+        "<span class='section-title'>Engagement Scope &amp; Methodology</span>",
+        "</div>",
+        "<table class='data-table' style='margin-bottom:20px;'>",
+        "<tr><th>Field</th><th>Value</th></tr>",
+        f"<tr><td>Target URL</td><td><code>{_esc(c['url'])}</code></td></tr>",
+        f"<tr><td>Company</td><td>{_esc(company)}</td></tr>",
+        f"<tr><td>Assessment Date</td><td>{scan_dt}</td></tr>",
+        f"<tr><td>Assessment Type</td><td>Black-box VAPT (Automated + Correlation)</td></tr>",
+        f"<tr><td>Lead Tester</td><td>{tester}</td></tr>",
+        f"<tr><td>QA Reviewer</td><td>{qa_rev}</td></tr>",
+        f"<tr><td>Scope</td><td>Web application, network services, SSL/TLS, headers, OSINT</td></tr>",
+        f"<tr><td>Out of Scope</td><td>Physical access, social engineering, denial of service</td></tr>",
+        "</table>",
+        "<div class='sub-heading'>Security Tools Deployed</div>",
+        "<div class='method-grid'>",
+    ]
+    for tool_name, tool_type in all_tools:
+        used_cls = "used" if tool_name in used_set else ""
+        status_dot = "✅ " if tool_name in used_set else "○ "
         lines.append(
-            f"<tr><td>SEC-{idx:02d}</td>"
-            f"<td>{_esc(f.get('title',''))}</td>"
-            f"<td><span class='sev sev-{sev}'>{sev}</span></td>"
-            f"<td>{cvss}</td>"
-            f"<td>{_esc(f.get('source_tool',''))}</td></tr>"
+            f"<div class='method-item {used_cls}'>"
+            f"<div class='tool-name'>{status_dot}{_esc(tool_name)}</div>"
+            f"<div class='tool-type'>{_esc(tool_type)}</div>"
+            f"</div>"
         )
-    lines += ["</table></section>"]
+    lines += ["</div>", "</div>"]
 
-    # ── Section 3: Deep Technical Findings ───────────────────────────────────
-    lines += ["<section>", "<h2>&#128736;&#65039; Technical Findings Detail</h2>"]
-    import json as _json
-    for idx, f in enumerate(sorted_f, 1):
-        sev  = f.get("severity", "Info")
-        cve  = f.get("cve_id") or ""
-        cvss = f.get("cvss_score") or ""
-        desc = f.get("description") or ""
-        evid = f.get("evidence") or ""
-        remd = f.get("recommendation") or ""
-        url  = f.get("url") or c["url"]
-        tool = f.get("source_tool") or ""
-        
-        # New enterprise fields
-        b_impact = f.get("business_impact") or ""
-        repro_steps = f.get("reproduction_steps") or ""
-        remd_code = f.get("remediation_code") or ""
-        owasp_cat = f.get("owasp_category") or ""
-        affected = f.get("affected_component") or ""
-        refs_json = f.get("references_json") or ""
-
+    # ── Section 4: Findings Overview Matrix ─────────────────────────────────
+    lines += [
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 4</span>",
+        "<span class='section-title'>Findings Overview Matrix</span>",
+        "</div>",
+    ]
+    if not sorted_f:
+        lines.append("<p style='color:var(--muted);font-style:italic;'>No vulnerabilities identified during this assessment.</p>")
+    else:
         lines += [
-            f"<div class='finding-block {sev}'>",
-            f"<h3>SEC-{idx:02d} &mdash; {_esc(f.get('title',''))}"
-            f" &nbsp;<span class='sev sev-{sev}'>{sev}</span></h3>",
-            f"<p>"
-            f"<span class='tag'>Tool: {_esc(tool)}</span>"
-            + (f"<span class='tag'>CVE: {_esc(cve)}</span>" if cve else "")
-            + (f"<span class='tag'>CVSS: {cvss}</span>" if cvss else "")
-            + f"<span class='tag'>URL: {_esc(url)}</span>"
-            + (f"<span class='tag'>OWASP: {_esc(owasp_cat)}</span>" if owasp_cat else "")
-            + (f"<span class='tag'>Component: {_esc(affected)}</span>" if affected else "")
-            + "</p>",
+            "<table class='data-table'>",
+            "<tr><th>ID</th><th>Title</th><th>Severity</th><th>CVSS</th><th>MITRE</th><th>Tool</th><th>Component</th></tr>",
         ]
+        for idx, f in enumerate(sorted_f, 1):
+            sev   = f.get("severity", "Info")
+            cvss  = f.get("cvss_score") or ""
+            mitre = f.get("mitre_id") or "—"
+            comp  = f.get("affected_component") or "—"
+            lines.append(
+                f"<tr>"
+                f"<td style='font-family:monospace;font-weight:700;color:var(--muted);'>SEC-{idx:03d}</td>"
+                f"<td style='font-weight:600;'>{_esc(f.get('title',''))}</td>"
+                f"<td><span class='sev sev-{sev}'>{sev}</span></td>"
+                f"<td>{f'<span style=\"font-weight:700;\">{cvss}</span>' if cvss else '—'}</td>"
+                f"<td style='font-size:11px;font-family:monospace;color:#6d28d9;'>{_esc(mitre)}</td>"
+                f"<td style='font-size:12px;color:var(--muted);'>{_esc(f.get('source_tool',''))}</td>"
+                f"<td style='font-size:12px;'>{_esc(comp)}</td>"
+                f"</tr>"
+            )
+        lines.append("</table>")
+    lines.append("</div>")
 
-        if b_impact:
+    # ── Section 5: Technical Findings Detail ─────────────────────────────────
+    lines += [
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 5</span>",
+        "<span class='section-title'>Technical Findings — Detail</span>",
+        "</div>",
+    ]
+    if not sorted_f:
+        lines.append("<p style='color:var(--muted);font-style:italic;'>No vulnerabilities to detail for this assessment.</p>")
+    else:
+        for idx, f in enumerate(sorted_f, 1):
+            sev   = f.get("severity", "Info")
+            title = f.get("title", "")
+            cve   = f.get("cve_id") or ""
+            cvss  = f.get("cvss_score") or ""
+            desc  = f.get("description") or ""
+            evid  = f.get("evidence") or ""
+            remd  = f.get("recommendation") or ""
+            url_f = f.get("url") or c["url"]
+            tool  = f.get("source_tool") or ""
+            mitre = f.get("mitre_id") or ""
+            b_imp = f.get("business_impact") or ""
+            repro = f.get("reproduction_steps") or ""
+            code  = f.get("remediation_code") or ""
+            owasp = f.get("owasp_category") or ""
+            comp  = f.get("affected_component") or ""
+            refs_raw = f.get("references_json") or ""
+            conf  = f.get("confidence") or ""
+
             lines += [
-                f"<div style='background:#f9fafb;border:1px solid #e5e7eb;padding:12px;border-radius:6px;margin:12px 0;'>",
-                f"<p style='margin:0;font-weight:600;color:#111827;'>Business Impact &amp; Risk:</p>",
-                f"<p style='margin:4px 0 0 0;font-size:0.88rem;color:#374151;'>{_esc(b_impact)}</p>",
-                f"</div>"
+                "<div class='finding-card'>",
+                f"<div class='finding-card-header sev-{sev}-bg'>",
+                f"<div><div class='finding-id'>SEC-{idx:03d} &nbsp;/&nbsp; {_esc(tool)}</div>",
+                f"<div class='finding-title'>{_esc(title)}</div></div>",
+                f"<div><span class='sev sev-{sev}'>{sev}</span></div>",
+                "</div>",
+                "<div class='finding-body'>",
+                "<div class='finding-meta'>",
             ]
+            if cve:
+                lines.append(f"<span class='tag tag-cve'>CVE: {_esc(cve)}</span>")
+            if cvss:
+                lines.append(f"<span class='tag tag-cvss'>CVSS: {cvss}</span>")
+            if mitre and mitre.lower() not in ("unknown", "none", ""):
+                lines.append(f"<span class='tag tag-mitre'>MITRE: {_esc(mitre)}</span>")
+            if owasp:
+                lines.append(f"<span class='tag'>OWASP: {_esc(owasp)}</span>")
+            if comp:
+                lines.append(f"<span class='tag'>Component: {_esc(comp)}</span>")
+            if conf:
+                lines.append(f"<span class='tag'>Confidence: {conf}%</span>")
+            lines.append(f"<span class='tag'>URL: {_esc(str(url_f)[:80])}</span>")
+            lines.append("</div>")
 
-        lines += [f"<h3>Description</h3><p>{_esc(desc)}</p>"]
+            if desc:
+                lines += [
+                    "<div class='sub-heading'>Description</div>",
+                    f"<div class='prose'>{_esc(desc)}</div>",
+                ]
 
-        if repro_steps:
-            lines += [f"<h3>How to Reproduce (Proof of Concept)</h3><pre>{_esc(repro_steps)}</pre>"]
+            if b_imp:
+                lines += [
+                    "<div class='sub-heading'>Business Impact</div>",
+                    f"<div class='impact-block'>{_esc(b_imp)}</div>",
+                ]
 
-        if evid:
-            lines += [f"<h3>Scan Result Evidence</h3><pre>{_esc(str(evid)[:800])}</pre>"]
+            if repro:
+                lines += [
+                    "<div class='sub-heading'>Proof of Concept / Reproduction Steps</div>",
+                    f"<div class='code-block'>{_esc(repro)}</div>",
+                ]
 
-        if remd:
-            lines += [f"<h3>&#9989; Strategic Recommendation</h3><p>{_esc(remd)}</p>"]
+            if evid:
+                lines += [
+                    "<div class='sub-heading'>Scan Evidence</div>",
+                    f"<div class='evidence-block'>{_esc(str(evid)[:1200])}</div>",
+                ]
 
-        if remd_code:
-            lines += [f"<h3>Remediation Code/Config</h3><pre>{_esc(remd_code)}</pre>"]
+            if remd:
+                lines += [
+                    "<div class='sub-heading'>Remediation Recommendation</div>",
+                    f"<div class='remd-block'>{_esc(remd)}</div>",
+                ]
 
-        if refs_json:
-            try:
-                if isinstance(refs_json, str):
-                    ref_links = _json.loads(refs_json)
-                else:
-                    ref_links = refs_json
-                if ref_links:
-                    lines += ["<h3>References</h3><ul style='margin-left:20px; font-size:0.85rem;'>"]
-                    for link in ref_links:
-                        lines += [f"<li><a href='{link}' target='_blank' style='color:#10b981;'>{_esc(link)}</a></li>"]
-                    lines += ["</ul>"]
-            except Exception:
-                pass
+            if code:
+                lines += [
+                    "<div class='sub-heading'>Remediation Code / Config</div>",
+                    f"<div class='code-block'>{_esc(code)}</div>",
+                ]
 
-        lines += ["</div>"]
-    lines += ["</section>"]
+            if refs_raw:
+                try:
+                    ref_links = _json.loads(refs_raw) if isinstance(refs_raw, str) else refs_raw
+                    if ref_links and isinstance(ref_links, list):
+                        lines += ["<div class='sub-heading'>References</div>", "<ul class='ref-list'>"]
+                        for link in ref_links[:8]:
+                            lines.append(f"<li><a href='{_esc(str(link))}' target='_blank'>{_esc(str(link)[:100])}</a></li>")
+                        lines.append("</ul>")
+                except Exception:
+                    pass
 
-    # ── Section 4: Action Plan ────────────────────────────────────────────────
-    crit_n = counts["Critical"]; high_n = counts["High"]
+            lines += ["</div>", "</div>"]  # finding-body, finding-card
+    lines.append("</div>")  # section
+
+    # ── Section 6: Action Plan ────────────────────────────────────────────────
     lines += [
-        "<section>",
-        "<h2>&#128203; Action Plan &amp; Remediation Timeline</h2>",
-        "<table class='action-table'>",
-        "<tr><th>Window</th><th>Priority</th><th>Items</th></tr>",
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 6</span>",
+        "<span class='section-title'>Action Plan &amp; Remediation Timeline</span>",
+        "</div>",
     ]
-    action_rows = [
-        ("0–24 h",  "aw-critical", "Patch or isolate all Critical-severity findings immediately."),
-        ("72 h",    "aw-72h",      f"Remediate all High-severity findings ({high_n} identified). Deploy WAF rules as interim."),
-        ("2 weeks", "aw-2w",       "Address Medium findings. Apply OS/TLS/header hardening."),
-        ("Ongoing", "aw-ongoing",  "Schedule periodic re-scans. Monitor CVE feeds for new matches on detected technologies."),
+    action_items = [
+        ("aw-imm",  "Immediate (0–24 h)",
+         f"Patch, isolate, or WAF-block all <strong>Critical</strong> findings ({crit_n} identified). "
+         f"Engage incident response if any Critical finding is actively exploited."),
+        ("aw-72h",  "Short-term (72 h)",
+         f"Remediate all <strong>High</strong>-severity findings ({high_n} identified). "
+         f"Deploy WAF rules as temporary mitigations where direct patching is not immediately feasible."),
+        ("aw-2w",   "Medium-term (2 weeks)",
+         f"Address all <strong>Medium</strong>-severity issues ({med_n} identified). "
+         f"Apply OS, TLS version, and HTTP header hardening across the stack."),
+        ("aw-q",    "Quarterly",
+         f"Resolve remaining <strong>Low</strong>/{info_n} informational items and tighten configuration baselines. "
+         f"Schedule developer security training."),
+        ("aw-ong",  "Ongoing",
+         "Maintain automated CVE monitoring for detected technologies. "
+         "Repeat full VAPT every 6 months or after any major infrastructure change. "
+         "Subscribe to CISA KEV and NVD feeds for zero-day alerting."),
     ]
-    for window, cls, text in action_rows:
-        lines.append(
-            f"<tr><td><span class='action-window {cls}'>{window}</span></td>"
-            f"<td>{'Critical' if '24' in window else 'High' if '72' in window else 'Medium' if '2 w' in window else 'All'}</td>"
-            f"<td>{text}</td></tr>"
-        )
-    lines += ["</table></section>"]
+    for cls, window, text in action_items:
+        lines += [
+            "<div class='action-row'>",
+            f"<div class='action-window {cls}'>{window}</div>",
+            f"<div class='action-text'>{text}</div>",
+            "</div>",
+        ]
+    lines.append("</div>")
 
-    # ── Footer ────────────────────────────────────────────────────────────────
+    # ── Section 7: Attestation ────────────────────────────────────────────────
     lines += [
-        "<div class='footer'>",
-        f"<p><strong>Security Management Platform (SMP)</strong></p>",
-        f"<p>Report: SMP_{_esc(site)}_Report_{c['scan_time'][:10]}_{_esc(h16)}.html</p>",
-        f"<p>Verification: <code>{_esc(c_hash[:32]) if c_hash else 'n/a'}&hellip;</code></p>",
-        "<p><em>CONFIDENTIAL &mdash; INTERNAL USE ONLY &mdash; NOT FOR DISTRIBUTION</em></p>",
+        "<div class='section'>",
+        "<div class='section-header'>",
+        "<span class='section-num'>SECTION 7</span>",
+        "<span class='section-title'>Formal Attestation &amp; Report Verification</span>",
+        "</div>",
+        "<table class='data-table' style='margin-bottom:20px;'>",
+        "<tr><th>Field</th><th>Value</th></tr>",
+        f"<tr><td>Lead Penetration Tester</td><td><strong>{tester}</strong></td></tr>",
+        f"<tr><td>QA Reviewer</td><td>{qa_rev}</td></tr>",
+        f"<tr><td>Date of Report</td><td>{scan_dt}</td></tr>",
+        f"<tr><td>Generated By</td><td>Security Management Platform {_esc(smp_ver)}</td></tr>",
+        f"<tr><td>Report Integrity Hash</td><td><code style='font-size:11px;word-break:break-all;'>{_esc(c_hash or '—')}</code></td></tr>",
+        "</table>",
+        "<p style='font-size:12px;color:var(--muted);'>",
+        "This report was generated automatically by Security Management Platform (SMP). "
+        "The content hash above uniquely identifies this report's findings and can be independently "
+        "verified using: <code>python3 tools/verify_report.py &lt;path-to-this-file&gt;</code>. "
+        "Any modification to this document will invalidate the embedded signature.",
+        "</p>",
+        "</div>",
+
+        # ── Footer ────────────────────────────────────────────────────────────
+        "<div class='report-footer'>",
+        f"<strong>Security Management Platform (SMP) {_esc(smp_ver)}</strong><br>",
+        f"Report: SMP_{_esc(site)}_Report_{scan_dt}.html &nbsp;·&nbsp; "
+        f"Hash: <code>{_esc(c_hash[:24]) if c_hash else 'n/a'}…</code><br>",
+        "<em>CONFIDENTIAL — INTERNAL USE ONLY — NOT FOR EXTERNAL DISTRIBUTION</em>",
         "</div>",
         "</div></body></html>",
     ]
@@ -1787,3 +2156,4 @@ def _generate_html_fallback(filepath, ctx):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines))
+

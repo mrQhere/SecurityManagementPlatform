@@ -1,0 +1,29 @@
+{
+  "palette": {
+    "bg":       "#FFFFFF",
+    "surface":  "#F9FAFB",
+    "card":     "#F3F4F6",
+    "border":   "#E5E7EB",
+    "accent":   "#2563EB",
+    "accent2":  "#1D4ED8",
+    "white":    "#111827",
+    "muted":    "#6B7280",
+    "dim":      "#9CA3AF",
+    "crit":     "#DC2626",
+    "high":     "#EA580C",
+    "med":      "#D97706",
+    "low":      "#2563EB",
+    "info":     "#4B5563",
+    "green":    "#059669"
+  },
+  "fonts": {
+    "primary": "Helvetica",
+    "primary_bold": "Helvetica-Bold",
+    "mono": "Courier"
+  },
+  "text": {
+    "header_right": "v{version} | Page {page}",
+    "footer_left": "CONFIDENTIAL DO NOT DISTRIBUTE",
+    "footer_center": "STRICTLY CONFIDENTIAL"
+  }
+}

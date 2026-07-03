@@ -25,7 +25,12 @@
 # =============================================================================
 import os
 import json
-import sqlite3
+try:
+    from pysqlcipher3 import dbapi2 as sqlite3
+    SQLCIPHER_AVAILABLE = True
+except ImportError:
+    import sqlite3
+    SQLCIPHER_AVAILABLE = False
 import shutil
 import time
 import zipfile
@@ -225,6 +230,30 @@ def init_cve_db():
     finally:
         conn.close()
 
+
+def get_cve_db_connection():
+    """Return a direct connection to cve.db for CVE read/write operations.
+    Intelligence modules and add_cve must use this — NOT get_db_connection() —
+    to avoid writing to the wrong database via the ATTACH alias.
+    """
+    init_cve_db()
+    retries = 5
+    delay = 0.5
+    for attempt in range(retries):
+        try:
+            conn = sqlite3.connect(CVE_DB_PATH, timeout=30.0)
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA synchronous = NORMAL;")
+            conn.row_factory = sqlite3.Row
+            return conn
+        except sqlite3.OperationalError as e:
+            if "locked" in str(e).lower() and attempt < retries - 1:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                raise
+
+
 REDUNDANCY_DB_PATH = os.path.join(BASE_DIR, "database", "redundancy.db")
 
 def get_redundancy_connection():
@@ -239,6 +268,19 @@ def get_redundancy_connection():
     for attempt in range(retries):
         try:
             conn = sqlite3.connect(REDUNDANCY_DB_PATH, timeout=30.0)
+            
+            # ── V5.3 — SQLCipher Encryption for redundancy.db ────────────────
+            if SQLCIPHER_AVAILABLE:
+                # Use a default system-wide key for simplicity in redundancy
+                conn.execute("PRAGMA key = 'smp-default-sqlcipher-key';")
+            else:
+                if not getattr(get_redundancy_connection, "_warned", False):
+                    logging.getLogger("smp").warning(
+                        "[Security] pysqlcipher3 not installed! redundancy.db is falling back to unencrypted SQLite. "
+                        "Install pysqlcipher3 for full security."
+                    )
+                    get_redundancy_connection._warned = True
+                    
             conn.execute("PRAGMA foreign_keys = ON;")
             try:
                 conn.execute("PRAGMA journal_mode = WAL;")
@@ -254,8 +296,8 @@ def get_redundancy_connection():
                 except Exception:
                     pass
 
-            if not db_existed:
-                _initialize_db_schema(conn)
+            # Always run migrations (idempotent) so old redundancy DBs get new columns
+            _initialize_db_schema(conn)
             return conn
         except sqlite3.OperationalError as e:
             if "locked" in str(e).lower() and attempt < retries - 1:
@@ -349,7 +391,9 @@ def _initialize_db_schema(conn):
             added_date TEXT NOT NULL,
             last_scan TEXT,
             company_name TEXT,
-            submitted_to TEXT
+            submitted_to TEXT,
+            is_deleted INTEGER DEFAULT 0,
+            deleted_at TEXT
         );
     """)
 
@@ -404,6 +448,13 @@ def _initialize_db_schema(conn):
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
+        
+    # V5.3 seamless upgrade: Soft delete
+    try:
+        cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
+        cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
+    except sqlite3.OperationalError:
+        pass
 
     # Seamless upgrade: Add mitre_id to findings
     try:
@@ -710,23 +761,11 @@ def add_target(url, company_name=None, submitted_to=None):
 
 
 def delete_target(target_id):
-    """Delete a target URL and cascade deletes to scans, findings, alerts."""
+    """Soft delete a target URL."""
     conn = get_db_connection()
     try:
-        # Clean up flat files before deleting
-        rows = conn.execute(
-            "SELECT stdout, stderr FROM raw_scan_output WHERE scan_id IN (SELECT id FROM scans WHERE target_id = ?)",
-            (target_id,)
-        ).fetchall()
-        for r in rows:
-            if r["stdout"] and os.path.exists(r["stdout"]):
-                try: os.remove(r["stdout"])
-                except Exception: pass
-            if r["stderr"] and os.path.exists(r["stderr"]):
-                try: os.remove(r["stderr"])
-                except Exception: pass
-
-        conn.execute("DELETE FROM targets WHERE id = ?", (target_id,))
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute("UPDATE targets SET is_deleted = 1, deleted_at = ? WHERE id = ?", (now, target_id))
         conn.commit()
         _publish_event('target_update', {})
         return True
@@ -763,9 +802,9 @@ def update_target_last_scan(target_id, timestamp):
 
 
 def get_targets():
-    """Retrieve all target URLs."""
+    """Retrieve all target URLs that are not soft-deleted."""
     conn = get_db_connection()
-    rows = conn.execute("SELECT * FROM targets ORDER BY url ASC").fetchall()
+    rows = conn.execute("SELECT * FROM targets WHERE is_deleted = 0 OR is_deleted IS NULL ORDER BY url ASC").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -840,21 +879,25 @@ def get_scan(scan_id):
                 else:
                     conn = get_db_connection()
                 row = conn.execute(
-                    "SELECT t.url FROM targets t WHERE t.id = ?",
+                    "SELECT t.url, t.company_name, t.submitted_to FROM targets t WHERE t.id = ?",
                     (cached["target_id"],)
                 ).fetchone()
                 if row:
                     cached["url"] = row["url"]
+                    cached["company_name"] = row.get("company_name")
+                    cached["submitted_to"] = row.get("submitted_to")
                 return cached
             except Exception:
                 try:
                     conn = get_redundancy_connection()
                     row = conn.execute(
-                        "SELECT t.url FROM targets t WHERE t.id = ?",
+                        "SELECT t.url, t.company_name, t.submitted_to FROM targets t WHERE t.id = ?",
                         (cached["target_id"],)
                     ).fetchone()
                     if row:
                         cached["url"] = row["url"]
+                        cached["company_name"] = row.get("company_name")
+                        cached["submitted_to"] = row.get("submitted_to")
                     return cached
                 except Exception:
                     pass
@@ -869,12 +912,12 @@ def get_scan(scan_id):
             conn = get_redundancy_connection()
         else:
             conn = get_db_connection()
-        row = conn.execute("SELECT scans.*, targets.url FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
+        row = conn.execute("SELECT scans.*, targets.url, targets.company_name, targets.submitted_to FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
         return dict(row) if row else None
     except Exception:
         try:
             conn = get_redundancy_connection()
-            row = conn.execute("SELECT scans.*, targets.url FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
+            row = conn.execute("SELECT scans.*, targets.url, targets.company_name, targets.submitted_to FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
             return dict(row) if row else None
         except Exception:
             return None
@@ -1291,7 +1334,9 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None,
         words = set(w.lower() for w in kw_source.split() if len(w) >= 4 and w.isalpha())
         keywords = " ".join(sorted(words)[:50])
 
-    conn = get_db_connection()
+    # Use direct CVE DB connection — not the main DB where cve_db is attached as alias
+    conn = get_cve_db_connection()
+
     try:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         existing = conn.execute(
@@ -1358,7 +1403,8 @@ def get_cves(search_query="", limit=100, severity_filter=None):
             params.extend([wildcard_q, wildcard_q, wildcard_q, wildcard_q, wildcard_q])
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-        query = f"SELECT * FROM cves {where} ORDER BY id DESC LIMIT ?"
+        # CVE data lives in the attached cve_db database — use cve_db.cves
+        query = f"SELECT * FROM cve_db.cves {where} ORDER BY id DESC LIMIT ?"
         params.append(limit)
 
         rows = conn.execute(query, params).fetchall()
@@ -1372,8 +1418,9 @@ def search_cves_by_keyword(keyword, limit=50):
     conn = get_db_connection()
     try:
         wq = f"%{keyword}%"
+        # CVE data lives in the attached cve_db database — use cve_db.cves
         rows = conn.execute(
-            "SELECT * FROM cves WHERE "
+            "SELECT * FROM cve_db.cves WHERE "
             "cve LIKE ? OR title LIKE ? OR description LIKE ? OR keywords LIKE ? OR affected_products LIKE ? "
             "ORDER BY cvss_score DESC NULLS LAST, id DESC LIMIT ?",
             (wq, wq, wq, wq, wq, limit)
@@ -1387,16 +1434,17 @@ def get_cve_stats():
     """Get metrics about stored CVEs."""
     conn = get_db_connection()
     try:
-        total = conn.execute("SELECT COUNT(*) FROM cves").fetchone()[0]
+        # CVE data lives in the attached cve_db database — use cve_db.cves
+        total = conn.execute("SELECT COUNT(*) FROM cve_db.cves").fetchone()[0]
         today_str = datetime.now().strftime("%Y-%m-%d")
 
         new_today = conn.execute(
-            "SELECT COUNT(*) FROM cves WHERE added_date LIKE ?",
+            "SELECT COUNT(*) FROM cve_db.cves WHERE added_date LIKE ?",
             (f"{today_str}%",)
         ).fetchone()[0]
 
         critical_today = conn.execute(
-            "SELECT COUNT(*) FROM cves WHERE severity IN ('Critical', 'High') AND added_date LIKE ?",
+            "SELECT COUNT(*) FROM cve_db.cves WHERE severity IN ('Critical', 'High') AND added_date LIKE ?",
             (f"{today_str}%",)
         ).fetchone()[0]
 

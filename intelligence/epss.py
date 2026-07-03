@@ -26,7 +26,7 @@
 import logging
 import time
 import requests
-from tools.db_manager import get_db_connection
+from tools.db_manager import get_cve_db_connection
 
 logger = logging.getLogger("smp.cve")
 
@@ -50,7 +50,7 @@ def sync_epss():
     total_updated = 0
     
     while batches_processed < max_batches:
-        conn = get_db_connection()
+        conn = get_cve_db_connection()
         try:
             # Get CVEs without an EPSS score
             # Limit to 100 at a time to respect URI length and API limits
@@ -111,7 +111,7 @@ def sync_epss():
                     except ValueError:
                         pass
                         
-            # Update CVEs that returned no EPSS score to 0.0 or a placeholder so we don't query them again next time
+            # Update CVEs that returned no EPSS score to 0.0 so we don't query them again next time
             cursor.execute("UPDATE cves SET epss_score = 0.0 WHERE epss_score IS NULL AND cve IN ({})".format(','.join(['?']*len(cve_list))), cve_list)
             
             conn.commit()
@@ -132,3 +132,4 @@ def sync_epss():
             
     logger.info(f"EPSS Sync Finished: Enriched {total_updated} CVEs total across {batches_processed} batches.")
     return True
+
