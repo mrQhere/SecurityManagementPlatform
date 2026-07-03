@@ -111,6 +111,12 @@ DEFAULT_SETTINGS = {
     "masscan_path": "masscan",
     "paramspider_path": "paramspider",
     "cloud_enum_path": "cloud_enum",
+    # ── V5.3 — Proxies & Keys & Features ─────────────────────────────────────
+    "http_proxy": "",
+    "https_proxy": "",
+    "shodan_api_key": "",
+    "censys_api_key": "",
+    "cloud_enum_keywords": "",
 }
 
 def init_directories():

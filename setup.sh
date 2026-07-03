@@ -143,6 +143,11 @@ if [ ${#MISSING_APT[@]} -gt 0 ]; then
     done
 fi
 
+if command -v masscan &>/dev/null; then
+    info "Applying setcap for masscan to allow raw sockets..."
+    sudo setcap cap_net_raw+eip $(which masscan) 2>/dev/null || warn "Failed to apply setcap to masscan."
+fi
+
 # ── 6. Go language runtime (auto-download if missing) ────────────────────────
 info "Checking Go installation..."
 GO_VERSION="1.23.4"
@@ -404,10 +409,14 @@ EOF
 if [ -f "$WORDLIST_PATH" ]; then
     success "Wordlist already exists at $WORDLIST_PATH"
 else
-    info "System wordlist missing at $WORDLIST_PATH. Attempting to create it..."
-    if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && echo "$WORDLIST_CONTENT" | sudo tee "$WORDLIST_PATH" >/dev/null; then
-        success "Wordlist successfully installed at $WORDLIST_PATH"
+    info "System wordlist missing at $WORDLIST_PATH. Attempting to download SecLists common.txt..."
+    if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && sudo curl -sS -o "$WORDLIST_PATH" "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt"; then
+        success "SecLists common.txt successfully downloaded to $WORDLIST_PATH"
     else
+        warn "Failed to download SecLists common.txt. Falling back to basic wordlist..."
+        if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && echo "$WORDLIST_CONTENT" | sudo tee "$WORDLIST_PATH" >/dev/null; then
+            success "Basic wordlist successfully installed at $WORDLIST_PATH"
+        else
         warn "Could not write to $WORDLIST_PATH (permissions/sudo unavailable). Generating local fallback wordlist..."
         mkdir -p "$LOCAL_WORDLIST_DIR"
         if echo "$WORDLIST_CONTENT" > "$LOCAL_WORDLIST_PATH"; then

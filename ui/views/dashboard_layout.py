@@ -689,8 +689,8 @@ class DashboardLayoutMixin:
         layout.addLayout(kpi_row)
 
         # Bottom splitter
-        splitter = QSplitter(Qt.Horizontal)
-        splitter.setHandleWidth(1)
+        self.dashboard_splitter = QSplitter(Qt.Horizontal)
+        self.dashboard_splitter.setHandleWidth(1)
 
         # Left: target summary table
         left_card = self._make_card("Target Risk Summary")
@@ -704,25 +704,25 @@ class DashboardLayoutMixin:
         self.tbl_dashboard_targets.setAlternatingRowColors(True)
         self.tbl_dashboard_targets.verticalHeader().setVisible(False)
         left_layout.addWidget(self.tbl_dashboard_targets)
-        splitter.addWidget(left_card)
+        self.dashboard_splitter.addWidget(left_card)
 
         # Right: events feed
         right_card = self._make_card("Recent Security Events")
         right_layout = right_card.layout()
         self.lst_dashboard_updates = QListWidget()
         right_layout.addWidget(self.lst_dashboard_updates)
-        splitter.addWidget(right_card)
+        self.dashboard_splitter.addWidget(right_card)
+        self.dashboard_splitter.setSizes([500, 300])
 
-        splitter.setSizes([700, 400])
-        layout.addWidget(splitter, 1)
+        layout.addWidget(self.dashboard_splitter, 1)
 
         return page
 
     def _scan_all_targets(self):
         """Triggers a scan for all enabled targets."""
-        from tools.db_manager import get_all_targets
+        from tools.db_manager import get_targets
         from scanners.scan_runner import is_target_scanning
-        targets = get_all_targets()
+        targets = get_targets()
         enabled_targets = [t for t in targets if t.get("status") == "Enabled" and not is_target_scanning(t["id"])]
         
         if not enabled_targets:
@@ -862,15 +862,15 @@ class DashboardLayoutMixin:
         scan_card_layout.addWidget(self.lst_scans)
 
         # Vertical splitter — targets on top, scan monitor below
-        splitter = QSplitter(Qt.Vertical)
-        splitter.setHandleWidth(4)
-        splitter.setStyleSheet(
+        self.targets_splitter = QSplitter(Qt.Vertical)
+        self.targets_splitter.setHandleWidth(4)
+        self.targets_splitter.setStyleSheet(
             "QSplitter::handle { background: #1A1A1A; border-radius: 2px; }"
         )
-        splitter.addWidget(tbl_card)
-        splitter.addWidget(scan_card)
-        splitter.setSizes([350, 400])
-        layout.addWidget(splitter, 1)
+        self.targets_splitter.addWidget(tbl_card)
+        self.targets_splitter.addWidget(scan_card)
+        self.targets_splitter.setSizes([350, 400])
+        layout.addWidget(self.targets_splitter, 1)
 
         return page
 
@@ -1049,6 +1049,10 @@ class DashboardLayoutMixin:
         self.txt_tester_name.setPlaceholderText("e.g. John Doe (Security Auditor)")
         make_report_field("Tester / Operator Name", self.txt_tester_name)
 
+        self.txt_qa_reviewer = QLineEdit()
+        self.txt_qa_reviewer.setPlaceholderText("e.g. Jane Doe (QA Manager)")
+        make_report_field("QA Reviewer Name", self.txt_qa_reviewer)
+
         self.txt_report_email = QLineEdit()
         self.txt_report_email.setPlaceholderText("e.g. security@company.com (For auto-sending reports)")
         make_report_field("Report Email Address", self.txt_report_email)
@@ -1099,6 +1103,45 @@ class DashboardLayoutMixin:
         zap_desc.setWordWrap(True)
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
+
+        # ── V5.3 — API Keys & Proxies ──
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V5.3')}")
+        api_layout = api_card.layout()
+
+        def make_api_field(label_text, widget):
+            row = QHBoxLayout()
+            lbl = QLabel(label_text)
+            lbl.setFixedWidth(200)
+            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
+            row.addWidget(lbl)
+            row.addWidget(widget, 1)
+            api_layout.addLayout(row)
+            api_layout.addSpacing(4)
+
+        self.txt_shodan_key = QLineEdit()
+        self.txt_shodan_key.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
+        self.txt_shodan_key.setPlaceholderText("Shodan API Key (Required for deep Shodan scans)")
+        make_api_field("Shodan API Key", self.txt_shodan_key)
+
+        self.txt_censys_key = QLineEdit()
+        self.txt_censys_key.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
+        self.txt_censys_key.setPlaceholderText("Censys API Key / theHarvester config")
+        make_api_field("Censys API Key", self.txt_censys_key)
+        
+        self.txt_github_token = QLineEdit()
+        self.txt_github_token.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
+        self.txt_github_token.setPlaceholderText("GitHub Token (Prevents 403 API rate limits)")
+        make_api_field("GitHub API Token", self.txt_github_token)
+
+        self.txt_http_proxy = QLineEdit()
+        self.txt_http_proxy.setPlaceholderText("http://127.0.0.1:8080")
+        make_api_field("HTTP Proxy", self.txt_http_proxy)
+
+        self.txt_https_proxy = QLineEdit()
+        self.txt_https_proxy.setPlaceholderText("http://127.0.0.1:8080")
+        make_api_field("HTTPS Proxy", self.txt_https_proxy)
+        
+        scroll_layout.addWidget(api_card)
 
         # ── Scan Profile ──
         profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V5.2')}")
@@ -1264,8 +1307,22 @@ class DashboardLayoutMixin:
         self.tbl_reports = QTableWidget()
         self.tbl_reports.setObjectName("reports_table")
         self.tbl_reports.setColumnCount(6)
-        self.tbl_reports.setHorizontalHeaderLabels(["Filename", "Type", "Date Modified", "Size", "Hash Signature", "Action"])
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.tbl_reports.setHorizontalHeaderLabels(["#", "Filename", "Type", "Date Modified", "Size", "Hash Signature", "Action"])
+        self.tbl_reports.setColumnCount(7)
+        self.tbl_reports.setHorizontalHeaderLabels(["#", "Filename", "Type", "Date Modified", "Size", "Hash Signature", "Action"])
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(0, 36)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(2, 60)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(3, 110)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(4, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(4, 80)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(5, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(5, 170)
+        self.tbl_reports.horizontalHeader().setSectionResizeMode(6, QHeaderView.Fixed)
+        self.tbl_reports.setColumnWidth(6, 130)
         self.tbl_reports.setSelectionBehavior(QTableWidget.SelectRows)
         self.tbl_reports.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tbl_reports.setAlternatingRowColors(True)
@@ -1307,7 +1364,7 @@ class DashboardLayoutMixin:
 
     def _refresh_reports_table(self):
         """Populate the Reports table from disk."""
-        import os, platform, subprocess
+        import os, platform, subprocess, hashlib
         from datetime import datetime
         from tools.config_manager import BASE_DIR
         from PySide6.QtWidgets import QTableWidgetItem, QPushButton, QWidget, QHBoxLayout
@@ -1343,45 +1400,70 @@ class DashboardLayoutMixin:
 
         for row_idx, (fname, rtype, mtime, size_str, fpath) in enumerate(entries):
             self.tbl_reports.insertRow(row_idx)
-            self.tbl_reports.setItem(row_idx, 0, QTableWidgetItem(fname))
-            type_item = QTableWidgetItem(rtype)
-            from PySide6.QtGui import QColor
-            type_item.setForeground(QColor("#34C759") if rtype == "HTML" else QColor("#007AFF"))
-            self.tbl_reports.setItem(row_idx, 1, type_item)
-            self.tbl_reports.setItem(row_idx, 2, QTableWidgetItem(mtime))
-            self.tbl_reports.setItem(row_idx, 3, QTableWidgetItem(size_str))
 
-            # Action buttons cell
+            # Col 0: row number
+            num_item = QTableWidgetItem(str(row_idx + 1))
+            num_item.setTextAlignment(Qt.AlignCenter)
+            self.tbl_reports.setItem(row_idx, 0, num_item)
+
+            # Col 1: filename (clickable-looking)
+            from PySide6.QtGui import QColor
+            fname_item = QTableWidgetItem(fname)
+            fname_item.setForeground(QColor("#88BBFF"))
+            self.tbl_reports.setItem(row_idx, 1, fname_item)
+
+            # Col 2: type
+            type_item = QTableWidgetItem(rtype)
+            type_item.setForeground(QColor("#34C759") if rtype == "HTML" else QColor("#007AFF"))
+            type_item.setTextAlignment(Qt.AlignCenter)
+            self.tbl_reports.setItem(row_idx, 2, type_item)
+
+            # Col 3: date
+            self.tbl_reports.setItem(row_idx, 3, QTableWidgetItem(mtime))
+
+            # Col 4: size
+            size_item = QTableWidgetItem(size_str)
+            size_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.tbl_reports.setItem(row_idx, 4, size_item)
+
+            # Col 5: SHA256 hash — compute actual file hash for real verification
+            try:
+                sha256 = hashlib.sha256()
+                with open(fpath, "rb") as _f:
+                    for _chunk in iter(lambda: _f.read(8192), b""):
+                        sha256.update(_chunk)
+                file_hash_display = sha256.hexdigest()[:16] + "…"
+                full_hash = sha256.hexdigest()
+            except Exception:
+                file_hash_display = "N/A"
+                full_hash = ""
+            hash_item = QTableWidgetItem(f"SHA256: {file_hash_display}")
+            hash_item.setForeground(QColor("#88BBFF"))
+            hash_item.setToolTip(f"Full SHA256: {full_hash}" if full_hash else "Could not compute hash")
+            self.tbl_reports.setItem(row_idx, 5, hash_item)
+
+            # Col 6: Action buttons
             action_widget = QWidget()
             action_layout = QHBoxLayout(action_widget)
             action_layout.setContentsMargins(4, 2, 4, 2)
             action_layout.setSpacing(6)
 
             btn_open = QPushButton("Open")
-            btn_open.setFixedHeight(22)
+            btn_open.setFixedHeight(24)
             btn_open.setStyleSheet("background-color: #1A3A1A; color: #34C759; border: 1px solid #1A5C1A; border-radius: 4px; font-size: 11px; padding: 0 8px;")
             btn_open.clicked.connect(lambda _, p=fpath: self._open_report(p))
 
             btn_del = QPushButton("Delete")
-            btn_del.setFixedHeight(22)
+            btn_del.setFixedHeight(24)
             btn_del.setStyleSheet("background-color: #3A0A0A; color: #EF4444; border: 1px solid #7F1D1D; border-radius: 4px; font-size: 11px; padding: 0 8px;")
             btn_del.clicked.connect(lambda _, p=fpath: self._delete_report(p))
-            
-            # Extract Hash from filename
-            import re
-            match = re.search(r'_([a-f0-9]{8})\.pdf$', fname, re.IGNORECASE)
-            file_hash = match.group(1) if match else "N/A"
-            
-            hash_item = QTableWidgetItem(f"SHA256: {file_hash}")
-            hash_item.setForeground(QColor("#88BBFF"))
-            self.tbl_reports.setItem(row_idx, 4, hash_item)
 
             action_layout.addWidget(btn_open)
             action_layout.addWidget(btn_del)
-            action_layout.addStretch()
-            self.tbl_reports.setCellWidget(row_idx, 5, action_widget)
+            self.tbl_reports.setCellWidget(row_idx, 6, action_widget)
 
         self.tbl_reports.resizeRowsToContents()
+
 
     def _open_report(self, path):
         """Open a report file using the system default application."""

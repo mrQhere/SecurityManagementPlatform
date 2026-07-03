@@ -24,11 +24,6 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 from scanners.core.registry import register_scanner
-# =============================================================================
-# PROPRIETARY SOFTWARE — ALL RIGHTS RESERVED
-# Security Management Platform (SMP) — V4.8
-# Owner: Authorised Personnel Only
-# =============================================================================
 """
 WPScan — WordPress Vulnerability Scanner
 ==========================================
@@ -88,16 +83,34 @@ def run_wpscan_scan(url):
 
     logger.info(f"WPScan: WordPress detected at {url}. Starting deep scan.")
 
-    cmd = [
-        bin_path,
-        "--url", url,
-        "--format", "json",
-        "--no-banner",
-        "--random-user-agent",
-        "--throttle", "500",     # 500ms between requests
-        "--enumerate", "vp,vt,u1-5",  # vulnerable plugins, vulnerable themes, users 1-5
-        "--plugins-detection", "passive",
-    ]
+    # ── V5.3 — WPScan Docker Fallback ─────────────────────────────────────────
+    import shutil
+    has_native = shutil.which(bin_path) is not None
+    
+    if has_native:
+        cmd = [
+            bin_path,
+            "--url", url,
+            "--format", "json",
+            "--no-banner",
+            "--random-user-agent",
+            "--throttle", "500",     # 500ms between requests
+            "--enumerate", "vp,vt,u1-5",
+            "--plugins-detection", "passive",
+        ]
+    else:
+        logger.info(f"WPScan: Native binary not found. Falling back to Docker.")
+        cmd = [
+            "docker", "run", "--rm",
+            "wpscanteam/wpscan",
+            "--url", url,
+            "--format", "json",
+            "--no-banner",
+            "--random-user-agent",
+            "--throttle", "500",
+            "--enumerate", "vp,vt,u1-5",
+            "--plugins-detection", "passive",
+        ]
 
     wpscan_api_token = settings.get("wpscan_api_token", "")
     if wpscan_api_token:

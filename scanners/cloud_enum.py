@@ -24,11 +24,6 @@
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
 from scanners.core.registry import register_scanner
-# =============================================================================
-# PROPRIETARY SOFTWARE — ALL RIGHTS RESERVED
-# Security Management Platform (SMP) — V4.8
-# Owner: Authorised Personnel Only
-# =============================================================================
 """
 Cloud Enum — Cloud Asset Enumeration
 ======================================
@@ -63,20 +58,29 @@ def run_cloud_enum_scan(url):
     parsed = urlparse(url)
     domain = parsed.hostname or url.replace("https://", "").replace("http://", "").split("/")[0]
 
-    # Derive keyword from domain (e.g. company name from sub.company.com → company)
+    # ── V5.3 — Custom Keyword List ──────────────────────────────────────────
+    # Derive base keyword from domain (e.g. company name from sub.company.com → company)
     parts = domain.split(".")
-    keyword = parts[-2] if len(parts) >= 2 else parts[0]
+    base_keyword = parts[-2] if len(parts) >= 2 else parts[0]
+    
+    # Check if custom keywords are defined in settings
+    custom_keywords_str = settings.get("cloud_enum_keywords", "")
+    keywords = [k.strip() for k in custom_keywords_str.split(",") if k.strip()]
+    if not keywords:
+        keywords = [base_keyword]
 
-    logger.info(f"Cloud Enum Started: Cloud asset discovery for keyword '{keyword}'")
-    add_log_entry("INFO", f"Cloud Enum Started: Enumerating cloud assets for {domain} (keyword: {keyword})")
+    logger.info(f"Cloud Enum Started: Cloud asset discovery for keywords {keywords}")
+    add_log_entry("INFO", f"Cloud Enum Started: Enumerating cloud assets for {domain} (keywords: {keywords})")
 
     cmd = [
         bin_path,
-        "-k", keyword,
         "--quickscan",
         "-t", "10",    # 10 threads
         "--disable-azure",  # comment out if Azure coverage is needed
     ]
+    
+    for kw in keywords:
+        cmd.extend(["-k", kw])
 
     findings = []
     try:
@@ -92,8 +96,8 @@ def run_cloud_enum_scan(url):
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate()
-            logger.warning(f"Cloud Enum timed out after {CLOUDENUM_TIMEOUT}s for {keyword}")
-            add_log_entry("WARNING", f"Cloud Enum timed out for {keyword}")
+            logger.warning(f"Cloud Enum timed out after {CLOUDENUM_TIMEOUT}s for {keywords}")
+            add_log_entry("WARNING", f"Cloud Enum timed out for {keywords}")
             return []
 
         combined = stdout + "\n" + stderr

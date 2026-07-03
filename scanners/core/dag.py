@@ -70,6 +70,7 @@ class DAGOrchestrator:
         # Initialize a queue for results
         result_queue = queue.Queue()
         threads = {}
+        start_times = {}
         
         def run_plugin(plugin, q, c_event):
             try:
@@ -77,6 +78,12 @@ class DAGOrchestrator:
                 if c_event and c_event.is_set():
                     q.put((plugin.name, None, False, "Cancelled"))
                     return
+                
+                # ── V5.3 — Inter-Request Delay (Rate Limiting) ────────────────
+                # Stagger concurrent tool launches to avoid hammering the target.
+                import time
+                import random
+                time.sleep(random.uniform(1.0, 3.0))
                     
                 # Setup resilient subprocess execution context here if needed...
                 res = plugin.execute()
@@ -110,6 +117,7 @@ class DAGOrchestrator:
                 )
                 threads[plugin.name] = t
                 t.start()
+                start_times[plugin.name] = time.time()
                 logger.info(f"Started plugin: {plugin.name}")
 
             # Wait for at least one thread to finish or just poll
@@ -131,9 +139,17 @@ class DAGOrchestrator:
                     if name in threads:
                         threads[name].join()
                         del threads[name]
-                        
                 except queue.Empty:
-                    pass
+                    current_time = time.time()
+                    for r_name in list(self.running):
+                        if current_time - start_times.get(r_name, current_time) > 3600:
+                            logger.error(f"[{r_name}] CRITICAL: Plugin timed out after 60 minutes. Moving on.")
+                            self.running.remove(r_name)
+                            self.failed.add(r_name)
+                            if r_name in threads:
+                                # We can't safely kill the thread, but we can stop tracking it
+                                del threads[r_name]
+                    continue
             else:
                 # If we have no running processes and no ready plugins, 
                 # we have a dependency deadlock or unresolvable failure graph.

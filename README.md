@@ -1,51 +1,52 @@
 <div align="center">
 
-# 🛡️ Security Management Platform (SMP) v5.2
+# 🛡️ Security Management Platform (SMP) v5.3
 
-![Platform Overview](https://via.placeholder.com/1200x400.png?text=Security+Management+Platform+v5.2+Enterprise)
+![Platform Overview](https://via.placeholder.com/1200x400.png?text=Security+Management+Platform+v5.3+Enterprise)
 
 **An enterprise-grade, multi-process Security Management Platform utilizing a Directed Acyclic Graph (DAG) for high-performance concurrent vulnerability scanning.**
 
-[![Version](https://img.shields.io/badge/version-5.2-blue.svg)](#) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#) [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#) [![Architecture](https://img.shields.io/badge/architecture-DAG%20%7C%20MVC-success.svg)](#) [![Database](https://img.shields.io/badge/database-SQLite%20WAL%20AES--256-orange.svg)](#) [![Self--Healing](https://img.shields.io/badge/tools-Self--Healing%20Installer-brightgreen.svg)](#)
+[![Version](https://img.shields.io/badge/version-5.3-blue.svg)](#) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](#) [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#) [![Architecture](https://img.shields.io/badge/architecture-DAG%20%7C%20MVC-success.svg)](#) [![Database](https://img.shields.io/badge/database-SQLite%20WAL%20AES--256-orange.svg)](#) [![Self--Healing](https://img.shields.io/badge/tools-Self--Healing%20Installer-brightgreen.svg)](#)
 
 </div>
 
 ---
 
-## 🚀 Welcome to V5.2: The Concurrency Update
+## 🚀 Welcome to V5.3: The Stability & Intelligence Update
 
-The Security Management Platform has been entirely re-engineered from the ground up. Moving away from legacy sequential scanning, V5.2 introduces true OS-level multiprocessing powered by a smart **Directed Acyclic Graph (DAG)**.
-
-By calculating tool dependencies in real-time, SMP can now run up to **35 industry-standard security tools concurrently** across isolated processes, completely eliminating UI freezing and reducing scan times by **up to 80%**.
+Building on V5.2's concurrency engine, V5.3 focuses on robustness, professionalism, and security hardening. The DAG Orchestrator now has a **global 60-minute watchdog** that prevents hanging scanners from freezing the pipeline. Email alerts are fully redesigned with responsive HTML templates and dynamic metadata injection. Reports now carry proper company, tester, and QA reviewer metadata on the cover page. All hardcoded tool lists have been replaced with dynamic registry lookups — add a new scanner once and it automatically appears everywhere.
 
 > [!NOTE]
 > **First time here?** Jump straight to the [Quick Start](#-installation--quick-start) section. The entire setup is automated — one `bash setup.sh` and you're done. ☕
 
 ---
 
-### 🔥 Key V5.2 Features
+### 🔥 Key V5.3 Features & New Additions
 
 | Feature | What it does |
 |---|---|
-| 🕸️ **DAG Orchestration** | Resolves dependency graphs, executes non-dependent scanners in fully parallel Python subprocesses |
-| ⚡ **Zero-Latency UDP IPC** | Active-polling eradicated. UI updates via `127.0.0.1:5005` — 98% less idle CPU & Disk I/O |
-| 🧩 **Dynamic Plugin Registry** | Add new scanners with a single `@register_scanner` decorator — zero core modifications |
-| 🏛️ **Strict MVC Architecture** | `ui/views/` + `ui/controllers/` — business logic and UI rendering are perfectly isolated |
-| 🔧 **Self-Healing Tool Installer** | Missing binary? SMP auto-installs it at runtime and retries the scan step automatically |
-| 🔄 **Redundancy Database** | All live scan data is hot-mirrored to a backup DB. If main DB is gone, reports still generate |
-| 🔐 **AES-256 Encryption** | Every database byte is symmetrically encrypted at rest with your Master Password |
+| 🕸️ **DAG Orchestration** | Resolves dependency graphs, executes non-dependent scanners in fully parallel threads |
+| ⏱️ **60-Minute Watchdog** | Hanged scanner threads auto-fail; the pipeline **never freezes** even if a tool locks up |
+| 🔁 **Deferred Retry Queue** | Failed plugins get a second attempt at 1.5× timeout after the main DAG pass |
+| 🧩 **Dynamic Plugin Registry** | Add a scanner with one `@register_scanner` decorator — splash screen, tests, and DAG update automatically |
+| 🏗️ **Strict MVC Architecture** | `ui/views/` + `ui/controllers/` — business logic and UI rendering are perfectly isolated |
+| 🔧 **Self-Healing Installer** | Missing binary? SMP installs it on-the-fly via `pip`, `apt`, or Go, then retries automatically |
+| 🔄 **Redundancy Database** | All live scan data hot-mirrored; if `security.db` is gone, reports still generate from the mirror |
+| 🔐 **AES-256 Encryption** | Every database byte encrypted at rest, including the redundancy DB |
+| 📧 **Professional Email Alerts** | Responsive HTML templates with company, tester & QA metadata — Critical/High summaries only |
+| 📊 **Cover Page Metadata** | Company Name, Lead Tester, and QA Reviewer injected dynamically into every PDF cover page |
 
 ---
 
 ## 🏗️ System Architecture Deep Dive
 
-SMP V5.2 is built on a highly modular, decoupled architecture designed for scale and stability. The system is split into distinct functional domains to ensure fault tolerance.
+SMP V5.3 is built on a highly modular, decoupled architecture designed for scale and stability.
 
 ### 🖥️ The UI & Event Bus
-The frontend is constructed using PySide6. However, unlike traditional desktop applications, the UI acts purely as a "dumb" terminal that listens for events. When a background scan completes a task, the Database Manager emits a JSON payload over a local UDP socket (`127.0.0.1:5005`). The UI catches this payload and triggers a Qt Signal, refreshing the screen instantly.
+The frontend is constructed using PySide6. The UI acts purely as a "dumb" terminal that listens for events. When a background scan completes a task, the Database Manager emits a JSON payload over a local UDP socket (`127.0.0.1:5005`). The UI catches this payload and triggers a Qt Signal, refreshing the screen instantly.
 
-### 🧠 The DAG Execution Engine
-The true power of SMP lies in its Orchestrator. When a scan starts, a new `multiprocessing.Process` is spawned to bypass Python's Global Interpreter Lock (GIL). Inside this process, the Orchestrator analyzes the dependencies of 35 security tools, builds a Directed Acyclic Graph, and launches a ThreadPool to execute them concurrently. If one tool crashes (e.g. out of memory), the Orchestrator safely catches the SIGSEGV and continues executing the remaining branches of the graph.
+### 🧠 The DAG Execution Engine (V5.3 Enhanced)
+The Orchestrator analyses tool dependencies, builds a Directed Acyclic Graph, and launches a thread pool to execute scanners concurrently. **New in V5.3**: each plugin thread has a 60-minute watchdog — if any scanner hangs beyond that, it is marked `failed` and the pipeline continues without losing all subsequent dependent steps.
 
 ### 🔧 Self-Healing at Runtime
 
@@ -136,9 +137,9 @@ bash run.sh
 
 ---
 
-## 🛠️ 35 Integrated Security Modules
+## 🛠️ Integrated Security Modules
 
-SMP acts as a centralized orchestrator for 35 of the world's best open-source security tools. The DAG Engine dynamically maps out their dependencies and executes them concurrently for maximum speed.
+SMP acts as a centralized orchestrator for the world's best open-source security tools. The DAG Engine dynamically maps out their dependencies and executes them concurrently for maximum speed. The tool list grows automatically as new scanners are registered.
 
 | Category | Tools |
 |---|---|
@@ -155,7 +156,7 @@ SMP acts as a centralized orchestrator for 35 of the world's best open-source se
 
 ## 📖 Comprehensive Documentation
 
-For a deep dive into the platform's inner workings, troubleshooting guides, the self-healing installer, the redundancy database lifecycle, and instructions on how to add your own custom tools using the new Plugin Registry, please consult the **[V5.2 USER GUIDE](./USER_GUIDE.md)**.
+For a deep dive into the platform's inner workings, troubleshooting guides, the self-healing installer, the redundancy database lifecycle, and instructions on how to add your own custom tools using the new Plugin Registry, please consult the **[V5.3 USER GUIDE](./USER_GUIDE.md)**.
 
 The User Guide contains **detailed technical documentation** covering every aspect of the platform, with copy-paste code examples, beautiful diagrams, and step-by-step troubleshooting guides.
 
@@ -168,3 +169,60 @@ The User Guide contains **detailed technical documentation** covering every aspe
 > By using this software, you accept sole legal responsibility for all activities performed with it. Ensure you have explicit written authorization before scanning any target.
 
 *Security Management Platform (SMP) © Authorised Personnel Only. All Rights Reserved.*
+
+
+## Changelog — V5.3 Stability & Intelligence Update
+
+> This release resolves every architectural flaw documented in the V5.3 audit. For the full technical details, see [USER_GUIDE.md Part 8](./USER_GUIDE.md).
+
+### 🔒 Security & Reliability
+| Change | Details |
+|--------|---------|
+| SQLCipher Graceful Fallback | Falls back to sqlite3 with UI warning if SQLCipher unavailable |
+| Tool SHA-256 Checksums | All binary downloads verified before execution |
+| Redundancy DB Encryption | SQLCipher PRAGMA now on `redundancy.db` too |
+| WPScan Docker Fallback | Docker used when Ruby/gem missing |
+| Masscan Rootless Setup | `setcap cap_net_raw+eip` in `setup.sh` |
+
+### 🧠 DAG Engine & Robustness
+| Change | Details |
+|--------|---------|
+| 60-Minute Watchdog | Hanging plugins auto-fail; pipeline never freezes |
+| Deferred Retry Queue | Failed DAG steps retried at 1.5× timeout after main pass |
+| Dynamic Plugin Registry | `@register_scanner` auto-populates all consumers |
+| Rate Limiting (Jitter) | Prevents WAF bans during aggressive parallel scans |
+| Universal Proxy Env | All subprocesses inherit `HTTP_PROXY`/`HTTPS_PROXY` |
+| Wapiti Adaptive Timeout | Scales with endpoint count, no longer fixed at 600s |
+
+### 📊 Reports & Email
+| Change | Details |
+|--------|---------|
+| Professional Email Templates | Responsive HTML with metadata card (Company, Tester, QA, Max Severity) |
+| Cover Page Metadata | Company Name & QA Reviewer injected via SQL JOIN on `targets` table |
+| Report Template Config | Layout constants moved to `config/report_template.json` |
+
+### 🖥️ UI & Settings
+| Change | Details |
+|--------|---------|
+| QA Reviewer Field | New globally configurable field in Settings Dashboard |
+| Dynamic Splash Screen | Tool count auto-derived from registry — always accurate |
+| Splitter Persistence | Panel sizes saved/restored across sessions |
+| Target Soft-Delete | 30-day recovery window instead of permanent deletion |
+| API Keys & Proxies UI | Shodan, Censys, GitHub tokens, and HTTP proxy settings |
+
+### 🧪 Testing & CI/CD
+| Change | Details |
+|--------|---------|
+| Resilient Test Suite | `test_10` patches via `scanners.scan_runner` namespace — matches GenericPlugin resolution |
+| Dynamic Test Discovery | All tests iterate live registry, not hardcoded lists |
+| GitHub Actions CI | `verify_smp.py` runs on every push and PR |
+| Weekly Nuclei Updates | `nuclei -update-templates` in scheduler |
+| Log Rotation | `RotatingFileHandler` (10MB, 5 backups) enforced |
+
+### 🧹 Code Quality
+| Change | Details |
+|--------|---------|
+| Proprietary Header Cleanup | Duplicate headers removed from 29+ scanner files |
+| Cloud Enum Keywords | Custom per-target keyword lists |
+| API / Headless Mode | `--api` flag for programmatic scan triggering via FastAPI |
+

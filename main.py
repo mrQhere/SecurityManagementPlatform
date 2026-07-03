@@ -121,6 +121,29 @@ def enforce_license():
         sys.exit(1)
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Security Management Platform")
+    parser.add_argument("--api", action="store_true", help="Run the FastAPI backend server instead of the GUI")
+    args, unknown = parser.parse_known_args()
+    
+    if args.api:
+        print("[*] Starting SMP in Headless API Mode...")
+        enforce_license()
+        enforce_single_instance()
+        init_directories()
+        init_db()
+        setup_logging()
+        
+        try:
+            import uvicorn
+        except ImportError:
+            print("[❌ FATAL] FastAPI/uvicorn not installed. Run: pip install fastapi uvicorn")
+            sys.exit(1)
+            
+        import api.server
+        api.server.start_server()
+        return
+
     enforce_license()
     enforce_single_instance()
     

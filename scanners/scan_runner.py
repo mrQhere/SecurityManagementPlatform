@@ -597,6 +597,16 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     url = target["url"]
     settings = load_settings()
 
+    # ── V5.3 — Global Proxy Configuration ────────────────────────────────────
+    http_proxy = settings.get("http_proxy", "").strip()
+    https_proxy = settings.get("https_proxy", "").strip()
+    if http_proxy:
+        os.environ["HTTP_PROXY"] = http_proxy
+        os.environ["http_proxy"] = http_proxy
+    if https_proxy:
+        os.environ["HTTPS_PROXY"] = https_proxy
+        os.environ["https_proxy"] = https_proxy
+
     # ── MAC Address Randomisation at scan start ───────────────────────────────
     mac_change_ok = False
     if settings.get("mac_changer_enabled", True):
@@ -965,6 +975,10 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         dag_results = orchestrator.run(cancel_event=cancel_event)
         
         # Populate results for Phase 2 correlation
+        for plugin in dag_plugins:
+            if plugin.name in orchestrator.failed:
+                deferred_retry_queue.append((plugin.step_name, plugin.scan_func, plugin.binary_name, plugin.process_func))
+
         # ── Execute Deferred Retry Queue (Improvement 4 & 8) ──────────────
         if deferred_retry_queue:
             logger.info("\n[*] Initial sequence concluded. Re-attempting deferred failures with adaptive timeout balancing...")

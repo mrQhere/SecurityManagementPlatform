@@ -162,14 +162,14 @@ def sync_github_adv():
     On first call: downloads everything. Subsequent calls: checks for advisories
     newer than the last synced GHSA ID.
     """
-    from tools.db_manager import get_db_connection
+    from tools.db_manager import get_cve_db_connection
     from tools.config_manager import load_settings
 
     logger.info("GitHub Advisories Sync Started…")
 
-    conn = get_db_connection()
-    gh_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'GitHub Advisories'").fetchone()[0]
-    conn.close()
+    cve_conn = get_cve_db_connection()
+    gh_count = cve_conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'GitHub Advisories'").fetchone()[0]
+    cve_conn.close()
     
     is_initial = (gh_count == 0)
     settings   = load_settings()

@@ -278,9 +278,10 @@ def sync_nvd():
 
     # If the cache says complete but NVD count is 0 (e.g. DB deleted), reset it
     if initial_sync_complete:
-        conn = get_db_connection()
-        nvd_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'NVD'").fetchone()[0]
-        conn.close()
+        from tools.db_manager import get_cve_db_connection
+        cve_conn = get_cve_db_connection()
+        nvd_count = cve_conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'NVD'").fetchone()[0]
+        cve_conn.close()
         if nvd_count == 0:
             initial_sync_complete = False
             cache["nvd_initial_sync_complete"] = False

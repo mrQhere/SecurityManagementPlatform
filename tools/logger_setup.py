@@ -28,13 +28,18 @@ import logging
 from tools.config_manager import BASE_DIR, init_directories
 from tools.db_manager import add_log_entry
 
-class RecreatingFileHandler(logging.FileHandler):
+import logging.handlers
+
+class RecreatingFileHandler(logging.handlers.RotatingFileHandler):
     """FileHandler that automatically recreates the log file and directories on disk if deleted."""
+    def __init__(self, filename, mode='a', maxBytes=10*1024*1024, backupCount=5, encoding=None, delay=False):
+        super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
+
     def emit(self, record):
         try:
             if not os.path.exists(self.baseFilename):
                 os.makedirs(os.path.dirname(self.baseFilename), exist_ok=True)
-                self.close()
+                self.stream = self._open()
         except Exception:
             pass
         super().emit(record)

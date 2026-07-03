@@ -48,7 +48,12 @@ class StartupWorker(QThread):
         time.sleep(0.5)
 
         # 3. Component Verifier (Tools Check)
-        self.progress.emit(50, "Running Verifier Checker on all 34 tools...")
+        try:
+            from tools.tool_installer import TOOLS
+            tool_count = len(TOOLS)
+        except Exception:
+            tool_count = 34
+        self.progress.emit(50, f"Running Verifier Checker on all {tool_count} tools...")
         try:
             from tools.tool_installer import check_and_install_all
             def _progress_cb(current, total, name):

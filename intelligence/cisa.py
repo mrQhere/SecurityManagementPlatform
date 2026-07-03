@@ -111,12 +111,12 @@ def sync_cisa():
         cache = load_intel_cache()
         local_version = cache.get("cisa_catalog_version", "")
 
-        from tools.db_manager import get_db_connection
+        from tools.db_manager import get_cve_db_connection
         from tools.config_manager import load_settings
 
-        conn = get_db_connection()
-        cisa_count = conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'CISA KEV'").fetchone()[0]
-        conn.close()
+        cve_conn = get_cve_db_connection()
+        cisa_count = cve_conn.execute("SELECT COUNT(*) FROM cves WHERE source = 'CISA KEV'").fetchone()[0]
+        cve_conn.close()
 
         if remote_version and local_version == remote_version:
             # Version unchanged — but still sync in case DB was cleared
