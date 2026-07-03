@@ -637,7 +637,7 @@ class DashboardLayoutMixin:
         layout.addStretch()
 
         # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V5.2')} • SMP Console")
+        ver = QLabel(f"{getattr(self, 'version', 'V5.4')} • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -1105,7 +1105,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(zap_card)
 
         # ── V5.3 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V5.3')}")
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V5.4')}")
         api_layout = api_card.layout()
 
         def make_api_field(label_text, widget):
@@ -1144,7 +1144,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(api_card)
 
         # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V5.2')}")
+        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V5.4')}")
         profile_layout = profile_card.layout()
         profile_desc = QLabel(
             "Controls which scanner steps run. Fast = passive OSINT only. "
@@ -1178,7 +1178,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(profile_card)
 
         # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V5.2')}")
+        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V5.4')}")
         auth_layout = auth_card.layout()
         auth_desc = QLabel(
             "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "

@@ -51,7 +51,7 @@ _SENSITIVE_PATTERNS = [
 ]
 
 
-@register_scanner(name="Katana", step_name="Running Katana", depends_on=['DNSx'], binary_name="katana", needs_binary=True, confidence=90)
+@register_scanner(name="Katana", step_name="Running Katana", depends_on=['HTTPx'], binary_name="katana", needs_binary=True, confidence=90)
 def run_katana_scan(url):
     """
     Runs Katana web crawler against the target URL.
