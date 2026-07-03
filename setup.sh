@@ -324,124 +324,321 @@ if command -v nuclei &>/dev/null; then
         || warn "Nuclei template update failed (non-critical; templates update on first run)."
 fi
 
-# ── 9. OWASP ZAP (optional – too large for auto-download) ────────────────────
-if ! command -v zaproxy &>/dev/null; then
-    info "OWASP ZAP not detected (OPTIONAL – active scanning)."
-    info "Download from: https://www.zaproxy.org/download/"
-    info "Then enable ZAP active scanning in the System Settings UI."
-fi
+# ── 9. Additional binary tools (dalfox, dnsx, katana, feroxbuster, trufflehog, trivy, amass) ──
+info "Installing additional binary tools..."
 
-# ── 9.5 Wordlist Provisioning ───────────────────────────────────────────────
-info "Provisioning wordlist..."
-WORDLIST_PATH="/usr/share/wordlists/dirb/common.txt"
-WORDLIST_DIR="/usr/share/wordlists/dirb"
-LOCAL_WORDLIST_DIR="$SCRIPT_DIR/config"
-LOCAL_WORDLIST_PATH="$LOCAL_WORDLIST_DIR/common.txt"
+# Architecture tag for downloads
+_DARCH="amd64"
+[ "$GO_ARCH" = "arm64" ] && _DARCH="arm64"
 
-WORDLIST_CONTENT=$(cat << 'EOF'
-admin
-login
-dashboard
-panel
-wp-admin
-api
-config
-backup
-uploads
-static
-assets
-images
-files
-docs
-test
-dev
-staging
-phpmyadmin
-db
-database
-.git
-.env
-robots.txt
-sitemap.xml
-wp-config.php
-config.php
-web.config
-server-status
-server-info
-console
-manager
-administrator
-user
-users
-account
-accounts
-register
-signup
-signin
-logout
-profile
-settings
-setup
-install
-update
-upgrade
-download
-export
-import
-cgi-bin
-scripts
-js
-css
-src
-include
-includes
-lib
-libs
-vendor
-node_modules
-tmp
-temp
-log
-logs
-EOF
-)
-
-if [ -f "$WORDLIST_PATH" ]; then
-    success "Wordlist already exists at $WORDLIST_PATH"
-else
-    info "System wordlist missing at $WORDLIST_PATH. Attempting to download SecLists common.txt..."
-    if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && sudo curl -sS -o "$WORDLIST_PATH" "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt"; then
-        success "SecLists common.txt successfully downloaded to $WORDLIST_PATH"
+# ── Helper: download + extract any binary to BIN_DIR ──────────────────────────
+_download_extra_binary() {
+    local name="$1" url="$2"
+    if command -v "$name" &>/dev/null || [ -x "$BIN_DIR/$name" ]; then
+        success "$name already installed at $(command -v "$name" 2>/dev/null || echo "$BIN_DIR/$name")"
+        return 0
+    fi
+    local tmpdir; tmpdir=$(mktemp -d)
+    local tmpfile="$tmpdir/archive"
+    info "Downloading $name..."
+    if curl -fsSL "$url" -o "$tmpfile" 2>/dev/null || wget -q "$url" -O "$tmpfile" 2>/dev/null; then
+        if [[ "$url" == *.zip ]]; then
+            command -v unzip &>/dev/null || sudo apt-get install -y unzip -qq 2>/dev/null
+            unzip -q "$tmpfile" -d "$tmpdir" 2>/dev/null
+        elif [[ "$url" == *.tar.gz ]] || [[ "$url" == *.tgz ]]; then
+            tar -xzf "$tmpfile" -C "$tmpdir" 2>/dev/null
+        elif [[ "$url" == *.tar.xz ]]; then
+            tar -xJf "$tmpfile" -C "$tmpdir" 2>/dev/null
+        elif [[ "$url" == *.deb ]]; then
+            sudo dpkg -i "$tmpfile" 2>/dev/null && rm -rf "$tmpdir" && success "$name installed via deb." && return 0
+        else
+            cp "$tmpfile" "$BIN_DIR/$name" && chmod +x "$BIN_DIR/$name"
+            rm -rf "$tmpdir"; success "$name installed."; return 0
+        fi
+        local found; found=$(find "$tmpdir" -maxdepth 4 -type f -name "$name" 2>/dev/null | head -1)
+        if [ -n "$found" ]; then
+            cp "$found" "$BIN_DIR/$name" && chmod +x "$BIN_DIR/$name"
+            rm -rf "$tmpdir"; success "$name installed to $BIN_DIR/$name"; return 0
+        else
+            warn "$name binary not found inside archive."; rm -rf "$tmpdir"; return 1
+        fi
     else
-        warn "Failed to download SecLists common.txt. Falling back to basic wordlist..."
-        if sudo mkdir -p "$WORDLIST_DIR" 2>/dev/null && echo "$WORDLIST_CONTENT" | sudo tee "$WORDLIST_PATH" >/dev/null; then
-            success "Basic wordlist successfully installed at $WORDLIST_PATH"
-        else
-        warn "Could not write to $WORDLIST_PATH (permissions/sudo unavailable). Generating local fallback wordlist..."
-        mkdir -p "$LOCAL_WORDLIST_DIR"
-        if echo "$WORDLIST_CONTENT" > "$LOCAL_WORDLIST_PATH"; then
-            success "Local fallback wordlist compiled at $LOCAL_WORDLIST_PATH"
-            SETTINGS_FILE="$SCRIPT_DIR/config/settings.json"
-            mkdir -p "$SCRIPT_DIR/config"
-            if [ ! -f "$SETTINGS_FILE" ]; then
-                cat > "$SETTINGS_FILE" << EOF
-{
-    "ffuf_wordlist": "$LOCAL_WORDLIST_PATH"
+        warn "Failed to download $name."; rm -rf "$tmpdir"; return 1
+    fi
 }
-EOF
-            else
-                if "$VENV_PYTHON" -c "import json; f='$SETTINGS_FILE'; d=json.load(open(f)) if open(f).read().strip() else {}; d['ffuf_wordlist']='$LOCAL_WORDLIST_PATH'; json.dump(d,open(f,'w'),indent=4)" 2>/dev/null; then
-                    success "Updated settings.json to use local wordlist path."
-                else
-                    sed -i "s|\"/usr/share/wordlists/dirb/common.txt\"|\"$LOCAL_WORDLIST_PATH\"|g" "$SETTINGS_FILE" 2>/dev/null
-                fi
-            fi
-        else
-            err "Failed to write local fallback wordlist."
-            SYSTEM_ERRORS+=("Failed to create fallback wordlist")
+
+# ── Go-install extras (if Go available) ───────────────────────────────────────
+_go_install_extra() {
+    local name="$1" pkg="$2"
+    if command -v "$name" &>/dev/null || [ -x "$BIN_DIR/$name" ]; then
+        success "$name already installed."
+        return 0
+    fi
+    if [ -n "$GO_BIN" ] && [ -x "$GO_BIN" ]; then
+        info "go install $name..."
+        if "$GO_BIN" install "$pkg" 2>/dev/null; then
+            # Copy from GOPATH/bin to project bin/
+            SRC="$HOME/go/bin/$name"
+            [ -f "$SRC" ] && cp "$SRC" "$BIN_DIR/$name" && chmod +x "$BIN_DIR/$name"
+            success "$name installed via go install."
+            return 0
         fi
     fi
+    return 1
+}
+
+# Dalfox
+_go_install_extra "dalfox" "github.com/hahwul/dalfox/v2@latest" || \
+_download_extra_binary "dalfox" "https://github.com/hahwul/dalfox/releases/download/v2.9.1/dalfox_linux_${_DARCH}.tar.gz" || \
+{ warn "dalfox install failed (non-critical)."; SYSTEM_ERRORS+=("dalfox install failed"); }
+
+# DNSx
+_go_install_extra "dnsx" "github.com/projectdiscovery/dnsx/cmd/dnsx@latest" || \
+_download_extra_binary "dnsx" "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_${_DARCH}.zip" || \
+{ warn "dnsx install failed (non-critical)."; SYSTEM_ERRORS+=("dnsx install failed"); }
+
+# Katana
+_go_install_extra "katana" "github.com/projectdiscovery/katana/cmd/katana@latest" || \
+_download_extra_binary "katana" "https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_${_DARCH}.zip" || \
+{ warn "katana install failed (non-critical)."; SYSTEM_ERRORS+=("katana install failed"); }
+
+# Feroxbuster
+if [ "$_DARCH" = "amd64" ]; then
+    _download_extra_binary "feroxbuster" "https://github.com/epi052/feroxbuster/releases/download/v2.10.4/x86_64-linux-feroxbuster.tar.gz" || \
+    { warn "feroxbuster install failed (non-critical)."; SYSTEM_ERRORS+=("feroxbuster install failed"); }
+else
+    _download_extra_binary "feroxbuster" "https://github.com/epi052/feroxbuster/releases/download/v2.10.4/aarch64-linux-feroxbuster.tar.gz" || \
+    { warn "feroxbuster install failed (non-critical)."; SYSTEM_ERRORS+=("feroxbuster install failed"); }
 fi
+
+# TruffleHog
+_go_install_extra "trufflehog" "github.com/trufflesecurity/trufflehog/v3@latest" || \
+_download_extra_binary "trufflehog" "https://github.com/trufflesecurity/trufflehog/releases/download/v3.82.6/trufflehog_3.82.6_linux_${_DARCH}.tar.gz" || \
+{ warn "trufflehog install failed (non-critical)."; SYSTEM_ERRORS+=("trufflehog install failed"); }
+
+# Trivy
+_download_extra_binary "trivy" "https://github.com/aquasecurity/trivy/releases/download/v0.58.1/trivy_0.58.1_Linux-64bit.tar.gz" || \
+{ warn "trivy install failed (non-critical)."; SYSTEM_ERRORS+=("trivy install failed"); }
+
+# Amass
+_download_extra_binary "amass" "https://github.com/owasp-amass/amass/releases/download/v4.2.0/amass_linux_${_DARCH}.zip" || \
+{ warn "amass install failed (non-critical)."; SYSTEM_ERRORS+=("amass install failed"); }
+
+# ParamSpider (Python tool – pip install)
+if ! command -v paramspider &>/dev/null; then
+    info "Installing ParamSpider via pip..."
+    "$VENV_PIP" install --quiet paramspider 2>/dev/null \
+        && success "paramspider installed." \
+        || warn "paramspider pip install failed."
+fi
+
+# cloud-enum (Python tool – pip install)
+if ! command -v cloud_enum &>/dev/null && ! "$VENV_PYTHON" -c "import cloud_enum" 2>/dev/null; then
+    info "Installing cloud-enum via pip..."
+    "$VENV_PIP" install --quiet cloud-enum 2>/dev/null || true
+fi
+
+# jwt_tool (Python tool – pip install)
+if ! "$VENV_PYTHON" -c "import jwt_tool" 2>/dev/null; then
+    info "Installing jwt_tool via pip..."
+    "$VENV_PIP" install --quiet jwt_tool 2>/dev/null || true
+fi
+
+# Extra pip packages (FastAPI, uvicorn for API mode)
+info "Installing FastAPI/uvicorn for --api headless mode..."
+"$VENV_PIP" install --quiet fastapi uvicorn 2>/dev/null \
+    && success "fastapi + uvicorn installed." \
+    || warn "fastapi/uvicorn install failed (--api mode will be unavailable)."
+
+# Extra pip packages (semgrep, arjun, commix, requests-futures, colorama, dnspython)
+info "Installing additional Python scanner packages..."
+"$VENV_PIP" install --quiet \
+    arjun commix semgrep \
+    requests-futures colorama dnspython \
+    2>/dev/null \
+    && success "Additional Python scanner packages installed." \
+    || warn "Some additional Python packages failed to install."
+
+# OWASP ZAP (optional – too large for auto-download, but inform user)
+if ! command -v zaproxy &>/dev/null; then
+    warn "OWASP ZAP not detected (OPTIONAL – active scanning)."
+    warn "To install ZAP: sudo snap install zaproxy --classic"
+    warn "Or download from: https://www.zaproxy.org/download/"
+fi
+
+# ── 9.5 Wordlist Provisioning — Download ALL major wordlists ─────────────────
+info "Provisioning wordlists (downloading SecLists...)..."
+
+# Project-local wordlists directory (always writable, no sudo needed)
+WL_DIR="$SCRIPT_DIR/wordlists"
+mkdir -p "$WL_DIR"
+
+# System path (preferred if writable)
+SYS_WL_DIR="/usr/share/wordlists"
+SYS_DIRB_DIR="/usr/share/wordlists/dirb"
+
+# SecLists raw base URL
+SECLISTS_RAW="https://raw.githubusercontent.com/danielmiessler/SecLists/master"
+
+# ── Download helper ────────────────────────────────────────────────────────────
+_dl_wordlist() {
+    local dest="$1" url="$2" label="$3"
+    if [ -f "$dest" ] && [ -s "$dest" ]; then
+        success "Wordlist already exists: $label"
+        return 0
+    fi
+    mkdir -p "$(dirname "$dest")"
+    if curl -fsSL --connect-timeout 15 --max-time 120 "$url" -o "$dest" 2>/dev/null && [ -s "$dest" ]; then
+        success "Downloaded: $label → $(basename "$dest") ($(wc -l < "$dest") lines)"
+        return 0
+    else
+        warn "Failed to download: $label"
+        rm -f "$dest"
+        return 1
+    fi
+}
+
+# ── 1. Web content discovery ──────────────────────────────────────────────────
+_dl_wordlist "$WL_DIR/common.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/common.txt" \
+    "SecLists common.txt"
+
+_dl_wordlist "$WL_DIR/big.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/big.txt" \
+    "SecLists big.txt"
+
+_dl_wordlist "$WL_DIR/directory-list-2.3-small.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/directory-list-2.3-small.txt" \
+    "directory-list-2.3-small.txt"
+
+_dl_wordlist "$WL_DIR/directory-list-2.3-medium.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/directory-list-2.3-medium.txt" \
+    "directory-list-2.3-medium.txt"
+
+_dl_wordlist "$WL_DIR/raft-large-directories.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/raft-large-directories.txt" \
+    "raft-large-directories.txt"
+
+_dl_wordlist "$WL_DIR/raft-medium-files.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/raft-medium-files.txt" \
+    "raft-medium-files.txt"
+
+# ── 2. API endpoints ──────────────────────────────────────────────────────────
+_dl_wordlist "$WL_DIR/api-endpoints.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/api/api-endpoints.txt" \
+    "API endpoints"
+
+_dl_wordlist "$WL_DIR/api-seen-in-wild.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/api/api-seen-in-wild.txt" \
+    "API seen in wild"
+
+# ── 3. Fuzzing / parameters ───────────────────────────────────────────────────
+_dl_wordlist "$WL_DIR/LFI-linux-etc.txt" \
+    "$SECLISTS_RAW/Fuzzing/LFI/LFI-linux-etc.txt" \
+    "LFI Linux paths"
+
+_dl_wordlist "$WL_DIR/burp-parameter-names.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/burp-parameter-names.txt" \
+    "Burp parameter names"
+
+_dl_wordlist "$WL_DIR/params.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/SVNDigger/all.txt" \
+    "SVNDigger all paths"
+
+# ── 4. Subdomains / DNS ───────────────────────────────────────────────────────
+_dl_wordlist "$WL_DIR/subdomains-top1million-5000.txt" \
+    "$SECLISTS_RAW/Discovery/DNS/subdomains-top1million-5000.txt" \
+    "Subdomains top 5000"
+
+_dl_wordlist "$WL_DIR/subdomains-top1million-20000.txt" \
+    "$SECLISTS_RAW/Discovery/DNS/subdomains-top1million-20000.txt" \
+    "Subdomains top 20000"
+
+_dl_wordlist "$WL_DIR/bitquark-subdomains-top100000.txt" \
+    "$SECLISTS_RAW/Discovery/DNS/bitquark-subdomains-top100000.txt" \
+    "Bitquark subdomains top 100k"
+
+# ── 5. Passwords / creds (for authenticated testing) ─────────────────────────
+_dl_wordlist "$WL_DIR/rockyou-75.txt" \
+    "$SECLISTS_RAW/Passwords/Leaked-Databases/rockyou-75.txt" \
+    "rockyou-75 (top 75 passwords)"
+
+_dl_wordlist "$WL_DIR/10k-most-common.txt" \
+    "$SECLISTS_RAW/Passwords/Common-Credentials/10k-most-common.txt" \
+    "10k most common passwords"
+
+_dl_wordlist "$WL_DIR/10-million-password-list-top-1000.txt" \
+    "$SECLISTS_RAW/Passwords/Common-Credentials/10-million-password-list-top-1000.txt" \
+    "10M password list top 1000"
+
+# ── 6. Web shells / backdoors (detection wordlist) ───────────────────────────
+_dl_wordlist "$WL_DIR/web-shells.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/web-extensions.txt" \
+    "Web extensions / shells"
+
+_dl_wordlist "$WL_DIR/sensitive-files.txt" \
+    "$SECLISTS_RAW/Discovery/Web-Content/Combined_Words.txt" \
+    "Sensitive files combined"
+
+# ── 7. Symlink system wordlists → project wordlists (best-effort) ─────────────
+# Make system wordlists available if we have sudo
+if sudo mkdir -p "$SYS_DIRB_DIR" 2>/dev/null; then
+    for wl in common.txt big.txt; do
+        if [ -f "$WL_DIR/$wl" ] && [ ! -f "$SYS_DIRB_DIR/$wl" ]; then
+            sudo cp "$WL_DIR/$wl" "$SYS_DIRB_DIR/$wl" 2>/dev/null && success "Copied $wl to $SYS_DIRB_DIR/$wl"
+        fi
+    done
+fi
+
+# ── 8. Update settings.json with best available wordlist path ─────────────────
+SETTINGS_FILE="$SCRIPT_DIR/config/settings.json"
+mkdir -p "$SCRIPT_DIR/config"
+
+# Determine best wordlist: prefer system path if it exists, else local
+BEST_WL="$WL_DIR/common.txt"
+[ -f "$SYS_DIRB_DIR/common.txt" ] && BEST_WL="$SYS_DIRB_DIR/common.txt"
+
+# If even local download failed, write the built-in emergency wordlist
+if [ ! -f "$BEST_WL" ] || [ ! -s "$BEST_WL" ]; then
+    warn "All SecLists downloads failed. Writing emergency built-in wordlist..."
+    cat > "$WL_DIR/common.txt" << 'EWEOF'
+admin login dashboard panel wp-admin api config backup uploads static assets images files docs test dev staging phpmyadmin db database .git .env robots.txt sitemap.xml wp-config.php config.php web.config server-status server-info console manager administrator user users account accounts register signup signin logout profile settings setup install update upgrade download export import cgi-bin scripts js css src include includes lib libs vendor node_modules tmp temp log logs api/v1 api/v2 api/v3 graphql swagger swagger.json openapi.json .well-known actuator metrics health status debug trace info version shell cmd upload share data search query ajax feed rss xmlrpc.php xmlrpc readme readme.txt readme.html license license.txt changelog sitemap xmlrpc.php .htaccess .htpasswd index.php index.html
+EWEOF
+    # Expand space-separated to one per line
+    tr ' ' '\n' < "$WL_DIR/common.txt" > "$WL_DIR/common.txt.tmp" && mv "$WL_DIR/common.txt.tmp" "$WL_DIR/common.txt"
+    BEST_WL="$WL_DIR/common.txt"
+    success "Emergency built-in wordlist written to $BEST_WL"
+fi
+
+# Write best wordlist path to settings.json
+if [ -f "$SETTINGS_FILE" ] && [ -s "$SETTINGS_FILE" ]; then
+    "$VENV_PYTHON" -c "
+import json, sys
+f = '$SETTINGS_FILE'
+try:
+    d = json.load(open(f)) if open(f).read().strip() else {}
+except Exception:
+    d = {}
+d['ffuf_wordlist'] = '$BEST_WL'
+d['wordlists_dir'] = '$WL_DIR'
+json.dump(d, open(f, 'w'), indent=4)
+print('  settings.json updated with wordlist paths.')
+" 2>/dev/null && success "Updated settings.json: ffuf_wordlist=$BEST_WL" \
+    || warn "Could not update settings.json automatically."
+else
+    cat > "$SETTINGS_FILE" << EOF
+{
+    "ffuf_wordlist": "$BEST_WL",
+    "wordlists_dir": "$WL_DIR"
+}
+EOF
+    success "Created settings.json with wordlist paths."
+fi
+
+info "Wordlist summary:"
+info "  Primary:   $BEST_WL"
+info "  Directory: $WL_DIR  ($(ls "$WL_DIR" 2>/dev/null | wc -l) wordlists downloaded)"
+
 
 # ── 10. Create run.sh ─────────────────────────────────────────────────────────
 cat > "$SCRIPT_DIR/run.sh" << 'RUNEOF'
