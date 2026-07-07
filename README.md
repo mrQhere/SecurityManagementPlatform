@@ -2,7 +2,7 @@
 
 #  Security Management Platform (SMP) v5.4
 
-![Platform Overview](https://via.placeholder.com/1200x400.png?text=Security+Management+Platform+v5.4+Enterprise)
+
 
 **An enterprise-grade, multi-process Security Management Platform utilizing a Directed Acyclic Graph (DAG) for high-performance concurrent vulnerability scanning.**
 
