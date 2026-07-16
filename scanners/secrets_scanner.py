@@ -19,6 +19,9 @@ import re
 import logging
 import hashlib
 import math
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -140,7 +143,7 @@ def run_secrets_scan(url: str) -> list:
         session.headers["User-Agent"] = "SMP-SecretsScanner/6.0"
 
         # Scan main page
-        resp = session.get(url, timeout=TIMEOUT, verify=False)
+        resp = session.get(url, timeout=TIMEOUT, verify=verify_tls)
         findings += _scan_text(resp.text, url)
 
         # Also scan common JS paths
@@ -148,7 +151,7 @@ def run_secrets_scan(url: str) -> list:
         for path in js_paths:
             try:
                 js_url = url.rstrip("/") + path
-                js_resp = session.get(js_url, timeout=5, verify=False)
+                js_resp = session.get(js_url, timeout=5, verify=verify_tls)
                 if js_resp.status_code == 200 and "javascript" in js_resp.headers.get("content-type", ""):
                     findings += _scan_text(js_resp.text, js_url)
             except Exception:

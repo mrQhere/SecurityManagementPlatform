@@ -36,6 +36,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -80,7 +83,7 @@ def run_robots_scan(url):
     # ── Fetch robots.txt ────────────────────────────────────────────────────
     try:
         robots_url = f"{base}/robots.txt"
-        resp = session.get(robots_url, timeout=ROBOTS_TIMEOUT, verify=False)
+        resp = session.get(robots_url, timeout=ROBOTS_TIMEOUT, verify=verify_tls)
 
         if resp.status_code == 200:
             robots_content = resp.text
@@ -148,7 +151,7 @@ def run_robots_scan(url):
     # ── Fetch sitemap.xml ────────────────────────────────────────────────────
     try:
         sitemap_url = f"{base}/sitemap.xml"
-        resp = session.get(sitemap_url, timeout=ROBOTS_TIMEOUT, verify=False)
+        resp = session.get(sitemap_url, timeout=ROBOTS_TIMEOUT, verify=verify_tls)
 
         if resp.status_code == 200:
             content = resp.text

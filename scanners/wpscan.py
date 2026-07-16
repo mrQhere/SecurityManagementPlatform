@@ -38,6 +38,9 @@ import json
 import logging
 from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -48,7 +51,7 @@ def _is_wordpress(url):
     """Quick check to see if the target appears to be WordPress."""
     try:
         import requests
-        resp = requests.get(url, timeout=10, verify=False)
+        resp = requests.get(url, timeout=10, verify=verify_tls)
         indicators = [
             "wp-content",
             "wp-includes",

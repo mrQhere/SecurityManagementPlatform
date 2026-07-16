@@ -36,6 +36,9 @@ import shutil
 import requests
 from urllib.parse import urlparse
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -66,7 +69,7 @@ def run_gitleaks_scan(url):
     git_url = f"{url.rstrip('/')}/.git/config"
     exposed = False
     try:
-        resp = requests.get(git_url, timeout=10, verify=False, allow_redirects=False)
+        resp = requests.get(git_url, timeout=10, verify=verify_tls, allow_redirects=False)
         if resp.status_code == 200 and ("repositoryformatversion" in resp.text or "[core]" in resp.text):
             exposed = True
             desc = (

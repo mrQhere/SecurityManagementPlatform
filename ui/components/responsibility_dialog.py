@@ -23,15 +23,17 @@
 # ║  Read USER_GUIDE.md in the project root before making ANY changes.       ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 # =============================================================================
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QCheckBox, QPushButton, QMessageBox
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
 from PySide6.QtCore import Qt
-from tools.responsibility_manager import load_responsibility_flag, set_responsibility_flag
+from tools.responsibility_manager import set_target_attestation
 
 class ResponsibilityDialog(QDialog):
     """Show a disclaimer and require the user to accept responsibility before using the tool."""
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, target=None):
         super().__init__(parent)
-        self.setWindowTitle("Legal Responsibility & Usage Terms")
+        self.target = target
+        target_url = self.target.get('url', 'this target') if self.target else 'this target'
+        self.setWindowTitle(f"Legal Responsibility - {target_url}")
         self.setFixedSize(500, 350)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)
 
@@ -43,21 +45,12 @@ class ResponsibilityDialog(QDialog):
                 font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
             }
             QLabel { color: #AAAAAA; font-size: 13px; background: transparent; }
-            QCheckBox { color: #CCCCCC; font-size: 13px; spacing: 10px; }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-                border-radius: 4px;
-                border: 1.5px solid #555555;
+            QLineEdit {
                 background-color: #111111;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #888888;
-                background-color: #1A1A1A;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #D8D8D8;
-                border: 2px solid #BBBBBB;
+                border: 1px solid #555555;
+                color: #FFFFFF;
+                padding: 5px;
+                border-radius: 4px;
             }
             QPushButton {
                 background-color: #1E1E1E;
@@ -77,17 +70,23 @@ class ResponsibilityDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(12)
 
+        target_url = self.target.get('url', 'this target') if self.target else 'this target'
         disclaimer = (
-            "By using Security Management Platform you acknowledge that you are fully responsible "
+            f"By scanning {target_url}, you acknowledge that you are fully responsible "
             "for any consequences, data loss, security incidents, or legal ramifications that may "
-            "arise from its use. The developers provide no warranty or liability."
+            "arise. The developers provide no warranty or liability."
         )
         lbl = QLabel(disclaimer)
         lbl.setWordWrap(True)
         layout.addWidget(lbl)
 
-        self.chk_accept = QCheckBox("I have read and accept the responsibility disclaimer.")
-        layout.addWidget(self.chk_accept)
+        instruction = QLabel("Type exactly: 'I accept full legal responsibility for scanning this target.'")
+        instruction.setStyleSheet("color: #FF5555; font-weight: bold;")
+        layout.addWidget(instruction)
+
+        self.txt_accept = QLineEdit()
+        self.txt_accept.setPlaceholderText("Type the sentence here...")
+        layout.addWidget(self.txt_accept)
 
         # Privacy policy link
         self.lbl_policy_link = QLabel('<a href="#" style="color: #2563EB; text-decoration: none;">Read our Privacy Policy & Legal Terms</a>')
@@ -132,8 +131,14 @@ class ResponsibilityDialog(QDialog):
             self.setFixedSize(500, 250)
 
     def _on_accept(self):
-        if not self.chk_accept.isChecked():
-            QMessageBox.warning(self, "Acceptance Required", "You must check the box to proceed.")
+        expected_text = "I accept full legal responsibility for scanning this target."
+        typed_text = self.txt_accept.text().strip()
+        if typed_text != expected_text:
+            QMessageBox.warning(self, "Acceptance Required", "You must type the exact sentence to proceed.")
             return
-        set_responsibility_flag(True)
+        
+        target_id = self.target.get("id") if self.target else None
+        if target_id is not None:
+            set_target_attestation(target_id, typed_text)
+            
         self.accept()

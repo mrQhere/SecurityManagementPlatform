@@ -55,6 +55,9 @@ import requests
 
 from tools.config_manager import BASE_DIR, load_settings
 from tools.db_manager import get_db_connection, get_targets, add_log_entry, add_alert
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp")
 
@@ -69,7 +72,7 @@ def _page_hash(url: str) -> tuple[Optional[int], Optional[str]]:
     """Fetch URL and return (status_code, md5_of_body)."""
     try:
         resp = requests.get(url, timeout=_REQUEST_TIMEOUT, allow_redirects=True,
-                            verify=False, headers={"User-Agent": "SMP-Watchdog/1.0"})
+                            verify=verify_tls, headers={"User-Agent": "SMP-Watchdog/1.0"})
         body_hash = hashlib.md5(resp.content).hexdigest()
         return resp.status_code, body_hash
     except Exception:
@@ -80,7 +83,7 @@ def _headers_hash(url: str) -> Optional[str]:
     """Return md5 of sorted response headers (keys + values)."""
     try:
         resp = requests.head(url, timeout=_REQUEST_TIMEOUT, allow_redirects=True,
-                             verify=False, headers={"User-Agent": "SMP-Watchdog/1.0"})
+                             verify=verify_tls, headers={"User-Agent": "SMP-Watchdog/1.0"})
         header_str = json.dumps(dict(sorted(resp.headers.items())), sort_keys=True)
         return hashlib.md5(header_str.encode()).hexdigest()
     except Exception:

@@ -141,6 +141,8 @@ DEFAULT_SETTINGS = {
     "sbom_output_dir": "",
     # Port baseline — auto-baseline on first scan
     "port_baseline_enabled": True,
+    # Insecure Scans (allow invalid TLS certificates)
+    "insecure_scans": False,
 }
 
 def init_directories():

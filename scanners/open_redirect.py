@@ -36,6 +36,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -82,7 +85,7 @@ def run_open_redirect_scan(url):
             resp = session.get(
                 test_url,
                 timeout=REDIRECT_TIMEOUT,
-                verify=False,
+                verify=verify_tls,
                 allow_redirects=True,
             )
             # Check if we ended up at evil.com
@@ -94,7 +97,7 @@ def run_open_redirect_scan(url):
             resp2 = session.get(
                 test_url,
                 timeout=REDIRECT_TIMEOUT,
-                verify=False,
+                verify=verify_tls,
                 allow_redirects=False,
             )
             location = resp2.headers.get("Location", "")

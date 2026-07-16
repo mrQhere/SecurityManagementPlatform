@@ -38,9 +38,7 @@ It brings together **30+ security tools**, **CVE intelligence**, **compliance ma
    ```bash
    pip install -r requirements.txt
    ```
-2. **Setup License**:
-   Copy your V6 RSA license to `config/license.key`.
-3. **Run**:
+2. **Run**:
    ```bash
    python3 main.py
    ```

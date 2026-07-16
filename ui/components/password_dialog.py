@@ -32,7 +32,7 @@ from PySide6.QtCore import Qt
 import logging
 logger = logging.getLogger('smp')
 from tools.encryption_manager import has_password_set, setup_password, verify_password, decrypt_databases
-from tools.responsibility_manager import load_responsibility_flag
+from tools.encryption_manager import has_password_set, setup_password, verify_password, decrypt_databases
 
 class PasswordDialog(QDialog):
     def __init__(self, parent=None, is_setup=False):
@@ -72,13 +72,7 @@ class PasswordDialog(QDialog):
             QPushButton:hover { background-color: #282828; color: #FFFFFF; border-color: #444444; }
             QMessageBox { background-color: #141414; color: #CCCCCC; }
         """)
-        # Ensure user has accepted responsibility disclaimer before proceeding
-        from .responsibility_dialog import ResponsibilityDialog
-        if not load_responsibility_flag():
-            dlg = ResponsibilityDialog(self)
-            if dlg.exec() != QDialog.Accepted:
-                self.reject()
-                return
+        # No responsibility check at startup. It is checked per-target during manual scans.
         
         self._setup_ui()
         

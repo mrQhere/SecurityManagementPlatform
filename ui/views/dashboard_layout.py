@@ -28,6 +28,7 @@ import logging
 import threading
 from datetime import datetime
 
+from PySide6.QtCharts import QChart, QChartView, QPieSeries
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView,
@@ -895,7 +896,21 @@ class DashboardLayoutMixin:
         # Stats strip
         self.lbl_stats = QLabel("Loading CVE stats...")
         self.lbl_stats.setStyleSheet("color: #888888; font-size: 13px; padding: 0px 2px 6px 2px; font-weight: 500;")
-        layout.addWidget(self.lbl_stats)
+        
+        # CVE Chart
+        self.cve_chart = QChart()
+        self.cve_chart.setTheme(QChart.ChartThemeDark)
+        self.cve_chart.setBackgroundVisible(False)
+        self.cve_chart.legend().hide()
+        self.cve_chart_view = QChartView(self.cve_chart)
+        self.cve_chart_view.setRenderHint(self.cve_chart_view.renderHints() | 0x01) # Antialiasing
+        self.cve_chart_view.setFixedHeight(200)
+        
+        stats_layout = QHBoxLayout()
+        stats_layout.addWidget(self.lbl_stats)
+        stats_layout.addWidget(self.cve_chart_view)
+        layout.addLayout(stats_layout)
+
 
         # Filter bar
         filter_card = QFrame()

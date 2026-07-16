@@ -36,6 +36,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -81,7 +84,7 @@ def run_cors_scan(url):
                         "Access-Control-Request-Headers": "Authorization",
                     },
                     timeout=CORS_TIMEOUT,
-                    verify=False,
+                    verify=verify_tls,
                     allow_redirects=False,
                 )
 
@@ -148,7 +151,7 @@ def run_cors_scan(url):
                 url,
                 headers={"Origin": "https://evil.com"},
                 timeout=CORS_TIMEOUT,
-                verify=False,
+                verify=verify_tls,
                 allow_redirects=True,
             )
             acao_get = resp_get.headers.get("Access-Control-Allow-Origin", "")

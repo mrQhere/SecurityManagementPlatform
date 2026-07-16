@@ -37,6 +37,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -117,12 +120,12 @@ def run_headers_scan(url):
         })
 
         try:
-            resp = session.get(url, timeout=HEADERS_TIMEOUT, verify=False,
+            resp = session.get(url, timeout=HEADERS_TIMEOUT, verify=verify_tls,
                                allow_redirects=True)
         except requests.exceptions.SSLError:
             # Fallback to HTTP if HTTPS fails
             url_http = url.replace("https://", "http://")
-            resp = session.get(url_http, timeout=HEADERS_TIMEOUT, verify=False,
+            resp = session.get(url_http, timeout=HEADERS_TIMEOUT, verify=verify_tls,
                                allow_redirects=True)
 
         headers = resp.headers
