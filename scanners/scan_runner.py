@@ -175,7 +175,7 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
                 break
         if timeout_var_name and orig_timeout:
             if attempt == 1:
-                max_initial = settings.get("scanner_timeout_seconds", 180)
+                max_initial = settings.get("scanner_timeout_seconds", 600)
                 if orig_timeout > max_initial:
                     setattr(module, timeout_var_name, max_initial)
                     logger.info(f"[{step_name}] Capped timeout {timeout_var_name} to {max_initial}s for initial run.")
@@ -297,6 +297,13 @@ def _process_waiter(target_id, url, process):
         _active_scans.pop(target_id, None)
         _active_urls.discard(url)
         _cancel_events.pop(target_id, None)
+        
+        if not _APP_SHUTTING_DOWN and len(_active_scans) == 0:
+            try:
+                clear_redundancy_db()
+                logger.debug("Redundancy DB cleared after all scans completed.")
+            except Exception as rdbe:
+                logger.warning(f"Failed to clear redundancy DB post-scan: {rdbe}")
 
 
 def start_scan_for_target(target, sudo_password=None):
@@ -1046,7 +1053,12 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
             )
 
         logger.info(f"Starting DAG Orchestrator with {len(dag_plugins)} plugins")
-        orchestrator = DAGOrchestrator(dag_plugins, max_workers=6)
+        
+        def _on_active_change(active_steps):
+            if active_steps:
+                update_scan_status(scan_id, active_steps[0])
+                
+        orchestrator = DAGOrchestrator(dag_plugins, max_workers=6, on_active_change=_on_active_change)
         dag_results = orchestrator.run(cancel_event=cancel_event)
         
         # Populate results for Phase 2 correlation
@@ -1175,18 +1187,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         update_scan_status(scan_id, "Failed", end_time=now_str)
         add_log_entry("ERROR", f"Scanner Failure: {url} – {e}")
     finally:
-        # ── Wipe redundancy DB on scan completion ───────────────────────────
-        # Only clear when the scan finished/failed/cancelled normally.
-        # If the app is shutting down (_APP_SHUTTING_DOWN=True), preserve the
-        # redundancy DB so the next session can recover in-flight scan data.
-        if not _APP_SHUTTING_DOWN:
-            try:
-                clear_redundancy_db()
-                logger.debug("Redundancy DB cleared after scan completion.")
-            except Exception as rdbe:
-                logger.warning(f"Failed to clear redundancy DB post-scan: {rdbe}")
-        else:
-            logger.info("App shutdown detected — redundancy DB preserved for next session.")
+        pass
 
 
 # ── Scan resumption ────────────────────────────────────────────────────────────

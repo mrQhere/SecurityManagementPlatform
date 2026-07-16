@@ -783,20 +783,45 @@ class DashboardLogicMixin:
                 import shutil, os, sys
                 from tools.config_manager import BASE_DIR
                 
-                sys.path.append(BASE_DIR)
-                import reset_db
-                reset_db.reset_databases()
+                # Wipe config files
+                auth_path = os.path.join(BASE_DIR, "config", "auth.json")
+                resp_path = os.path.join(BASE_DIR, "config", "responsibility.json")
+                if os.path.exists(auth_path):
+                    os.remove(auth_path)
+                if os.path.exists(resp_path):
+                    os.remove(resp_path)
+                
+                # Wipe databases EXCEPT cve.db
+                db_dir = os.path.join(BASE_DIR, "database")
+                if os.path.exists(db_dir):
+                    for filename in os.listdir(db_dir):
+                        if filename == "cve.db" or filename == "cve.db-journal" or filename == "cve.db-wal" or filename == "cve.db-shm":
+                            continue
+                        file_path = os.path.join(db_dir, filename)
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+
+                # Wipe auto-restoring backups
+                backup_dir = os.path.join(BASE_DIR, "backup")
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                os.makedirs(backup_dir, exist_ok=True)
 
                 reports_dir = os.path.join(BASE_DIR, "reports")
                 if os.path.exists(reports_dir):
                     shutil.rmtree(reports_dir)
-                os.makedirs(os.path.join(reports_dir, "pdf"))
-                os.makedirs(os.path.join(reports_dir, "html"))
+                os.makedirs(os.path.join(reports_dir, "pdf"), exist_ok=True)
+                os.makedirs(os.path.join(reports_dir, "html"), exist_ok=True)
 
                 logs_dir = os.path.join(BASE_DIR, "logs")
                 if os.path.exists(logs_dir):
                     shutil.rmtree(logs_dir)
-                os.makedirs(logs_dir)
+                os.makedirs(logs_dir, exist_ok=True)
+                
+                cache_dir = os.path.join(BASE_DIR, "cache")
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                os.makedirs(cache_dir, exist_ok=True)
 
                 self._cache_targets_hash = None
                 self._cache_scans_hash = None

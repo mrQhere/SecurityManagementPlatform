@@ -173,7 +173,7 @@ def run_cloud_enum_scan(url):
             })
 
         if not findings and not (s3_buckets or gcs_buckets or azure_blobs or azure_sites):
-            logger.info(f"Cloud Enum Completed: No cloud assets found for '{keyword}'.")
+            logger.info(f"Cloud Enum Completed: No cloud assets found for '{keywords}'.")
             add_log_entry("INFO", f"Cloud Enum Completed: No cloud assets found.")
             return []
 

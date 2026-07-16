@@ -36,9 +36,10 @@ import time
 logger = logging.getLogger("smp.scan")
 
 class DAGOrchestrator:
-    def __init__(self, plugins, max_workers=3):
+    def __init__(self, plugins, max_workers=3, on_active_change=None):
         self.plugins = {p.name: p for p in plugins}
         self.max_workers = max_workers
+        self.on_active_change = on_active_change
         self.completed = set()
         self.failed = set()
         self.running = set()
@@ -108,6 +109,8 @@ class DAGOrchestrator:
             while len(self.running) < self.max_workers and ready_plugins:
                 plugin = ready_plugins.pop(0)
                 self.running.add(plugin.name)
+                if self.on_active_change:
+                    self.on_active_change([self.plugins[p].step_name for p in self.running])
                 
                 t = threading.Thread(
                     target=run_plugin, 
@@ -126,6 +129,8 @@ class DAGOrchestrator:
                     # Blocking get with timeout allows us to check for cancellation
                     name, res, success, err = result_queue.get(timeout=1.0)
                     self.running.remove(name)
+                    if self.on_active_change:
+                        self.on_active_change([self.plugins[p].step_name for p in self.running])
                     
                     if success:
                         self.completed.add(name)

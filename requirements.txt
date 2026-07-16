@@ -1,8 +1,36 @@
+# Security Management Platform V6.0 — Python Dependencies
+# =========================================================
+# Core
 APScheduler>=3.10.0
-reportlab>=4.0.0
 requests>=2.31.0
-sslyze>=5.2.0
-python-owasp-zap-v2.4>=0.0.21
+cryptography>=41.0.5,<42.1
+pyee>=11.0.0,<12.0.0
+urllib3>=1.25.8,<2.0.0
+protobuf>=3.14,<5.0.0
+
+# Reporting
+reportlab>=4.0.0
 Jinja2>=3.1.2
 weasyprint>=60.2
+
+# Security scanning
+sslyze>=5.2.0
+python-owasp-zap-v2.4>=0.0.21
 theHarvester
+
+# ── V6.0 New Dependencies ──────────────────────────────────────────────────────
+# API (Secured REST API with JWT and rate limiting)
+fastapi>=0.111.0
+uvicorn>=0.30.0
+python-jose[cryptography]>=3.3.0
+slowapi>=0.1.9
+pydantic>=2.0.0
+
+# SBOM Generation (CycloneDX — fallback to SPDX/CSV if not available)
+cyclonedx-python-lib>=4.0.0
+
+# Screenshot Evidence (optional — graceful fallback to HTML snapshot if not installed)
+playwright>=1.40.0
+
+# System resource monitoring (optional — graceful fallback to /proc if not installed)
+psutil>=5.9.0

@@ -501,50 +501,21 @@ def _build_context(scan_id, target, findings, previous_scan,
     scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     settings  = load_settings()
 
-    def by_tool(*tools):
-        return [f for f in findings if f.get("source_tool") in tools]
-
-    nmap      = by_tool("Nmap")
-    nuclei    = by_tool("Nuclei")
-    nikto     = by_tool("Nikto")
-    ffuf      = by_tool("ffuf")
-    wapiti    = by_tool("Wapiti")
-    sqlmap    = by_tool("SQLMap")
-    ssl_f     = by_tool("SSL")
-    tracert   = by_tool("Traceroute")
-    cve_corr  = by_tool("CVE Correlation")
-    shodan    = by_tool("Shodan")
-    wayback   = by_tool("Wayback Machine")
-    crtsh     = by_tool("CRT.sh")
-    ht_data   = by_tool("HackerTarget")
-    whois_d   = by_tool("Whois")
-    httpx     = by_tool("HTTPx")
-    subfinder = by_tool("Subfinder")
-    headers   = by_tool("Security Headers")
-    robots    = by_tool("Robots.txt")
-    cors      = by_tool("CORS")
-    cms       = by_tool("CMS Scanner")
-    redirect  = by_tool("Open Redirect")
-    tech_fp   = by_tool("Tech Fingerprint")
-    zap       = by_tool("ZAP")
-
+    findings_by_tool = {}
     counts = {"Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
     for f in findings:
         s = f.get("severity", "Info")
         if s in counts:
             counts[s] += 1
+        t = f.get("source_tool")
+        if t:
+            findings_by_tool.setdefault(t, []).append(f)
 
     return dict(
         target=target,
         url=url, scan_time=scan_time, scanned_by=scanned_by,
         doc_version="1.0", doc_status="Final",
-        findings=findings, nmap=nmap, nuclei=nuclei, nikto=nikto,
-        ffuf=ffuf, wapiti=wapiti, sqlmap=sqlmap, ssl_f=ssl_f,
-        tracert=tracert, cve_corr=cve_corr,
-        shodan=shodan, wayback=wayback, crtsh=crtsh,
-        ht_data=ht_data, whois_d=whois_d,
-        httpx=httpx, subfinder=subfinder, headers=headers, robots=robots,
-        cors=cors, cms=cms, redirect=redirect, tech_fp=tech_fp, zap=zap,
+        findings=findings, findings_by_tool=findings_by_tool,
         technologies=technologies, risk_data=risk_data,
         previous_scan=previous_scan, counts=counts,
         total=len(findings),
@@ -750,8 +721,9 @@ def _generate_vapt_pdf(filepath, ctx):
         )
 
     # 2. CVE correlation sentence — if CVEs were matched
-    if c.get("cve_corr"):
-        n_cve = len(c["cve_corr"]) if isinstance(c["cve_corr"], list) else 1
+    cve_corr_f = c.get("findings_by_tool", {}).get("CVE Correlation", [])
+    if cve_corr_f:
+        n_cve = len(cve_corr_f) if isinstance(cve_corr_f, list) else 1
         exec_paragraphs.append(
             f"CVE correlation analysis identified <b>{n_cve} known vulnerability entr{'y' if n_cve == 1 else 'ies'}</b> "
             f"matching the detected technology stack. These entries carry documented exploitation "
@@ -760,7 +732,7 @@ def _generate_vapt_pdf(filepath, ctx):
         )
 
     # 3. SSL/TLS sentence — if SSL failures found
-    if c.get("ssl_f"):
+    if c.get("findings_by_tool", {}).get("SSL", []):
         exec_paragraphs.append(
             f"TLS/SSL assessment identified <b>cryptographic weaknesses</b> including support for "
             f"deprecated protocol versions and/or weak cipher suites. "
@@ -857,10 +829,10 @@ def _generate_vapt_pdf(filepath, ctx):
     if high_n > 0:
         actions.append("<b>SHORT-TERM (24–72 hrs):</b> Address all High severity findings. "
                        "Deploy WAF rules as interim mitigation while permanent patches are prepared.")
-    if c["cve_corr"]:
+    if c.get("findings_by_tool", {}).get("CVE Correlation", []):
         actions.append("<b>MEDIUM-TERM (1–2 weeks):</b> Upgrade all software components matched to CVE "
                        "correlation results. Enforce version pinning and dependency auditing in CI/CD.")
-    if c["ssl_f"]:
+    if c.get("findings_by_tool", {}).get("SSL", []):
         actions.append("<b>CONFIGURATION (ongoing):</b> Enforce TLS 1.2+ across all endpoints. "
                        "Disable deprecated cipher suites. Automate certificate renewal.")
     if not actions:
@@ -887,14 +859,14 @@ def _generate_vapt_pdf(filepath, ctx):
     story.append(_section_header(st, "3", "Engagement Scope &amp; Methodology Boundaries"))
 
     story.append(Paragraph("In-Scope Asset Inventory", st["h3"]))
-    subdomains = c["crtsh"] + c["subfinder"]
+    subdomains = c.get("findings_by_tool", {}).get("CRT.sh", []) + c.get("findings_by_tool", {}).get("Subfinder", [])
     scope_rows = [
         ["Primary Target", c["url"], "Web Application", "Authorized"],
     ]
     for sub in subdomains[:20]:
         host = sub.get("title", "").replace("Subdomain Discovered: ", "")
         scope_rows.append([host, "Subdomain", "Web", "Authorized"])
-    for nmap_f in c["nmap"][:10]:
+    for nmap_f in c.get("findings_by_tool", {}).get("Nmap", [])[:10]:
         scope_rows.append([c["url"], nmap_f.get("title", ""), "Network Port", "Authorized"])
     story.append(_data_table(
         ["Asset / Host", "URL / Port", "Asset Type", "Auth Status"],
@@ -1146,32 +1118,12 @@ def _generate_vapt_pdf(filepath, ctx):
     # ══════════════════════════════════════════════════════════════════════════
     story.append(_section_header(st, "6A", "Appendix A — Security Assessment Tooling"))
 
-    tools_rows = [
-        ["HTTPx",           "HTTP probe & header analysis",         "Open Source", "Active — HTTP"],
-        ["WhatWeb",         "Passive technology fingerprinting",    "Open Source", "Passive"],
-        ["Subfinder",       "DNS subdomain enumeration",            "Open Source", "Passive — DNS"],
-        ["CRT.sh",          "Certificate transparency subdomain enum","Public API","Passive — HTTPS"],
-        ["HackerTarget",    "Reverse DNS / IP intel",               "Public API", "Passive"],
-        ["Whois",           "Domain registration intelligence",     "System",     "Passive"],
-        ["Wayback Machine", "Historical URL mapping",               "Public API", "Passive"],
-        ["Traceroute",      "Network path discovery",               "System",     "Active — UDP/ICMP"],
-        ["Nmap",            "Port & service scanning",              "Open Source", "Active — TCP SYN"],
-        ["sslyze",          "SSL/TLS certificate & cipher analysis","Open Source", "Active — TLS"],
-        ["Security Headers","HTTP security header audit",           "Custom",     "Active — HTTP"],
-        ["Robots.txt",      "Robots / sitemap reconnaissance",      "Custom",     "Passive — HTTP"],
-        ["CORS Scanner",    "CORS misconfiguration detection",      "Custom",     "Active — HTTP"],
-        ["CMS Scanner",     "CMS & admin panel fingerprinting",     "Custom",     "Active — HTTP"],
-        ["Nikto",           "Legacy web vulnerability scanning",    "Open Source", "Active — HTTP"],
-        ["Nuclei",          "Template-based CVE scanning",          "Open Source", "Active — HTTP"],
-        ["ffuf",            "Directory & file fuzzing",             "Open Source", "Active — HTTP"],
-        ["Open Redirect",   "Open redirect parameter testing",      "Custom",     "Active — HTTP"],
-        ["Wapiti",          "OWASP web application scan",           "Open Source", "Active — Injection"],
-        ["SQLMap",          "SQL injection detection",              "Open Source", "Active — Injection"],
-        ["Shodan InternetDB","Passive IoT/IP exposure profiling",   "Public API", "Passive"],
-        ["CVE Correlator",  "Tech → CVE database cross-matching",  "Custom",     "Offline"],
-        ["Risk Scorer",     "0–100 CVSS-weighted risk calculation", "Custom",     "Offline"],
-        ["SMP Report Engine","VAPT PDF report compilation",         "Proprietary","Offline"],
-    ]
+    tools_used = sorted(list(c.get("findings_by_tool", {}).keys()))
+    if not tools_used:
+        tools_used = ["No specific tools recorded"]
+    tools_rows = []
+    for t in tools_used:
+        tools_rows.append([t, "Automated Security Assessment Tool", "Mixed", "Active/Passive"])
     story.append(_data_table(
         ["Tool", "Purpose", "Type", "Method"],
         tools_rows,
@@ -1899,21 +1851,6 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
     ]
 
     # ── Section 3: Scope & Methodology ──────────────────────────────────────
-    all_tools = [
-        ("HTTPx", "HTTP Probing"), ("WhatWeb", "Tech Fingerprint"), ("Subfinder", "Subdomain Enum"),
-        ("theHarvester", "OSINT"), ("CRT.sh", "Certificate Transparency"), ("HackerTarget", "Network Intel"),
-        ("Whois", "Domain Intel"), ("Wayback Machine", "Historical URLs"), ("Traceroute", "Network Path"),
-        ("Nmap", "Port / Service Scan"), ("SSL Scan", "TLS Analysis"), ("Security Headers", "HTTP Headers"),
-        ("Robots.txt", "Disclosure"), ("CORS", "CORS Misconfiguration"), ("CMS Scanner", "CMS Detect"),
-        ("Nikto", "Web Vuln Scan"), ("Nuclei", "Template-based CVE"), ("ffuf", "Directory Brute-force"),
-        ("Open Redirect", "Redirect Chains"), ("Tech Fingerprint", "Stack Identification"),
-        ("Wapiti", "DAST"), ("SQLMap", "SQL Injection"), ("Shodan", "Internet Exposure"),
-        ("Gitleaks", "Secret Leaks"), ("ZAP", "DAST / OWASP"),
-        ("Dalfox", "XSS Detection"), ("Arjun", "Param Discovery"), ("DNSx", "DNS Enum"),
-        ("Katana", "Web Crawling"), ("Commix", "Command Injection"), ("JWT Scanner", "JWT Weakness"),
-        ("WPScan", "WordPress"), ("Masscan", "Fast Port Scan"), ("ParamSpider", "Param Mining"),
-        ("Cloud Enum", "Cloud Assets"), ("CVE Correlation", "Threat Intel Match"),
-    ]
     used_set = set(tools_used)
     lines += [
         "<div class='section'>",
@@ -1935,13 +1872,11 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
         "<div class='sub-heading'>Security Tools Deployed</div>",
         "<div class='method-grid'>",
     ]
-    for tool_name, tool_type in all_tools:
-        used_cls = "used" if tool_name in used_set else ""
-        status_dot = "✅ " if tool_name in used_set else "○ "
+    for tool_name in sorted(used_set):
         lines.append(
-            f"<div class='method-item {used_cls}'>"
-            f"<div class='tool-name'>{status_dot}{_esc(tool_name)}</div>"
-            f"<div class='tool-type'>{_esc(tool_type)}</div>"
+            f"<div class='method-item used'>"
+            f"<div class='tool-name'>✅ {_esc(tool_name)}</div>"
+            f"<div class='tool-type'>Automated Tool</div>"
             f"</div>"
         )
     lines += ["</div>", "</div>"]

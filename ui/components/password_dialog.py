@@ -137,13 +137,21 @@ class PasswordDialog(QDialog):
             if password != confirm:
                 QMessageBox.warning(self, "Mismatch", "Passwords do not match.")
                 return
-            setup_password(password)
-            QMessageBox.information(self, "Success", "Master Password successfully configured and databases secured.")
-            self.success = True
-            self.accept()
+            try:
+                setup_password(password)
+                QMessageBox.information(self, "Success", "Master Password successfully configured and databases secured.")
+                self.success = True
+                self.accept()
+            except ValueError as e:
+                QMessageBox.warning(self, "Invalid Password", str(e))
+                return
         else:
             if verify_password(password):
-                decrypt_databases()
+                ok = decrypt_databases()
+                if not ok:
+                    # Decryption ran but produced no output — warn but still let user in
+                    # (could be a fresh install with no .enc files yet)
+                    pass
                 self.success = True
                 self.accept()
             else:

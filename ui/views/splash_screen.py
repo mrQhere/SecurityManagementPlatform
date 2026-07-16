@@ -33,9 +33,26 @@ class StartupWorker(QThread):
     progress = Signal(int, str)
 
     def run(self):
-        # 1. Database Initialization
-        self.progress.emit(10, "Decrypting and initializing databases...")
-        time.sleep(0.5) # Simulate slight delay for UX
+        # 1. Verify decryption status — ACTIVE_KEY was set in the password dialog
+        # and decrypt_databases() was already called. We just need to ensure the
+        # plain DB files exist before running init_db().
+        self.progress.emit(10, "Verifying database integrity...")
+        time.sleep(0.3)
+        try:
+            from tools.encryption_manager import is_decryption_ok, ACTIVE_KEY, decrypt_databases
+            # Re-run decryption if the DB files are missing (safety net)
+            import os
+            from tools.config_manager import BASE_DIR
+            db_path = os.path.join(BASE_DIR, "database", "security.db")
+            enc_path = os.path.join(BASE_DIR, "database", "security.db.enc")
+            if not os.path.exists(db_path) and os.path.exists(enc_path):
+                # Plain DB missing but .enc exists — attempt decryption again
+                decrypt_databases()
+        except Exception as e:
+            print(f"[Startup] Decryption verification error: {e}")
+
+        self.progress.emit(20, "Initializing database schema...")
+        time.sleep(0.3)
         from tools.db_manager import init_db
         init_db()
 
@@ -101,12 +118,12 @@ class SplashScreen(QWidget):
 
         import json
         import os
-        version = "V5.4"
+        version = "V6.0"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V5.4")
+                version = metadata.get("version", "V6.0")
         except Exception:
             pass
 
