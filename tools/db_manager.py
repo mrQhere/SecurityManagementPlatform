@@ -40,6 +40,8 @@ from pathlib import Path
 from tools.config_manager import BASE_DIR, init_directories
 from intelligence.mitre_mapper import enrich_finding_with_mitre
 
+logger = logging.getLogger(__name__)
+
 import socket
 import json
 
