@@ -1626,7 +1626,7 @@ def get_cve_stats():
         ).fetchone()[0]
 
         critical_today = conn.execute(
-            "SELECT COUNT(*) FROM cve_db.cves WHERE severity IN ('Critical', 'High') AND added_date LIKE ?",
+            "SELECT COUNT(*) FROM cve_db.cves WHERE severity = 'Critical' AND added_date LIKE ?",
             (f"{today_str}%",)
         ).fetchone()[0]
 
