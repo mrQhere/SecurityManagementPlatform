@@ -544,7 +544,7 @@ def _initialize_db_schema(conn):
     """)
 
     # Ensure legacy cves table in main DB is dropped to avoid conflict with attached cve.db
-    cursor.execute("DROP TABLE IF EXISTS cves;")
+    cursor.execute("DROP TABLE IF EXISTS main.cves;")
 
     # logs table
     cursor.execute("""
@@ -648,6 +648,12 @@ def init_db():
 
     # Also initialize backup databases
     _init_backup_databases()
+
+    # ── Safety net: restore from full_backup.db if main DB is empty ────────────
+    # This handles cases where encryption/decryption leaves security.db empty.
+    # On startup, if targets table is empty but full_backup.db has data,
+    # we automatically restore the last known good state.
+    _restore_from_backup_if_empty()
 
 
 def _init_backup_databases():
@@ -774,6 +780,111 @@ def _init_backup_databases():
     conn.close()
 
 
+
+def _restore_from_backup_if_empty():
+    """Auto-restore targets/scans/findings from full_backup.db if main DB is empty.
+    This is a safety net triggered on every startup to recover from failed
+    encrypt/decrypt cycles or accidental resets.
+    """
+    try:
+        # Check if main DB has any targets
+        conn = get_db_connection()
+        try:
+            count = conn.execute(
+                "SELECT count(*) as cnt FROM targets WHERE is_deleted = 0 OR is_deleted IS NULL"
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if count and count["cnt"] > 0:
+            return  # Main DB has data — nothing to restore
+
+        # Main DB is empty — check if full_backup.db has data
+        full_db = os.path.join(BACKUP_DIR, "full_backup.db")
+        if not os.path.exists(full_db):
+            return
+
+        backup_conn = sqlite3.connect(full_db, timeout=10.0)
+        backup_conn.row_factory = sqlite3.Row
+        try:
+            targets_bak = backup_conn.execute("SELECT * FROM targets_backup").fetchall()
+            scans_bak = backup_conn.execute("SELECT * FROM scans_backup").fetchall()
+            findings_bak = backup_conn.execute("SELECT * FROM findings_backup").fetchall()
+        finally:
+            backup_conn.close()
+
+        if not targets_bak:
+            return  # Backup is also empty
+
+        _logger = logging.getLogger("smp")
+        _logger.warning(
+            f"[Recovery] Main DB is empty but full_backup.db has {len(targets_bak)} target(s). "
+            "Auto-restoring..."
+        )
+
+        restore_conn = get_db_connection()
+        try:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Restore targets
+            for t in targets_bak:
+                t = dict(t)
+                try:
+                    restore_conn.execute(
+                        "INSERT OR REPLACE INTO targets "
+                        "(id, url, status, added_date, last_scan) VALUES (?, ?, ?, ?, ?)",
+                        (t["id"], t["url"], t["status"], t["added_date"], t.get("last_scan"))
+                    )
+                except Exception as te:
+                    _logger.error(f"[Recovery] Failed to restore target {t.get('url')}: {te}")
+
+            # Restore scans — mark interrupted as Completed so they show history
+            for s in scans_bak:
+                s = dict(s)
+                status = s["status"] if s["status"] in ("Completed", "Failed") else "Completed"
+                try:
+                    restore_conn.execute(
+                        "INSERT OR REPLACE INTO scans "
+                        "(id, target_id, start_time, end_time, status, scanned_by, report_hash) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            s["id"], s["target_id"], s["start_time"],
+                            s.get("end_time") or now, status,
+                            s.get("scanned_by"), s.get("report_hash")
+                        )
+                    )
+                except Exception as se:
+                    _logger.error(f"[Recovery] Failed to restore scan {s.get('id')}: {se}")
+
+            # Restore findings
+            for f in findings_bak:
+                f = dict(f)
+                try:
+                    restore_conn.execute(
+                        "INSERT OR IGNORE INTO findings "
+                        "(id, scan_id, severity, title, description, source_tool, confidence) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (
+                            f["id"], f["scan_id"], f["severity"], f["title"],
+                            f.get("description", ""), f.get("source_tool", "restored"),
+                            f.get("confidence", 50)
+                        )
+                    )
+                except Exception:
+                    pass
+
+            restore_conn.commit()
+            _logger.warning(
+                f"[Recovery] Restored {len(targets_bak)} target(s), "
+                f"{len(scans_bak)} scan(s), {len(findings_bak)} finding(s) from full_backup.db"
+            )
+        finally:
+            restore_conn.close()
+
+    except Exception as e:
+        logging.getLogger("smp").error(f"[Recovery] Auto-restore failed: {e}")
+
+
 # ----------------- Target Management -----------------
 
 def add_target(url, company_name=None, submitted_to=None):
@@ -786,6 +897,27 @@ def add_target(url, company_name=None, submitted_to=None):
             (url.strip(), "Enabled", now, company_name, submitted_to)
         )
         conn.commit()
+
+        # Get the newly inserted target ID for real-time backup
+        row = conn.execute("SELECT id FROM targets WHERE url = ?", (url.strip(),)).fetchone()
+        target_id = row["id"] if row else None
+
+        # Immediately mirror to full_backup.db — this ensures data survives
+        # encrypt/decrypt failures on close/open cycles
+        if target_id:
+            try:
+                full_db = os.path.join(BACKUP_DIR, "full_backup.db")
+                bconn = sqlite3.connect(full_db, timeout=10.0)
+                bconn.execute(
+                    "INSERT OR REPLACE INTO targets_backup "
+                    "(id, url, status, added_date, last_scan, backed_up_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (target_id, url.strip(), "Enabled", now, None, now)
+                )
+                bconn.commit()
+                bconn.close()
+            except Exception:
+                pass  # Backup failure is non-fatal
+
         return True
     except sqlite3.IntegrityError:
         return False

@@ -105,19 +105,52 @@ def trigger_scan_job():
             logger.error(f"Scheduler failed to launch scan for {target['url']}: {e}")
             add_log_entry("ERROR", f"Scheduler failed to launch scan for {target['url']}: {e}")
 
+def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
+    """
+    V6.0 P0 Fix — Wait for the DB to be decrypted and accessible.
+    Returns True when DB is ready, False if all retries exhausted.
+    This ensures CVE sync never starts before the DB is available,
+    which was the root cause of all-data-lost-on-reopen bugs.
+    """
+    import time
+    from tools.encryption_manager import is_decryption_ok
+    for attempt in range(1, max_retries + 1):
+        try:
+            if is_decryption_ok():
+                # Verify DB is actually accessible
+                from tools.db_manager import get_db_connection
+                conn = get_db_connection()
+                conn.execute("SELECT 1 FROM cves LIMIT 1")
+                logger.info(f"[Scheduler] DB ready check passed (attempt {attempt})")
+                return True
+        except Exception as e:
+            logger.warning(f"[Scheduler] DB not ready yet (attempt {attempt}/{max_retries}): {e}")
+        if attempt < max_retries:
+            logger.info(f"[Scheduler] Retrying DB check in {wait_seconds}s...")
+            time.sleep(wait_seconds)
+            wait_seconds *= 2  # Exponential backoff
+    logger.error("[Scheduler] DB never became ready. Intel sync skipped this cycle.")
+    return False
+
+
 def trigger_intel_job():
-    """Hourly threat intelligence feed update job."""
+    """Hourly threat intelligence feed update job — V6.0: waits for DB to be ready."""
     logger.info("Scheduler Triggered: Threat intelligence update starting.")
     add_log_entry("INFO", "Scheduler Triggered: Threat intelligence update starting.")
-    
+
+    # ── V6.0 P0 FIX: Ensure DB is decrypted before syncing ──────────────────
+    if not _wait_for_db_ready(max_retries=3, wait_seconds=5):
+        add_log_entry("WARNING", "Intel sync skipped: DB not ready (still encrypting/decrypting).")
+        return
+
     # Import update functions dynamically
     from intelligence.nvd import sync_nvd
     from intelligence.cisa import sync_cisa
     from intelligence.github_adv import sync_github_adv
     from intelligence.epss import sync_epss
-    
+
     success = True
-    
+
     try:
         sync_nvd()
     except Exception as e:
@@ -129,19 +162,19 @@ def trigger_intel_job():
     except Exception as e:
         logger.error(f"CISA sync failed: {e}")
         success = False
-        
+
     try:
         sync_github_adv()
     except Exception as e:
         logger.error(f"GitHub Advisories sync failed: {e}")
         success = False
-        
+
     try:
         sync_epss()
     except Exception as e:
         logger.error(f"EPSS sync failed: {e}")
         success = False
-        
+
     if success:
         logger.info("CVE Feed Synced successfully.")
         add_log_entry("INFO", "CVE Feed Synced")

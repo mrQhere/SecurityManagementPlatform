@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
-DIR="$(cd "$(dirname "$0")" && pwd)"
-export PYTHONPATH="$DIR"
-# Ensure project bin/ and Go bins are on PATH
-export PATH="$DIR/bin:$HOME/go/bin:/usr/local/go/bin:$PATH"
-exec "$DIR/venv/bin/python" "$DIR/main.py" "$@"
+#!/bin/bash
+# SMP V6.0 - Runner
+echo "🚀 Starting Security Management Platform V6.0..."
+if [ -d "venv" ]; then
+    source venv/bin/activate
+fi
+python3 main.py

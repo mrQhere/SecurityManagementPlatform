@@ -117,6 +117,30 @@ DEFAULT_SETTINGS = {
     "shodan_api_key": "",
     "censys_api_key": "",
     "cloud_enum_keywords": "",
+    # ── V6.0 — New Security Features ──────────────────────────────────────────
+    # MAC Changer — enhanced: show result in dashboard
+    "mac_changer_enabled": True,
+    "mac_display_result": True,   # Show changed MAC in dashboard status bar
+    # Session timeout (auto-lock after idle)
+    "session_timeout_minutes": 15,
+    # Rate limiting for scanners (requests per minute per target)
+    "rate_limit_rpm": 120,
+    # SLA breach threshold — findings unfixed longer than this are escalated
+    "sla_breach_days": 30,
+    # GreyNoise Community API key (optional — free tier works without key)
+    "greynoise_api_key": "",
+    # RSA license public key path (V6 license format)
+    "rsa_license_public_key_path": "",
+    # System resource check thresholds (pre-scan)
+    "sys_cpu_warn_pct": 80,
+    "sys_ram_warn_mb": 500,
+    "sys_disk_warn_gb": 1.0,
+    # API token expiry (hours)
+    "api_token_expiry_hours": 24,
+    # SBOM output directory (leave blank for default)
+    "sbom_output_dir": "",
+    # Port baseline — auto-baseline on first scan
+    "port_baseline_enabled": True,
 }
 
 def init_directories():

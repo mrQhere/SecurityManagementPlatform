@@ -227,15 +227,17 @@ def _strategy_ip_link_down_up(iface, new_mac, sudo_password=None):
 
 def change_mac_address(sudo_password=None):
     """
-    Assign a same-vendor-class random MAC to the primary interface.
+    V6.0 — Assign a same-vendor-class random MAC to the primary interface.
     Called at scan start with the sudo_password from thread-local storage.
 
-    Returns (success: bool, message: str).
+    Returns (success: bool, message: str, new_mac: str).
+    The new_mac is always returned so the dashboard can display it,
+    even if the change itself failed.
     """
     try:
         iface = _get_primary_interface()
         if not iface:
-            return False, "MAC Changer: Could not detect primary network interface. Skipped."
+            return False, "MAC Changer: Could not detect primary network interface. Skipped.", ""
 
         new_mac = _generate_same_class_mac(iface)
         iface_type = "Wi-Fi" if _is_wifi_interface(iface) else "Ethernet"
@@ -245,28 +247,59 @@ def change_mac_address(sudo_password=None):
         if ok:
             msg = f"MAC Changer: [{iface_type}] {iface} → {new_mac} ✓ (ip-link)"
             logger.info(msg)
-            return True, msg
+            _emit_mac_change(iface, new_mac, msg)
+            return True, msg, new_mac
 
         # Strategy 2: macchanger binary
         ok2, err2 = _strategy_macchanger(iface, new_mac, sudo_password=sudo_password)
         if ok2:
             msg = f"MAC Changer: [{iface_type}] {iface} → {new_mac} ✓ (macchanger)"
             logger.info(msg)
-            return True, msg
+            _emit_mac_change(iface, new_mac, msg)
+            return True, msg, new_mac
 
         # Strategy 3: down/set/up (brief network interruption)
         ok3, err3 = _strategy_ip_link_down_up(iface, new_mac, sudo_password=sudo_password)
         if ok3:
             msg = f"MAC Changer: [{iface_type}] {iface} → {new_mac} ✓ (down/up)"
             logger.info(msg)
-            return True, msg
+            _emit_mac_change(iface, new_mac, msg)
+            return True, msg, new_mac
 
         # All three strategies failed — non-fatal, scan continues
-        return False, f"MAC Changer: All 3 strategies failed ({err}). Scan proceeds anyway."
+        return False, f"MAC Changer: All 3 strategies failed ({err}). Scan proceeds anyway.", ""
 
     except PermissionError:
-        return False, "MAC Changer: Permission denied. Scan proceeds anyway."
+        return False, "MAC Changer: Permission denied. Scan proceeds anyway.", ""
     except FileNotFoundError:
-        return False, "MAC Changer: 'ip' command not found. Scan proceeds anyway."
+        return False, "MAC Changer: 'ip' command not found. Scan proceeds anyway.", ""
     except Exception as e:
-        return False, f"MAC Changer: {e}. Scan proceeds anyway."
+        return False, f"MAC Changer: {e}. Scan proceeds anyway.", ""
+
+
+def _emit_mac_change(iface: str, new_mac: str, message: str):
+    """
+    V6.0 — Emit the MAC change result to:
+      1. Audit log (DB)
+      2. In-process event bus (for dashboard status bar)
+    """
+    try:
+        from tools.db_manager import add_log_entry
+        add_log_entry("INFO", f"MAC Changed: {iface} → {new_mac}")
+    except Exception:
+        pass
+
+    try:
+        from tools import event_bus
+        event_bus.emit("mac_changed", {"iface": iface, "new_mac": new_mac, "message": message})
+    except Exception:
+        pass  # Event bus optional — non-fatal
+
+
+def get_current_mac(iface: str = None) -> str:
+    """Get current MAC address of the primary interface (or specified interface)."""
+    if not iface:
+        iface = _get_primary_interface()
+    if not iface:
+        return ""
+    return _get_current_mac(iface) or ""

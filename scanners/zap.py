@@ -111,6 +111,11 @@ def run_zap_scan(url):
     zap_path = settings.get("zap_path", "zaproxy")
     api_url = f"http://{host}:{port}"
 
+    # Bypass system proxy for local API calls to ZAP
+    import os
+    os.environ["no_proxy"] = f"127.0.0.1,localhost,zap,{host}"
+    os.environ["NO_PROXY"] = f"127.0.0.1,localhost,zap,{host}"
+
     zap = ZAPv2(apikey=api_key, proxies={"http": api_url, "https": api_url})
 
     # Try to connect; if ZAP isn't running, start it
@@ -122,13 +127,22 @@ def run_zap_scan(url):
         zap_proc = _start_zap_daemon(zap_path, host, port, api_key)
         if not zap_proc:
             return None
-        # Re-instantiate after start
-        zap = ZAPv2(apikey=api_key, proxies={"http": api_url, "https": api_url})
-        try:
-            zap.core.version()
-        except Exception as e:
-            logger.error(f"ZAP daemon did not respond after start: {e}")
-            add_log_entry("ERROR", f"ZAP Scan Failed: Daemon did not respond – {e}")
+            
+        # Give ZAP more time to fully initialize on slow machines
+        zap_ready = False
+        for _ in range(12):
+            try:
+                # Re-instantiate to reset connection
+                zap = ZAPv2(apikey=api_key, proxies={"http": api_url, "https": api_url})
+                zap.core.version()
+                zap_ready = True
+                break
+            except Exception:
+                time.sleep(5)
+                
+        if not zap_ready:
+            logger.error(f"ZAP daemon did not respond after start")
+            add_log_entry("ERROR", f"ZAP Scan Failed: Daemon did not respond")
             if zap_proc:
                 zap_proc.terminate()
             return None

@@ -38,7 +38,7 @@ V5.4 Improvements:
 - Score breakdown includes CISA KEV count and match tier breakdown
 
 Ratings:
-  0–20   → Minimal
+   0–20   → Minimal
   21–40  → Low
   41–60  → Medium
   61–80  → High

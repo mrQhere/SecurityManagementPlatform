@@ -95,7 +95,6 @@ class GenericPlugin(ScannerPlugin):
         # Route through scan_runner module namespace to respect unit test patches
         func_to_run = getattr(sr, self.scan_func.__name__, self.scan_func)
 
-        update_scan_status(self.scan_id, self.step_name)
         res, success = run_with_resilience(self.scan_id, self.step_name, func_to_run, self.target_url, self.binary_name, self.needs_binary)
         if success:
             _log_raw(self.scan_id, self.name, res)

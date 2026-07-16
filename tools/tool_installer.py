@@ -99,7 +99,7 @@ TOOLS = [
 
     # New V5.2 Enterprise pip packages
     ("semgrep",           "semgrep",     "pip",    "semgrep"),
-    ("SpiderFoot OSINT",  "sf",          "pip",    "spiderfoot"),
+    ("SpiderFoot OSINT",  "sf",          "manual", "Download from https://github.com/smicallef/spiderfoot"),
 
     # New V5.2 Enterprise binaries
     ("Amass",             "amass",       "binary", ""),
@@ -129,6 +129,22 @@ TOOLS = [
     ("OWASP ZAP",  "zaproxy",  "manual", "Download from https://www.zaproxy.org/download/"),
 ]
 
+def _populate_dynamic_tools():
+    try:
+        from scanners.core.registry import discover_scanners, _REGISTRY
+        discover_scanners()
+        
+        existing_bins = {t[1] for t in TOOLS if t[1]}
+        for name, meta in _REGISTRY.items():
+            if not meta.get("needs_binary"): continue
+            b = meta.get("binary_name")
+            if b and b not in existing_bins:
+                TOOLS.append((name, b, "manual", f"Install {b} manually for {name} scanner."))
+                existing_bins.add(b)
+    except Exception as e:
+        logger.error(f"Failed to load dynamic tools: {e}")
+
+_populate_dynamic_tools()
 
 # Module name overrides for pip packages with non-standard import names
 _PIP_IMPORT_OVERRIDES = {
