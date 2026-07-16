@@ -38,6 +38,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -95,10 +98,10 @@ def run_tech_fingerprint(url):
 
     try:
         try:
-            resp = session.get(url, timeout=TECH_TIMEOUT, verify=False, allow_redirects=True)
+            resp = session.get(url, timeout=TECH_TIMEOUT, verify=verify_tls, allow_redirects=True)
         except requests.exceptions.SSLError:
             resp = session.get(url.replace("https://", "http://"), timeout=TECH_TIMEOUT,
-                               verify=False, allow_redirects=True)
+                               verify=verify_tls, allow_redirects=True)
 
         headers_str = "\n".join(f"{k}: {v}" for k, v in resp.headers.items())
         body = resp.text[:50000]  # Limit body analysis size

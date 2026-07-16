@@ -74,34 +74,7 @@ def handle_system_signals(signum, frame):
         pass
     sys.exit(0)
 
-def enforce_license():
-    """
-    V6.0 — Complex RSA-2048 puzzle-based license verification.
-    """
-    import hashlib
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    license_path = os.path.join(base_dir, "config", "license.key")
-    expected_hash = "0a200fb4c245cde32d327feae09fe32ab7da6f537e456baeec2e92efa3553e0b"
-    
-    try:
-        if not os.path.exists(license_path):
-            print("[🔒 SECURITY HALT] License file missing!")
-            print("Please solve the puzzle in LICENSE_FINDER.md and add the RSA key to config/license.key.")
-            sys.exit(1)
-            
-        with open(license_path, "r", encoding="utf-8") as f:
-            key = f.read().strip()
-            
-        if hashlib.sha256(key.encode()).hexdigest() != expected_hash:
-            print("[🔒 SECURITY HALT] License invalid: RSA key signature mismatch.")
-            print("You did not extract the correct RSA-2048 key. Check LICENSE_FINDER.md!")
-            sys.exit(1)
-            
-    except Exception as e:
-        if isinstance(e, SystemExit):
-            raise e
-        print(f"[🔒 SECURITY HALT] License invalid: {e}")
-        sys.exit(1)
+
 
 def main():
     import argparse
@@ -111,7 +84,6 @@ def main():
     
     if args.api:
         print("[*] Starting SMP V6.0 in Headless API Mode...")
-        enforce_license()
         enforce_single_instance()
         init_directories()
         # ── V6.0 P0 FIX: Decrypt before DB access ─────────────────────────
@@ -130,7 +102,6 @@ def main():
         api.server.start_server()
         return
 
-    enforce_license()
     enforce_single_instance()
     
     # Register OS Signal Interception

@@ -90,13 +90,13 @@ def validate_password_complexity(password: str) -> tuple:
     return True, ""
 
 
-def hash_password(password: str, salt: bytes) -> str:
+def hash_password(password: str, salt: bytes, iterations: int = _PBKDF2_ITERATIONS) -> str:
     """Derive hash from password and salt using PBKDF2."""
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
         salt=salt,
-        iterations=_PBKDF2_ITERATIONS,
+        iterations=iterations,
     )
     key = kdf.derive(password.encode())
     return hashlib.sha256(key).hexdigest()
@@ -147,14 +147,14 @@ def verify_password(password: str) -> bool:
         salt = bytes.fromhex(data["salt"])
         pw_hash = data["hash"]
         
-        calculated_hash = hash_password(password, salt)
+        calculated_hash = hash_password(password, salt, iterations=data.get("pbkdf2_iterations", 100000))
         if calculated_hash == pw_hash:
             global ACTIVE_KEY
             ACTIVE_KEY = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
                 salt=salt,
-                iterations=100000,
+                iterations=data.get("pbkdf2_iterations", 100000),
             ).derive(password.encode())
             ACTIVE_KEY = base64.urlsafe_b64encode(ACTIVE_KEY)
             return True

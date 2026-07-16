@@ -13,6 +13,9 @@ import os
 import logging
 import hashlib
 from datetime import datetime
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -72,7 +75,7 @@ def _capture_html_snapshot(url: str, output_path: str) -> bool:
     """Fallback: save HTML source as text evidence."""
     try:
         import requests
-        resp = requests.get(url, timeout=10, verify=False,
+        resp = requests.get(url, timeout=10, verify=verify_tls,
                             headers={"User-Agent": "SMP-Evidence-Capture/6.0"})
         html_path = output_path.replace(".png", ".html")
         with open(html_path, "w", encoding="utf-8", errors="replace") as f:

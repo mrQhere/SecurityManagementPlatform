@@ -40,6 +40,9 @@ import logging
 import requests
 from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -55,7 +58,7 @@ def _extract_jwts_from_response(url):
     """Attempt to extract JWT tokens from the target's HTTP response headers and body."""
     tokens = []
     try:
-        resp = requests.get(url, timeout=15, verify=False, allow_redirects=True)
+        resp = requests.get(url, timeout=15, verify=verify_tls, allow_redirects=True)
         # Check headers
         for header_val in resp.headers.values():
             tokens.extend(_JWT_RE.findall(header_val))

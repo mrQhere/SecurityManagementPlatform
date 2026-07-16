@@ -37,6 +37,9 @@ except ImportError:
     requests = None
 
 from tools.db_manager import add_log_entry
+from tools.config_manager import load_settings
+verify_tls = not load_settings().get('insecure_scans', False)
+
 
 logger = logging.getLogger("smp.scan")
 
@@ -125,7 +128,7 @@ def run_cms_scan(url):
     for path, pattern, cms_name in _CMS_SIGNATURES:
         test_url = base_url + path
         try:
-            resp = session.get(test_url, timeout=CMS_TIMEOUT, verify=False,
+            resp = session.get(test_url, timeout=CMS_TIMEOUT, verify=verify_tls,
                                allow_redirects=True)
             if resp.status_code in (200, 301, 302, 403):
                 content = resp.text

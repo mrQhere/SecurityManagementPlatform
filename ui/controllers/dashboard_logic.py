@@ -28,6 +28,7 @@ import logging
 import threading
 from datetime import datetime
 
+from PySide6.QtCharts import QPieSeries
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView,
@@ -1247,9 +1248,40 @@ class DashboardLogicMixin:
 
     def refresh_intel_feed(self):
         stats = get_cve_stats()
+        
         self.lbl_stats.setText(
-            f"Total CVEs: {stats['total']:,}   ·   New Today: {stats['new_today']}   ·   Critical Today: {stats['critical_today']}"
+            f"Total CVEs: {stats['total']:,}   ·   New Today: {stats.get('new_today', 0)}   ·   Critical Today: {stats.get('critical_today', 0)}"
         )
+        
+        # Update Pie Chart
+        counts = stats.get('counts', {})
+        if hasattr(self, 'cve_chart'):
+            self.cve_chart.removeAllSeries()
+            series = QPieSeries()
+            
+            critical_slice = series.append("Critical", counts.get("Critical", 0))
+            from PySide6.QtGui import QColor
+            critical_slice.setColor(QColor("#FF3333"))
+            
+            high_slice = series.append("High", counts.get("High", 0))
+            high_slice.setColor(QColor("#FF9933"))
+            
+            medium_slice = series.append("Medium", counts.get("Medium", 0))
+            medium_slice.setColor(QColor("#FFCC00"))
+            
+            low_slice = series.append("Low", counts.get("Low", 0))
+            low_slice.setColor(QColor("#33CC33"))
+            
+            info_slice = series.append("Info", counts.get("Info", 0))
+            info_slice.setColor(QColor("#3399FF"))
+            
+            for s in series.slices():
+                if s.value() > 0:
+                    s.setLabelVisible(True)
+                    s.setLabel(f"{s.label()} ({int(s.value())})")
+            
+            self.cve_chart.addSeries(series)
+
 
         search = self.txt_intel_search.text().lower().strip()
         sel_sev = self.cmb_intel_severity.currentText()
@@ -1525,7 +1557,17 @@ class DashboardLogicMixin:
             self.poll_updates()
 
     def trigger_manual_scan(self, target):
-        from PySide6.QtWidgets import QInputDialog, QLineEdit
+        from PySide6.QtWidgets import QInputDialog, QLineEdit, QDialog
+        from tools.responsibility_manager import check_target_attestation
+        from ui.components.responsibility_dialog import ResponsibilityDialog
+        
+        target_id = target.get("id")
+        if target_id and not check_target_attestation(target_id):
+            dlg = ResponsibilityDialog(self, target)
+            if dlg.exec() != QDialog.Accepted:
+                logger.info("Scan cancelled due to missing responsibility attestation.")
+                return
+
         sudo_password, ok = QInputDialog.getText(
             self, 
             "Scan Elevation Mode", 

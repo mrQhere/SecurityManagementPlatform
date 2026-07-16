@@ -7,23 +7,7 @@
 <!--  ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝     ╚═════╝  ╚═════╝ ╚═╝╚═════╝  ╚══════╝ -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-<div align="center">
 
-<h1>
-<span style="color:#FF6B6B">🔴</span>
-<span style="color:#FF8E53">🟠</span>
-<span style="color:#FFD93D">🟡</span>
-<span style="color:#6BCB77">🟢</span>
-<span style="color:#4D96FF">🔵</span>
-<span style="color:#C77DFF">🟣</span>
-&nbsp; Security Management Platform &nbsp;
-<span style="color:#C77DFF">🟣</span>
-<span style="color:#4D96FF">🔵</span>
-<span style="color:#6BCB77">🟢</span>
-<span style="color:#FFD93D">🟡</span>
-<span style="color:#FF8E53">🟠</span>
-<span style="color:#FF6B6B">🔴</span>
-</h1>
 
 ```
 ███████╗███╗   ███╗██████╗     ██╗   ██╗ ██████╗        ██████╗ 
@@ -39,13 +23,6 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/Version-V6.0-blueviolet?style=for-the-badge&logo=shield)](.)
-[![Level](https://img.shields.io/badge/Level-Beginner%20to%20Research-brightgreen?style=for-the-badge)](.)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-blue?style=for-the-badge&logo=linux)](.)
-[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](.)
-
-</div>
-
 ---
 
 > [!IMPORTANT]
@@ -55,19 +32,19 @@
 
 ---
 
-## 🌈 Table of Contents
+##  Table of Contents
 
 <div align="center">
 
 | 🎨 Color | Section | Level |
 |:--------:|---------|-------|
-| 🔴 **RED** | [Part 0 — Philosophy & Architecture](#-part-0--philosophy--architecture) | Everyone |
-| 🟠 **ORANGE** | [Part 1 — Beginner: First Setup](#-part-1--beginner-first-setup-zero-to-running) | 🐣 New Users |
-| 🟡 **YELLOW** | [Part 2 — Intermediate: Daily Operations](#-part-2--intermediate-daily-operations) | 🔧 Regular Analysts |
-| 🟢 **GREEN** | [Part 3 — Advanced: Power Features](#-part-3--advanced-power-features) | ⚡ Power Users |
-| 🔵 **BLUE** | [Part 4 — Developer: Plugin System](#-part-4--developer-plugin-system) | 🧑‍💻 Developers |
-| 🟣 **PURPLE** | [Part 5 — Research Level](#-part-5--research-level) | 🔬 Researchers |
-| ⭐ **GOLD** | [Part 6 — V6.0 Complete Fix List (30)](#-part-6--v60-complete-fix--feature-list-30-items) | 📋 All Levels |
+| **RED** | [Part 0 — Philosophy & Architecture](#-part-0--philosophy--architecture) | Everyone |
+| **ORANGE** | [Part 1 — Beginner: First Setup](#-part-1--beginner-first-setup-zero-to-running) | 🐣 New Users |
+| **YELLOW** | [Part 2 — Intermediate: Daily Operations](#-part-2--intermediate-daily-operations) | 🔧 Regular Analysts |
+| **GREEN** | [Part 3 — Advanced: Power Features](#-part-3--advanced-power-features) | ⚡ Power Users |
+| **BLUE** | [Part 4 — Developer: Plugin System](#-part-4--developer-plugin-system) | 🧑‍💻 Developers |
+| **PURPLE** | [Part 5 — Research Level](#-part-5--research-level) | 🔬 Researchers |
+| **GOLD** | [Part 6 — V6.0 Complete Fix List (30)](#-part-6--v60-complete-fix--feature-list-30-items) | 📋 All Levels |
 | 🔧 **WRENCH** | [Part 7 — Troubleshooting](#-part-7--troubleshooting) | 🆘 Help Me! |
 
 </div>
@@ -84,16 +61,16 @@ SMP is an **all-in-one security scanning platform** purpose-built for enterprise
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   SMP V6.0 Architecture                  │
+│                   SMP V6.0 Architecture                 │
 ├───────────────┬──────────────────┬──────────────────────┤
-│   🖥️  GUI      │  🔌 Plugin System │    🌐 REST API V6    │
+│   🖥️  GUI      │  🔌 Plugin System │    🌐 REST API V6  │
 │   (PySide6)   │  (Auto-discover) │  (JWT + Rate Limit)  │
 ├───────────────┴──────────────────┴──────────────────────┤
-│              📊 Scan Orchestrator (DAG Engine)           │
-├──────────┬──────────┬────────────┬───────────────────────┤
+│              📊 Scan Orchestrator (DAG Engine)          │
+├──────────┬──────────┬────────────┬──────────────────────┤
 │ 🔍 Nmap  │ 💥 Nuclei│ 🕸️ Katana  │  30+ more scanners   │
-├──────────┴──────────┴────────────┴───────────────────────┤
-│              🗄️ Encrypted SQLite Database                 │
+├──────────┴──────────┴────────────┴──────────────────────│
+│              🗄️ Encrypted SQLite Database               │
 ├─────────────────────────────────────────────────────────┤
 │    🔐 Fernet+PBKDF2 (600k iter)  │  🔑 RSA-2048 License │
 └─────────────────────────────────────────────────────────┘
@@ -137,31 +114,6 @@ chmod +x setup.sh run.sh
 
 > [!NOTE]
 > ☕ The setup scripts are fully autonomous. They will automatically install Python dependencies, configure the environment, and download all required external security tools (Nmap, Nuclei, Nikto, Go, Ruby, Perl) using your system's package manager (`apt`, `brew`, `dnf`, `pacman`, or `winget` on Windows). It takes about 2-5 minutes.
-
----
-
-## 🟠 Step 2 — Find and Install the License File
-
-To ensure only capable operators use SMP V6.0, your license key is locked behind a cryptography puzzle.
-
-1. Open the [LICENSE_FINDER.md](LICENSE_FINDER.md) file in the root directory.
-2. Follow the 3 hints provided to solve the puzzle and derive the password for the license vault.
-3. Once you have the vault password (e.g., `Mega-XXXX`), use it to unzip `license_puzzle/vault.zip`.
-
-**How to add the license key:**
-```bash
-# Unzip the vault using your derived password (replace YOUR_PASSWORD)
-unzip -P YOUR_PASSWORD license_puzzle/vault.zip -d license_puzzle/
-
-# Create the config directory if it doesn't exist
-mkdir -p config
-
-# Move the extracted huge_license.key into the config directory
-mv license_puzzle/huge_license.key config/license.key
-```
-
-> [!IMPORTANT]
-> 🔑 Without a valid `config/license.key` containing the correct RSA-2048 private key, SMP will not start.  
 
 ---
 
@@ -214,6 +166,9 @@ SecureM@co2026!    ← ✅ Meets all requirements
 > [!CAUTION]
 > ⚠️ Only add targets you have **written permission** to scan!
 
+> [!IMPORTANT]
+> 🛡️ **Per-Target Legal Attestation (V6.0):** Before you can scan any target, you must manually type exactly: *\"I accept full legal responsibility for scanning this target.\"* This is enforced on a per-target basis and expires every 30 days.
+
 ---
 
 ## 🟠 Step 9 — Run Your First Scan
@@ -249,7 +204,7 @@ When the scan finishes:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  🛡️ SMP V6.0          [🔴 Targets] [🟡 Scans] [📊 CVEs] │
+│  🛡️ SMP V6.0          [🔴 Targets] [🟡 Scans] [📊 CVEs]  │
 ├──────────┬───────────────────────────────────────────────┤
 │          │  Security Posture Score: 72/100  📈 +5        │
 │  SIDEBAR │  ─────────────────────────────────────────    │
@@ -360,6 +315,9 @@ Next Sync: In 58 minutes
 ```
 
 The CVE database **persists across restarts** (V6.0 P0 fix). You will always see your downloaded data on reopen.
+
+
+**New in V6.0:** The CVE Dashboard now features a dynamic **Pie Chart** visualizing the breakdown of vulnerabilities by severity (Critical, High, Medium, Low, Info).
 
 ---
 
@@ -759,7 +717,7 @@ Fernet (AES-128-CBC + HMAC-SHA256)
 Encrypted: security.db.enc, active_scans.db.enc
 ```
 
-**V6.0 improvement:** Iterations bumped from 100,000 → **600,000** (NIST SP 800-132 2024 recommendation).
+**V6.0 improvement:** Iterations are dynamically loaded from `auth.json` and default to **600,000** (NIST SP 800-132 2024 recommendation), ensuring backwards compatibility for older setups.
 
 ---
 
@@ -1037,8 +995,9 @@ if not ok:
 
 ```python
 # Verify the new iteration count:
-from tools.encryption_manager import _PBKDF2_ITERATIONS
-print(f"PBKDF2 iterations: {_PBKDF2_ITERATIONS:,}")
+import json
+with open('config/auth.json') as f:
+    print(f"PBKDF2 iterations: {json.load(f).get('pbkdf2_iterations', 100000):,}")
 # Output: PBKDF2 iterations: 600,000
 ```
 
@@ -1487,7 +1446,6 @@ def check(label, fn):
     except Exception as e:
         print(f'  ❌ {label}: {e}')
 
-check('License Verifier', lambda: __import__('tools.license_verifier', fromlist=['']).verify_license)
 check('System Checker',   lambda: __import__('tools.system_checker', fromlist=['']).check_system_resources)
 check('Session Manager',  lambda: __import__('tools.session_manager', fromlist=['']).init_session)
 check('Compliance Mapper',lambda: __import__('tools.compliance_mapper', fromlist=['']).map_finding_to_controls)
@@ -1524,17 +1482,7 @@ print(f'{\"=\"*52}')
 
 ---
 
-## 🔧 "License signature file missing!"
 
-```bash
-# Check if license.key exists
-ls -la config/license.key
-
-# If missing, copy your license file:
-cp /path/to/provided/license.key config/license.key
-```
-
----
 
 ## 🔧 "No module named 'PySide6'"
 
@@ -1656,119 +1604,6 @@ playwright install chromium
 # Verify:
 python3 -c "from playwright.sync_api import sync_playwright; print('✅ Playwright OK')"
 ```
-
----
-
-## 🗑️ How to Selectively Delete Items
-
-If you don't want to perform a **Full Factory Reset**, you can easily delete specific data using the API or directly via SQLite commands.
-
-### 1. Delete a Specific Target & Its Scans
-```bash
-# Connect to the database
-sqlite3 database/security.db
-
-# Find the target ID
-SELECT id, url FROM targets;
-
-# Delete it (this automatically cascades to delete associated scans)
-DELETE FROM targets WHERE id = 5;
-.quit
-```
-
-### 2. Delete All Scan Results for a Specific Tool
-```bash
-sqlite3 database/security.db
-DELETE FROM scan_results WHERE scan_id IN (SELECT id FROM scans WHERE tool_name = 'Nmap');
-.quit
-```
-
-### 3. Clear Only the Logs
-```bash
-# Delete all log files but keep your data intact
-rm -f logs/*.log
-```
-
----
-
-## 💻 30 Copy-Paste Usage Scenarios
-
-Whether you are automating SMP in a CI/CD pipeline or running quick recon, here are 30 direct commands you can copy and paste into your terminal. 
-*(Ensure your API is running by starting `./run.sh` first!)*
-
-> **Note:** Replace `YourMasterPassword!` with your actual password.
-
-### 🎯 Basic Recon & Target Management
-1. **Add a Single Target:**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"url":"https://example.com","tags":"prod"}' http://127.0.0.1:8000/api/v6/targets`
-2. **List All Targets:**
-   `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/targets`
-3. **Delete Target #1:**
-   `curl -X DELETE -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/targets/1`
-4. **Search Targets by Tag:**
-   `curl -X GET -H "Authorization: Bearer YourMasterPassword!" "http://127.0.0.1:8000/api/v6/targets?search=prod"`
-5. **Add Multiple Targets (Bulk):**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"urls":["https://a.com","https://b.com"]}' http://127.0.0.1:8000/api/v6/targets/bulk`
-
-### 🚀 Starting Scans
-6. **Start a Full Vulnerability Scan:**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"target_id": 1, "profile": "full"}' http://127.0.0.1:8000/api/v6/scans/start`
-7. **Start a Fast Recon Scan:**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"target_id": 1, "profile": "fast"}' http://127.0.0.1:8000/api/v6/scans/start`
-8. **Start a Specific Tool Scan (e.g. Nmap):**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"target_id": 1, "tools": ["Nmap"]}' http://127.0.0.1:8000/api/v6/scans/start`
-9. **Start an Authenticated Scan (Header Auth):**
-   `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"target_id": 1, "profile": "full", "headers": {"Authorization": "Bearer token123"}}' http://127.0.0.1:8000/api/v6/scans/start`
-10. **Start an Aggressive Scan (Stealth Off):**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"target_id": 1, "profile": "aggressive"}' http://127.0.0.1:8000/api/v6/scans/start`
-
-### 📊 Monitoring Scans
-11. **Check All Running Scans:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/scans?status=running`
-12. **Check Scan Status by ID:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/scans/12`
-13. **Stop a Running Scan:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/scans/12/stop`
-14. **Get Findings for a Scan:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/scans/12/findings`
-15. **Get High-Severity Findings Only:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" "http://127.0.0.1:8000/api/v6/scans/12/findings?severity=high"`
-
-### 🧠 Threat Intelligence (CVEs)
-16. **Check CVE Database Status:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/intel/status`
-17. **Force Manual CVE Sync:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/intel/sync`
-18. **Search for a Specific CVE:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" "http://127.0.0.1:8000/api/v6/intel/search?q=CVE-2021-44228"`
-19. **Search CVEs by Keyword (e.g. Apache):**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" "http://127.0.0.1:8000/api/v6/intel/search?q=Apache"`
-20. **Search CVEs by Severity (Critical):**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" "http://127.0.0.1:8000/api/v6/intel/search?severity=critical"`
-
-### 📝 Reporting & Export
-21. **Generate PDF Report for Target #1:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/reports/generate/pdf/1`
-22. **Generate HTML Report for Target #1:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/reports/generate/html/1`
-23. **List All Generated Reports:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/reports`
-24. **Download Report by ID:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" --output report.pdf http://127.0.0.1:8000/api/v6/reports/download/5`
-25. **Export All Findings to CSV:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" --output findings.csv http://127.0.0.1:8000/api/v6/export/csv`
-
-### ⚙️ System & Administration
-26. **Check System Health (CPU/RAM/DB):**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/system/health`
-27. **Check Audit Logs:**
-    `curl -X GET -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/system/audit_logs`
-28. **Update System Settings (e.g. timeout):**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" -H "Content-Type: application/json" -d '{"scan_timeout_minutes": 120}' http://127.0.0.1:8000/api/v6/system/settings`
-29. **Trigger Tool Verifier/Update:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/system/tools/verify`
-30. **Trigger Background DB Backup:**
-    `curl -X POST -H "Authorization: Bearer YourMasterPassword!" http://127.0.0.1:8000/api/v6/system/backup`
 
 ---
 

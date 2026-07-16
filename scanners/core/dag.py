@@ -38,6 +38,7 @@ logger = logging.getLogger("smp.scan")
 class DAGOrchestrator:
     def __init__(self, plugins, max_workers=3, on_active_change=None):
         self.plugins = {p.name: p for p in plugins}
+        self.plugins_lock = threading.Lock()
         self.max_workers = max_workers
         self.on_active_change = on_active_change
         self.completed = set()
@@ -45,10 +46,19 @@ class DAGOrchestrator:
         self.running = set()
         self.results = {}
         
+    def add_plugin_to_graph(self, plugin):
+        """Thread-safe runtime addition of a plugin to the DAG."""
+        with self.plugins_lock:
+            self.plugins[plugin.name] = plugin
+            logger.info(f"Dynamically added {plugin.name} to DAG orchestrator.")
+        
     def get_executable_plugins(self):
         """Returns a list of plugins that are ready to run (all dependencies met)."""
         executable = []
-        for name, plugin in self.plugins.items():
+        with self.plugins_lock:
+            plugins_items = list(self.plugins.items())
+            
+        for name, plugin in plugins_items:
             if name in self.completed or name in self.failed or name in self.running:
                 continue
             
@@ -98,7 +108,11 @@ class DAGOrchestrator:
                 logger.error(f"[{plugin.step_name}] Execution exception: {e}")
                 q.put((plugin.name, None, False, str(e)))
         
-        while len(self.completed) + len(self.failed) < len(self.plugins):
+        while True:
+            with self.plugins_lock:
+                total_plugins = len(self.plugins)
+            if len(self.completed) + len(self.failed) >= total_plugins:
+                break
             if cancel_event and cancel_event.is_set():
                 logger.warning("DAG Orchestrator cancelled by user.")
                 break
@@ -110,7 +124,9 @@ class DAGOrchestrator:
                 plugin = ready_plugins.pop(0)
                 self.running.add(plugin.name)
                 if self.on_active_change:
-                    self.on_active_change([self.plugins[p].step_name for p in self.running])
+                    with self.plugins_lock:
+                        active_step_names = [self.plugins[p].step_name for p in self.running if p in self.plugins]
+                    self.on_active_change(active_step_names)
                 
                 t = threading.Thread(
                     target=run_plugin, 
@@ -130,7 +146,9 @@ class DAGOrchestrator:
                     name, res, success, err = result_queue.get(timeout=1.0)
                     self.running.remove(name)
                     if self.on_active_change:
-                        self.on_active_change([self.plugins[p].step_name for p in self.running])
+                        with self.plugins_lock:
+                            active_step_names = [self.plugins[p].step_name for p in self.running if p in self.plugins]
+                        self.on_active_change(active_step_names)
                     
                     if success:
                         self.completed.add(name)
@@ -158,7 +176,9 @@ class DAGOrchestrator:
             else:
                 # If we have no running processes and no ready plugins, 
                 # we have a dependency deadlock or unresolvable failure graph.
-                if len(self.completed) + len(self.failed) < len(self.plugins):
+                with self.plugins_lock:
+                    total_plugins = len(self.plugins)
+                if len(self.completed) + len(self.failed) < total_plugins:
                     logger.error("DAG Orchestrator Deadlock: Cannot resolve remaining dependencies.")
                     break
         
