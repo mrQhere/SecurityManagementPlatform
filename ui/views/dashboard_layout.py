@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QSizePolicy, QSpacerItem
 )
 from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QThread, Signal
-from PySide6.QtGui import QFont, QColor, QBrush, QPalette, QFontDatabase, QTextCursor
+from PySide6.QtGui import QFont, QColor, QBrush, QPalette, QFontDatabase, QTextCursor, QPainter
 import hashlib
 
 class WorkerThread(QThread):
@@ -903,7 +903,7 @@ class DashboardLayoutMixin:
         self.cve_chart.setBackgroundVisible(False)
         self.cve_chart.legend().hide()
         self.cve_chart_view = QChartView(self.cve_chart)
-        self.cve_chart_view.setRenderHint(self.cve_chart_view.renderHints() | 0x01) # Antialiasing
+        self.cve_chart_view.setRenderHint(QPainter.RenderHint.Antialiasing) # Antialiasing
         self.cve_chart_view.setFixedHeight(200)
         
         stats_layout = QHBoxLayout()
