@@ -902,9 +902,12 @@ class DashboardLayoutMixin:
         self.cve_chart.setTheme(QChart.ChartThemeDark)
         self.cve_chart.setBackgroundVisible(False)
         self.cve_chart.legend().hide()
+        from PySide6.QtCore import QMargins
+        self.cve_chart.setMargins(QMargins(10, 10, 10, 10))
         self.cve_chart_view = QChartView(self.cve_chart)
         self.cve_chart_view.setRenderHint(QPainter.RenderHint.Antialiasing) # Antialiasing
-        self.cve_chart_view.setFixedHeight(200)
+        self.cve_chart_view.setFixedHeight(300)
+        self.cve_chart_view.setMinimumWidth(400)
         
         stats_layout = QHBoxLayout()
         stats_layout.addWidget(self.lbl_stats)
