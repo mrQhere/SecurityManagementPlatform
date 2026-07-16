@@ -72,7 +72,7 @@ def handle_system_signals(signum, frame):
         QApplication.quit()
     except Exception:
         pass
-    sys.exit(0)
+    os._exit(0)
 
 
 
@@ -172,29 +172,8 @@ def main():
     splash.worker = worker 
     worker.start()
 
-    # ── V6.0 P0 FIX: Strict startup order ────────────────────────────────────
-    # 1. Decrypt DBs FIRST — before any scheduler, CVE sync, or UI load
-    # 2. Initialize DB schema
-    # 3. Setup logging (needs DB)
-    # 4. THEN start background workers (scheduler, intel sync)
-    # This ensures all data (CVEs, scans, findings, risk scores) is available
-    # immediately when the UI opens, fixing the "data lost on reopen" P0 bug.
-    # ─────────────────────────────────────────────────────────────────────────
-    init_directories()
-
-    from tools.encryption_manager import decrypt_databases, is_decryption_ok
-    decrypt_databases()
-
-    if not is_decryption_ok():
-        print("[⚠️] Warning: DB decryption status uncertain. Data may be incomplete.")
-
-    init_db()
-    setup_logging()
-
-    # ── Now safe to start background workers ──────────────────────────────────
-    start_scheduler()
-
     # Run loop
+
     exit_code = app.exec()
     sys.exit(exit_code)
 
