@@ -34,3 +34,28 @@ playwright>=1.40.0
 
 # System resource monitoring (optional — graceful fallback to /proc if not installed)
 psutil>=5.9.0
+
+# ── Missing Third Party Dependencies ───────────────────────────────────────────
+PySide6>=6.0.0
+python-dateutil
+colorama
+netaddr
+aiomultiprocess
+pysqlcipher3
+shodan
+aiohttp-socks
+pycryptodomex
+certifi
+ujson
+dnspython
+aiohttp
+aiodns
+uvloop; sys_platform != 'win32'
+PyYAML
+beautifulsoup4
+termcolor
+pytest
+ratelimit
+aiosqlite
+requests-futures
+httpx

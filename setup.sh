@@ -24,12 +24,12 @@ echo "🛠️ 1. Installing System Dependencies..."
 
 # --- 1. Python Backup ---
 if ! command -v python3 &> /dev/null; then
-    run_cmd "sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-venv" \
+    run_cmd "sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-venv python3-dev" \
             "wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && bash miniconda.sh -b -p $HOME/miniconda && export PATH=\"$HOME/miniconda/bin:$PATH\" && echo 'export PATH=\"$HOME/miniconda/bin:$PATH\"' >> ~/.bashrc" \
             "Installing Python"
 fi
 
-# --- 2. Go Backup ---
+# --- 2. Go Backup ---fix it
 if ! command -v go &> /dev/null; then
     run_cmd "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go" \
             "wget https://go.dev/dl/go1.22.4.linux-amd64.tar.gz -O go.tar.gz && sudo tar -C /usr/local -xzf go.tar.gz && export PATH=$PATH:/usr/local/go/bin && echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc" \
@@ -37,7 +37,7 @@ if ! command -v go &> /dev/null; then
 fi
 
 # --- 3. OS Tools Backup ---
-run_cmd "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nmap whatweb nikto sqlmap traceroute masscan wapiti ruby ruby-dev build-essential perl git" \
+run_cmd "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nmap whatweb nikto sqlmap traceroute masscan wapiti ruby ruby-dev build-essential perl git libsqlcipher-dev" \
         "mkdir -p ~/smp_tools && cd ~/smp_tools && git clone --depth 1 https://github.com/sullo/nikto.git && sudo ln -sf \$(pwd)/nikto/program/nikto.pl /usr/local/bin/nikto && git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev && sudo ln -sf \$(pwd)/sqlmap-dev/sqlmap.py /usr/local/bin/sqlmap && cd - >/dev/null" \
         "Installing OS Tools (Nmap, Nikto, SQLMap, Ruby, Git...)"
 
