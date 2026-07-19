@@ -29,7 +29,7 @@ if ! command -v python3 &> /dev/null; then
             "Installing Python"
 fi
 
-# --- 2. Go Backup ---fix it
+# --- 2. Go Backup ---
 if ! command -v go &> /dev/null; then
     run_cmd "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y golang-go" \
             "wget https://go.dev/dl/go1.22.4.linux-amd64.tar.gz -O go.tar.gz && sudo tar -C /usr/local -xzf go.tar.gz && export PATH=$PATH:/usr/local/go/bin && echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc" \
