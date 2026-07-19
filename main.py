@@ -111,28 +111,9 @@ def main():
     # 1. Initialize PySide6 GUI QApplication early so we can run dialogs
     app = QApplication(sys.argv)
 
-    # ── Force light theme regardless of OS dark-mode setting ──────────────────
-    # This ensures the app always renders as light, readable, and consistent.
+    # Use Fusion style for consistent cross-platform rendering with the dark QSS theme
     app.setStyle("Fusion")
-    from PySide6.QtGui import QPalette, QColor
-    palette = QPalette()
-    palette.setColor(QPalette.Window,          QColor("#F2F2F7"))
-    palette.setColor(QPalette.WindowText,      QColor("#1C1C1E"))
-    palette.setColor(QPalette.Base,            QColor("#FFFFFF"))
-    palette.setColor(QPalette.AlternateBase,   QColor("#F9F9FB"))
-    palette.setColor(QPalette.ToolTipBase,     QColor("#FFFFFF"))
-    palette.setColor(QPalette.ToolTipText,     QColor("#1C1C1E"))
-    palette.setColor(QPalette.Text,            QColor("#1C1C1E"))
-    palette.setColor(QPalette.Button,          QColor("#F2F2F7"))
-    palette.setColor(QPalette.ButtonText,      QColor("#1C1C1E"))
-    palette.setColor(QPalette.BrightText,      QColor("#FF3B30"))
-    palette.setColor(QPalette.Link,            QColor("#007AFF"))
-    palette.setColor(QPalette.Highlight,       QColor("#007AFF"))
-    palette.setColor(QPalette.HighlightedText, QColor("#FFFFFF"))
-    palette.setColor(QPalette.Mid,             QColor("#C7C7CC"))
-    palette.setColor(QPalette.Shadow,          QColor("#E5E5EA"))
-    app.setPalette(palette)
-    # ─────────────────────────────────────────────────────────────────────────
+
 
     # Register clean shutdown callback
     app.aboutToQuit.connect(on_quit)
