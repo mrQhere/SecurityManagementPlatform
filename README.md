@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Security Management Platform (SMP) V6.0 🛡️
+#  Security Management Platform (SMP) V6.0 
 
 **The Complete Enterprise Security Orchestrator**
 
