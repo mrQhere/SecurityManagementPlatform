@@ -36,42 +36,93 @@ It combines **FastAPI**, **SQLite (SQLCipher)**, and **30+ security tools** into
 
 ---
 
-## 2. Setup (Beginner)
+## 2. Setup (Getting Started for Beginners)
 
-Setting up SMP is as easy as installing an app on your phone. No complex dependency hell.
+Welcome to SMP! Setting up SMP is designed to be as seamless as possible. We provide two main ways to get started: **Docker** (recommended for most users) and **Local Installation** (recommended if you plan to develop or modify the code).
+
+### Prerequisites
+
+Before starting, ensure you have the following installed on your system:
+- **Git**: To clone the repository.
+- **Make**: To use the simplified commands.
+
+For Docker installation:
+- **Docker & Docker Compose**: The engine that runs SMP securely in an isolated container.
+
+For Local installation:
+- **Python 3.10+**: The core language used by the platform.
+- **sudo access**: Required to install necessary security scanners (Nmap, Masscan, etc.) during setup.
+
+---
 
 ### Using Docker (Recommended - The Apple Way)
 
+Running SMP in Docker is the most reliable way to ensure all dependencies work out of the box without polluting your host system.
+
 ```bash
-# 1. Clone the repository
+# 1. Clone the repository to your local machine
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# 2. Build the platform (this downloads all dependencies automatically)
+# 2. Build the platform image
+# This step automatically downloads all Python packages, Go binaries, and OS dependencies 
+# required by the 30+ security tools into an isolated image.
 make docker-build
 
 # 3. Start the platform
+# This spins up the API, database, and background workers.
 make docker-run
 ```
 
-**That's it.** The API is now running at `http://localhost:8000/api/v6/docs`.
+**Success!** The platform API and interactive documentation are now running at:
+👉 `http://localhost:8000/api/v6/docs`
 
-### Local Installation (For developers)
+To stop the platform, simply press `Ctrl+C` in the terminal, or run `make docker-down`.
+
+---
+
+### Local Installation (For Developers & Power Users)
+
+If you prefer to run SMP directly on your host machine (useful for debugging, adding custom tools, or avoiding Docker overhead), use the automated setup scripts.
 
 ```bash
-# 1. Run the auto-setup script
+# 1. Make the setup script executable
 chmod +x setup.sh
+
+# 2. Run the auto-setup script
+# This script will automatically create a Python virtual environment (venv), 
+# install requirements.txt, and attempt to install system packages (like nmap, dirb) via apt/brew.
 ./setup.sh
 
-# 2. Start the API
+# 3. Activate the virtual environment
+source venv/bin/activate
+
+# 4. Start the REST API
 make run-api
 ```
+
+**Note for Windows Users:** You can use the provided `setup.bat` or `setup.ps1` scripts instead of `setup.sh`. However, some advanced scanners might require WSL (Windows Subsystem for Linux) to function optimally.
 
 ---
 
 ## 3. First Run & Daily Operations
 
-When you first start SMP, the system automatically checks for the latest CVE databases.
+When you first start SMP, the system automatically checks for the latest CVE databases. 
+
+### Exploring the User Interface
+The UI is divided into several powerful sections:
+
+- **Dashboard**: The command center. Here you can add targets, view real-time risk scores, and monitor live scan pipelines in the "Active Scan Monitor". The Live Monitor shows step-by-step narrative updates of exactly what the scanners are doing.
+- **Targets**: A dedicated view to manage your domains and IPs.
+- **Threat Intel**: A live searchable feed of the CVE database. It includes a chart showing vulnerability distributions and lets you force a sync with NVD and GitHub Advisories.
+- **Audit Logs**: The immutable trail of everything the platform has done, including error logs and engine startup logs.
+- **Settings**: Where you configure the platform's behavior:
+  - **SMTP**: Configure email notifications. You must provide host, port, user, and an App Password.
+  - **Reports**: Set the Auditor Name and QA Reviewer Name for the generated PDFs. Contains a Drag & Drop zone to cryptographically verify report authenticity.
+  - **API Keys & Proxies**: Define HTTP/HTTPS proxies for the scanners and configure your GitHub token. *(Note: Hidden API keys like WPScan or GreyNoise are configured via `config/settings.json`)*.
+  - **Scan Profile**: Choose between `fast` (OSINT only), `standard` (default VAPT), or `full` (highly invasive/aggressive tools like ZAP and Commix).
+  - **Auth Headers**: Inject custom Cookies or Bearer Tokens into the scanners for authenticated scanning of web apps.
+
 
 ### Running a Scan
 1. Open the UI or API.
@@ -117,7 +168,7 @@ REST API Fuzzer — Tests OpenAPI/Swagger endpoints for misconfigurations and in
 ### `arjun.py`
 
 ```text
-No description available.
+Arjun — HTTP Parameter Discovery suite for uncovering hidden parameters.
 ```
 
 <br>
@@ -125,7 +176,7 @@ No description available.
 ### `cloud_enum.py`
 
 ```text
-No description available.
+Cloud Enum — Multi-cloud OSINT tool to find public AWS/Azure/GCP resources.
 ```
 
 <br>
@@ -133,7 +184,7 @@ No description available.
 ### `cms_scanner.py`
 
 ```text
-No description available.
+CMS Scanner — Detects and enumerates vulnerabilities in WordPress, Joomla, Drupal, etc.
 ```
 
 <br>
@@ -141,7 +192,7 @@ No description available.
 ### `commix.py`
 
 ```text
-No description available.
+Commix — Automated all-in-one OS command injection and exploitation tool.
 ```
 
 <br>
@@ -149,7 +200,7 @@ No description available.
 ### `cors_scanner.py`
 
 ```text
-No description available.
+CORS Scanner — Identifies insecure Cross-Origin Resource Sharing configurations.
 ```
 
 <br>
@@ -165,7 +216,7 @@ CRLF / Header Injection Scanner.
 ### `crtsh.py`
 
 ```text
-No description available.
+CRT.sh — Queries Certificate Transparency logs for rapid passive subdomain enumeration.
 ```
 
 <br>
@@ -173,7 +224,7 @@ No description available.
 ### `dalfox.py`
 
 ```text
-No description available.
+DalFox — Fast, parameter-analyzing XSS scanner and utility based on Golang.
 ```
 
 <br>
@@ -196,7 +247,7 @@ Install:
 ### `dnsx.py`
 
 ```text
-No description available.
+dnsx — Fast and multi-purpose DNS toolkit allow to run multiple DNS queries.
 ```
 
 <br>
@@ -212,7 +263,7 @@ Feroxbuster — Recursive content discovery (fast, async, Rust-based).
 ### `ffuf.py`
 
 ```text
-No description available.
+FFUF — Fast web fuzzer written in Go for rapid directory and parameter discovery.
 ```
 
 <br>
@@ -220,7 +271,7 @@ No description available.
 ### `gitleaks.py`
 
 ```text
-No description available.
+Gitleaks — Detects hardcoded secrets like passwords, API keys, and tokens in git repos.
 ```
 
 <br>
@@ -258,7 +309,7 @@ GraphQL Scanner — Introspection, batch attacks, and information disclosure.
 ### `hackertarget.py`
 
 ```text
-No description available.
+HackerTarget — Leverages the HackerTarget API for reverse DNS, whois, and port scans.
 ```
 
 <br>
@@ -266,7 +317,7 @@ No description available.
 ### `headers_scanner.py`
 
 ```text
-No description available.
+Security Headers — Analyzes HTTP response headers for missing security protections.
 ```
 
 <br>
@@ -274,7 +325,7 @@ No description available.
 ### `httpx_scanner.py`
 
 ```text
-No description available.
+HTTPX — Fast and multi-purpose HTTP toolkit to run multiple probes concurrently.
 ```
 
 <br>
@@ -290,7 +341,7 @@ Hydra — Rate-limited brute-force authentication testing (login forms only).
 ### `jwt_scanner.py`
 
 ```text
-No description available.
+JWT Scanner — Analyzes JSON Web Tokens for weak signatures and misconfigurations.
 ```
 
 <br>
@@ -298,7 +349,7 @@ No description available.
 ### `katana.py`
 
 ```text
-No description available.
+Katana — A next-generation crawling and spidering framework.
 ```
 
 <br>
@@ -306,7 +357,7 @@ No description available.
 ### `masscan.py`
 
 ```text
-No description available.
+Masscan — TCP port scanner, spews SYN packets asynchronously, scanning entire Internet in under 6 minutes.
 ```
 
 <br>
@@ -334,7 +385,7 @@ Install:
 ### `nikto.py`
 
 ```text
-No description available.
+Nikto — Web server scanner which performs comprehensive tests for multiple items, including dangerous files/CGIs.
 ```
 
 <br>
@@ -342,7 +393,7 @@ No description available.
 ### `nmap.py`
 
 ```text
-No description available.
+Nmap — The industry standard for network exploration, port scanning, and security auditing.
 ```
 
 <br>
@@ -350,7 +401,7 @@ No description available.
 ### `nuclei.py`
 
 ```text
-No description available.
+Nuclei — Fast and customizable vulnerability scanner based on simple YAML based DSL.
 ```
 
 <br>
@@ -358,7 +409,7 @@ No description available.
 ### `open_redirect.py`
 
 ```text
-No description available.
+Open Redirect — Scans for open redirect vulnerabilities in URL parameters.
 ```
 
 <br>
@@ -366,7 +417,7 @@ No description available.
 ### `paramspider.py`
 
 ```text
-No description available.
+ParamSpider — Mines parameters from web archives for deeper fuzzing.
 ```
 
 <br>
@@ -390,7 +441,7 @@ Retire.js — JavaScript library CVE detection via version fingerprinting.
 ### `robots_scanner.py`
 
 ```text
-No description available.
+Robots/Sitemap Scanner — Analyzes robots.txt and sitemap.xml for hidden endpoints.
 ```
 
 <br>
@@ -474,7 +525,7 @@ Fallback chain:
 ### `shodan_idb.py`
 
 ```text
-No description available.
+Shodan InternetDB — Offline passive lookup of open ports and vulnerabilities via Shodan.
 ```
 
 <br>
@@ -490,7 +541,7 @@ HTTP Request Smuggling — CL.TE / TE.CL / TE.TE detection.
 ### `sqlmap.py`
 
 ```text
-No description available.
+SQLMap — Automatic SQL injection and database takeover tool.
 ```
 
 <br>
@@ -498,7 +549,7 @@ No description available.
 ### `ssl_scanner.py`
 
 ```text
-No description available.
+SSL Scanner — Analyzes SSL/TLS configuration for weak ciphers and vulnerabilities.
 ```
 
 <br>
@@ -514,7 +565,7 @@ SSRF Scanner — Server-Side Request Forgery parameter testing.
 ### `subfinder.py`
 
 ```text
-No description available.
+Subfinder — Fast passive subdomain enumeration tool using passive online sources.
 ```
 
 <br>
@@ -522,7 +573,7 @@ No description available.
 ### `tech_fingerprint.py`
 
 ```text
-No description available.
+Tech Fingerprint — Identifies underlying technologies, frameworks, and CMS of a web app.
 ```
 
 <br>
@@ -530,7 +581,7 @@ No description available.
 ### `theharvester.py`
 
 ```text
-No description available.
+TheHarvester — OSINT tool to gather emails, subdomains, hosts, employee names, open ports and banners.
 ```
 
 <br>
@@ -538,7 +589,7 @@ No description available.
 ### `traceroute.py`
 
 ```text
-No description available.
+Traceroute — Network diagnostic tool for displaying the route and measuring transit delays of packets.
 ```
 
 <br>
@@ -546,7 +597,7 @@ No description available.
 ### `wapiti.py`
 
 ```text
-No description available.
+Wapiti — Web application vulnerability scanner that acts like a fuzzer.
 ```
 
 <br>
@@ -577,7 +628,7 @@ Uses only Python stdlib + requests + nmap (already required by SMP).
 ### `wayback.py`
 
 ```text
-No description available.
+Wayback Machine — Fetches historical URLs from the Internet Archive for endpoint discovery.
 ```
 
 <br>
@@ -585,7 +636,7 @@ No description available.
 ### `whatweb.py`
 
 ```text
-No description available.
+WhatWeb — Next generation web scanner for identifying technologies used by websites.
 ```
 
 <br>
@@ -593,7 +644,7 @@ No description available.
 ### `whois_scanner.py`
 
 ```text
-No description available.
+Whois — Queries WHOIS databases for domain registration details.
 ```
 
 <br>
@@ -601,7 +652,7 @@ No description available.
 ### `wpscan.py`
 
 ```text
-No description available.
+WPScan — Black box WordPress vulnerability scanner.
 ```
 
 <br>
@@ -617,7 +668,7 @@ XXE Scanner — XML External Entity injection testing.
 ### `zap.py`
 
 ```text
-No description available.
+OWASP ZAP — Integrated dynamic application security testing (DAST) tool.
 ```
 
 <br>
@@ -625,7 +676,7 @@ No description available.
 ### `alert_engine.py`
 
 ```text
-No description available.
+Alert Engine — Dispatches notifications via SMTP, Slack, Webhooks upon finding detection.
 ```
 
 <br>
@@ -676,7 +727,7 @@ Usage:
 ### `config_manager.py`
 
 ```text
-No description available.
+Config Manager — Centralized management of platform settings, thresholds, and secrets.
 ```
 
 <br>
@@ -684,7 +735,7 @@ No description available.
 ### `db_manager.py`
 
 ```text
-No description available.
+Database Manager — Handles SQLite/SQLCipher connections, migrations, and ORM mapping.
 ```
 
 <br>
@@ -748,7 +799,7 @@ Usage:
 ### `fail2ban_reader.py`
 
 ```text
-No description available.
+Fail2Ban Integrator — Reads Fail2Ban logs to correlate attacks and dynamically block malicious actors.
 ```
 
 <br>
@@ -774,7 +825,7 @@ Strategy:
 ### `logger_setup.py`
 
 ```text
-No description available.
+Logger Setup — Configures structured, rotated logging for the entire platform.
 ```
 
 <br>
@@ -842,7 +893,7 @@ Structure:
 ### `responsibility_manager.py`
 
 ```text
-No description available.
+Responsibility Manager — Maps vulnerabilities to specific teams or owners based on asset tags.
 ```
 
 <br>
@@ -896,7 +947,7 @@ Usage:
 ### `scheduler.py`
 
 ```text
-No description available.
+Scheduler — Cron-like engine for managing recurring, automated security scans.
 ```
 
 <br>
@@ -979,7 +1030,7 @@ Usage:
 ### `verify_smp.py`
 
 ```text
-No description available.
+SMP Verifier — Cryptographically verifies core application files to ensure zero tampering.
 ```
 
 <br>
@@ -990,35 +1041,86 @@ No description available.
 
 ## 5. Advanced — Core Internals & Encryption
 
-### Database Encryption
-SMP uses `sqlcipher` to encrypt the SQLite database at rest.
-The master password generates a PBKDF2 hash (600,000 iterations) which derives an AES-256 key.
+SMP is architected for maximum security and performance. Below is a deep dive into its core components.
+
+### 5.1 Database Encryption (SQLCipher)
+To prevent unauthorized access to sensitive vulnerability data, SMP uses `sqlcipher` to encrypt the SQLite database (`security.db`) at rest with **AES-256**. 
+- The encryption key is derived from a master password using a **PBKDF2 HMAC-SHA256** key derivation function (KDF) with 600,000 iterations.
+- Even if an attacker compromises the server, the database is unreadable without the master password.
 
 ```bash
-# Interacting with the DB manually (requires key)
+# Interacting with the DB manually (requires the derived key)
 sqlcipher database/security.db
 PRAGMA key = 'your_derived_key';
+.tables
 ```
 
-### IPC (Inter-Process Communication)
-The backend sends real-time Narrative logs to the GUI via UDP socket on port `5005`.
+### 5.2 Dynamic Stage-Feeding Pipeline
+Unlike traditional sequential scanners, SMP utilizes an intelligent, adaptive pipeline. 
+The pipeline relies on `tools/dynamic_pipeline.py` which transitions between states:
+1. **Recon (OSINT)**: Gather IPs, subdomains, and open ports. 
+2. **Context Analysis**: The platform parses Phase 1 data. If port 80/443 is open, it queues web scanners (Nikto, Nuclei). If port 22 is open, it queues SSH brute-forcers (Hydra).
+3. **Exploit (Active)**: Dynamically executed based on Context Analysis.
+
+### 5.3 Event Bus & IPC (Inter-Process Communication)
+SMP employs a thread-safe publish/subscribe Event Bus (`tools/event_bus.py`) that decouples the backend scanners from the UI.
+- Scanners publish events (`finding_discovered`, `scanner_progress`, `mac_changed`).
+- The narrative logger and GUI subscribe to these events to provide real-time updates.
+- External communication (e.g., to a remote UI) operates over a secure UDP socket on port `5005` using serialized JSON payloads.
 
 ---
 
-## 6. Adding Custom Scanners
+## 6. Adding Custom Scanners & Tools
 
-SMP is highly modular. To add a new scanner:
-1. Create `scanners/my_scanner.py`.
-2. Implement `run_my_scanner(target_url, scan_id, settings)`.
-3. Add it to `tools/dynamic_pipeline.py`.
+SMP's modular architecture makes it trivial to integrate custom Python scripts, proprietary tools, or Go binaries into the pipeline.
+
+### Step 1: Create the Scanner Module
+Create a new file in the `scanners/` directory (e.g., `scanners/custom_fuzzer.py`). Every scanner must expose a primary run function that accepts `target_url`, `scan_id`, and `settings`.
 
 ```python
-def run_my_scanner(target_url, scan_id, settings):
-    from tools.narrative_logger import emit_scanner_start, emit_finding
-    emit_scanner_start(scan_id, "my_scanner")
-    # your logic
-    return {"success": True, "data": [], "raw_output": "done"}
+# scanners/custom_fuzzer.py
+import subprocess
+from tools.narrative_logger import emit, emit_finding
+
+def run_custom_fuzzer(target_url, scan_id, settings):
+    # 1. Emit a narrative event to inform the user
+    emit(scan_id, "custom_fuzzer", f"Starting custom fuzzing on {target_url}")
+    
+    try:
+        # 2. Execute your custom logic or binary
+        result = subprocess.run(
+            ["/usr/local/bin/my_fuzzer", "-u", target_url], 
+            capture_output=True, text=True, timeout=300
+        )
+        
+        # 3. Parse output and report findings
+        if "VULN_FOUND" in result.stdout:
+            emit_finding(scan_id, "custom_fuzzer", "High", "Found vulnerability via Custom Fuzzer!")
+            return {"success": True, "data": [{"vuln": "custom"}], "raw_output": result.stdout}
+            
+        return {"success": True, "data": [], "raw_output": result.stdout}
+        
+    except Exception as e:
+        emit(scan_id, "custom_fuzzer", f"Error running custom fuzzer: {str(e)}")
+        return {"success": False, "error": str(e), "raw_output": ""}
 ```
+
+### Step 2: Register in the Dynamic Pipeline
+To ensure the system executes your scanner, you must register it in `tools/dynamic_pipeline.py`. 
+
+Add your scanner to the appropriate phase (e.g., `ACTIVE_SCANNERS` or `RECON_SCANNERS`). You can also implement custom logic to only trigger your scanner if specific conditions are met (e.g., if a specific technology is fingerprinted).
+
+```python
+# tools/dynamic_pipeline.py
+from scanners.custom_fuzzer import run_custom_fuzzer
+
+# Inside the pipeline execution block
+if "web_server" in self.context:
+    self.queue.append(run_custom_fuzzer)
+```
+
+### Step 3: Register in Tool Installer (Optional)
+If your tool requires specific APT packages, PIP dependencies, or Go installations, add it to `tools/tool_installer.py` so that it installs automatically when a user sets up SMP.
 
 ---
 

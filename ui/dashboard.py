@@ -548,7 +548,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         self.version = version
         self.setStyleSheet(APPLE_STYLESHEET)
         # Set window dimensions
-        self.setMinimumSize(1200, 800)
+        self.setMinimumSize(900, 600)
         self.resize(1400, 860)
 
         self._cache_kpis = None
