@@ -633,8 +633,6 @@ class DashboardLogicMixin:
         self.txt_report_email.setText(settings.get("report_email", ""))
         self.chk_zap_enabled.setChecked(settings.get("zap_enabled", False))
         # ── V5.3 — Load API Keys & Proxies ──
-        if hasattr(self, "txt_shodan_key"): self.txt_shodan_key.setText(settings.get("shodan_api_key", ""))
-        if hasattr(self, "txt_censys_key"): self.txt_censys_key.setText(settings.get("censys_api_key", ""))
         if hasattr(self, "txt_github_token"): self.txt_github_token.setText(settings.get("github_token", ""))
         if hasattr(self, "txt_http_proxy"): self.txt_http_proxy.setText(settings.get("http_proxy", ""))
         if hasattr(self, "txt_https_proxy"): self.txt_https_proxy.setText(settings.get("https_proxy", ""))
@@ -658,8 +656,6 @@ class DashboardLogicMixin:
         current_settings["zap_enabled"] = self.chk_zap_enabled.isChecked()
 
         # ── V5.3 — Save API Keys & Proxies ──
-        if hasattr(self, "txt_shodan_key"): current_settings["shodan_api_key"] = self.txt_shodan_key.text().strip()
-        if hasattr(self, "txt_censys_key"): current_settings["censys_api_key"] = self.txt_censys_key.text().strip()
         if hasattr(self, "txt_github_token"): current_settings["github_token"] = self.txt_github_token.text().strip()
         if hasattr(self, "txt_http_proxy"): current_settings["http_proxy"] = self.txt_http_proxy.text().strip()
         if hasattr(self, "txt_https_proxy"): current_settings["https_proxy"] = self.txt_https_proxy.text().strip()
@@ -931,12 +927,8 @@ class DashboardLogicMixin:
 
     def _invalidate_all_log_caches(self):
         self._cache_log_mtime = None
-        self._cache_cve_log_mtime = None
-        self._cache_scan_log_mtime = None
         self._cache_error_log_mtime = None
         self.refresh_master_log()
-        self.refresh_cve_log()
-        self.refresh_scan_log()
         self.refresh_error_log()
 
     def _force_full_refresh(self):
@@ -994,11 +986,9 @@ class DashboardLogicMixin:
         if current_page == 2:
             self.refresh_intel_feed()
 
-        # Refresh logs only when on Audit Logs page (4)
-        if current_page == 4:
+        # Refresh logs only when on Audit Logs page (5)
+        if current_page == 5:
             self.refresh_master_log()
-            self.refresh_scan_log()
-            self.refresh_cve_log()
             self.refresh_error_log()
 
     def update_kpis(self):

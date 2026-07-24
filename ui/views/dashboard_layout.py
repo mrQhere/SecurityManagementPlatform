@@ -580,6 +580,7 @@ class DashboardLayoutMixin:
             self._build_targets_page,
             self._build_intel_page,
             self._build_settings_page,
+            self._build_prof_settings_page,
             self._build_logs_page,
             self._build_reports_page,
         ]
@@ -625,8 +626,9 @@ class DashboardLayoutMixin:
             ("  Targets", 1),
             ("  Threat Intel", 2),
             ("  Settings", 3),
-            ("  Audit Logs", 4),
-            ("  Reports", 5),
+            ("  Professional Settings", 4),
+            ("  Audit Logs", 5),
+            ("  Reports", 6),
         ]
         for label, idx in nav_items:
             btn = QPushButton(label)
@@ -967,7 +969,7 @@ class DashboardLayoutMixin:
 
     def _build_settings_page(self):
         page, layout = self._make_page()
-        self._add_page_header(layout, "Settings", "Configure email alerts, reports, and scanner options")
+        self._add_page_header(layout, "Settings", "Configure email alerts, reports, and backup settings")
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -1007,7 +1009,6 @@ class DashboardLayoutMixin:
         self.txt_smtp_user.setPlaceholderText("user@example.com")
         make_field("Username (Email)", self.txt_smtp_user)
 
-        # Password row with toggle
         pass_row_widget = QWidget()
         pass_row = QHBoxLayout(pass_row_widget)
         pass_row.setContentsMargins(0, 0, 0, 0)
@@ -1082,7 +1083,6 @@ class DashboardLayoutMixin:
         self.btn_check_tools.clicked.connect(self.check_tools_dependencies)
         report_layout.addWidget(self.btn_check_tools)
 
-        # ── SHASUM Validator Widget ──
         class DropLabel(QLabel):
             def __init__(self, parent=None):
                 super().__init__("Drag & Drop Report PDF here to verify SHASUM", parent)
@@ -1112,6 +1112,56 @@ class DashboardLayoutMixin:
         
         scroll_layout.addWidget(report_card)
 
+        # ── Backup & Raw Data Group ──
+        backup_card = self._make_card("Backup & Raw Data Download")
+        backup_layout = backup_card.layout()
+
+        backup_desc = QLabel(
+            "Two backup databases are maintained automatically:\n"
+            "  •  active_scans.db — all raw scan results\n"
+            "  •  cve_secondary.db — CVE database backup\n\n"
+            "Download as ZIP to export raw data for offline analysis."
+        )
+        backup_desc.setStyleSheet("color: #666666; font-size: 12px; padding: 4px 0;")
+        backup_desc.setWordWrap(True)
+        backup_layout.addWidget(backup_desc)
+
+        backup_btn_row = QHBoxLayout()
+        backup_btn_row.addStretch()
+        self.btn_backup_cve = QPushButton("⮦  Backup CVE Database")
+        self.btn_backup_cve.setObjectName("btn_secondary")
+        self.btn_backup_cve.clicked.connect(self._backup_cve_db)
+        self.btn_download_backup = QPushButton("⭳  Download Raw Data ZIP")
+        self.btn_download_backup.clicked.connect(self._download_backup_zip)
+        backup_btn_row.addWidget(self.btn_backup_cve)
+        backup_btn_row.addWidget(self.btn_download_backup)
+        backup_layout.addLayout(backup_btn_row)
+        scroll_layout.addWidget(backup_card)
+
+        scroll_layout.addStretch()
+        scroll_area.setWidget(scroll_content)
+        layout.addWidget(scroll_area, 1)
+
+        return page
+
+    # ─── Page: Professional Settings ──────────────────────────────────────────
+
+    def _build_prof_settings_page(self):
+        page, layout = self._make_page()
+        self._add_page_header(layout, "Professional Settings", "Advanced configurations, invasive scanners, and system tuning")
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
+        scroll_content = QWidget()
+        scroll_content.setObjectName("scroll_content_prof")
+        scroll_content.setStyleSheet("QWidget#scroll_content_prof { background: transparent; }")
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setSpacing(16)
+        scroll_layout.setContentsMargins(0, 0, 8, 0)
+
         # ── ZAP Group ──
         zap_card = self._make_card("OWASP ZAP Scanner")
         zap_layout = zap_card.layout()
@@ -1137,16 +1187,6 @@ class DashboardLayoutMixin:
             row.addWidget(widget, 1)
             api_layout.addLayout(row)
             api_layout.addSpacing(4)
-
-        self.txt_shodan_key = QLineEdit()
-        self.txt_shodan_key.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
-        self.txt_shodan_key.setPlaceholderText("Shodan API Key (Required for deep Shodan scans)")
-        make_api_field("Shodan API Key", self.txt_shodan_key)
-
-        self.txt_censys_key = QLineEdit()
-        self.txt_censys_key.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
-        self.txt_censys_key.setPlaceholderText("Censys API Key / theHarvester config")
-        make_api_field("Censys API Key", self.txt_censys_key)
         
         self.txt_github_token = QLineEdit()
         self.txt_github_token.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
@@ -1243,34 +1283,6 @@ class DashboardLayoutMixin:
         auth_btn_row.addWidget(btn_save_hdrs)
         auth_layout.addLayout(auth_btn_row)
         scroll_layout.addWidget(auth_card)
-
-
-
-        # ── Backup & Raw Data Group ──
-        backup_card = self._make_card("Backup & Raw Data Download")
-        backup_layout = backup_card.layout()
-
-        backup_desc = QLabel(
-            "Two backup databases are maintained automatically:\n"
-            "  •  active_scans.db — all raw scan results\n"
-            "  •  cve_secondary.db — CVE database backup\n\n"
-            "Download as ZIP to export raw data for offline analysis."
-        )
-        backup_desc.setStyleSheet("color: #666666; font-size: 12px; padding: 4px 0;")
-        backup_desc.setWordWrap(True)
-        backup_layout.addWidget(backup_desc)
-
-        backup_btn_row = QHBoxLayout()
-        backup_btn_row.addStretch()
-        self.btn_backup_cve = QPushButton("⮦  Backup CVE Database")
-        self.btn_backup_cve.setObjectName("btn_secondary")
-        self.btn_backup_cve.clicked.connect(self._backup_cve_db)
-        self.btn_download_backup = QPushButton("⭳  Download Raw Data ZIP")
-        self.btn_download_backup.clicked.connect(self._download_backup_zip)
-        backup_btn_row.addWidget(self.btn_backup_cve)
-        backup_btn_row.addWidget(self.btn_download_backup)
-        backup_layout.addLayout(backup_btn_row)
-        scroll_layout.addWidget(backup_card)
 
         # ── Danger Zone ──
         danger_card = self._make_card("Danger Zone")
@@ -1676,31 +1688,11 @@ class DashboardLayoutMixin:
         )
         tabs.addTab(tab_master, "📋  Master")
 
-        # ── Tab 2: Scan ────────────────────────────────────────────────────
-        tab_scan = _make_log_tab(
-            tab_title="scan log",
-            log_widget_attr="txt_scan_log",
-            search_attr="txt_scan_log_search",
-            level_widget_attr="cmb_scan_log_level",
-            invalidate_fn=self._invalidate_scan_log_cache,
-            note_text="  Scanner pipeline events — HTTPx, Nmap, Nuclei, Nikto, ffuf, CORS, Headers, CMS, SQLMap...",
-            with_level=True
-        )
-        tabs.addTab(tab_scan, "🔍  Scan")
 
-        # ── Tab 3: CVE Intel ───────────────────────────────────────────────
-        tab_cve = _make_log_tab(
-            tab_title="CVE intel log",
-            log_widget_attr="txt_cve_logs",
-            search_attr="txt_cve_log_search",
-            level_widget_attr="cmb_cve_log_level",
-            invalidate_fn=self._invalidate_cve_log_cache,
-            note_text="  CVE intel sync — NVD, CISA KEV, GitHub Advisories, EPSS",
-            with_level=True
-        )
-        tabs.addTab(tab_cve, "🛡  CVE Intel")
 
-        # ── Tab 4: Errors ──────────────────────────────────────────────────
+
+
+        # ── Tab 2: Errors ──────────────────────────────────────────────────
         tab_err = _make_log_tab(
             tab_title="error log",
             log_widget_attr="txt_error_logs",
@@ -1729,8 +1721,6 @@ class DashboardLayoutMixin:
         import zipfile
         log_files = {
             "master.log": os.path.join(BASE_DIR, "logs", "master.log"),
-            "scan.log": os.path.join(BASE_DIR, "logs", "scan.log"),
-            "cve.log": os.path.join(BASE_DIR, "logs", "cve.log"),
             "error.log": os.path.join(BASE_DIR, "logs", "error.log"),
         }
         default = os.path.join(os.path.expanduser("~"), "smp_logs.zip")
