@@ -1,6 +1,6 @@
 #!/bin/bash
-# SMP V6.0 - Runner
-echo "🚀 Starting Security Management Platform V6.0..."
+# SMP V6.5 - Runner
+echo "🚀 Starting Security Management Platform V6.5..."
 if [ -d "venv" ]; then
     source venv/bin/activate
 fi

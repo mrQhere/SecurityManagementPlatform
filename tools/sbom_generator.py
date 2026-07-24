@@ -52,7 +52,7 @@ def _generate_cyclonedx(scan_id: int, target_url: str, technologies: list, outpu
             "metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "tools": [{
-                    "vendor": "Mega Cooperative",
+                    "vendor": "mrQhere",
                     "name": "Security Management Platform",
                     "version": "V6.0"
                 }],

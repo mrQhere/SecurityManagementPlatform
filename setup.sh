@@ -1,6 +1,6 @@
 #!/bin/bash
-# SMP V6.0 - Auto Setup for Linux/macOS with Fallbacks
-echo "🚀 Starting SMP V6.0 Auto-Setup for Linux/macOS..."
+# SMP V6.5 - Auto Setup for Linux/macOS with Fallbacks
+echo "🚀 Starting SMP V6.5 Auto-Setup for Linux/macOS..."
 
 # Helper: Command runner with ONE fallback
 run_cmd() {

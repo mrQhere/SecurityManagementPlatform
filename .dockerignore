@@ -1,0 +1,12 @@
+venv/
+database/*.db
+database/*.pid
+*.enc
+logs/
+reports/
+cache/
+backup/
+__pycache__/
+*.pyc
+.env
+.DS_Store
