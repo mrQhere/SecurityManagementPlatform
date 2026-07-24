@@ -1,4 +1,4 @@
-Write-Host "🚀 Starting SMP V6.0 Auto-Setup for Windows (PowerShell) with Fallbacks..." -ForegroundColor Cyan
+Write-Host "🚀 Starting SMP V6.5 Auto-Setup for Windows (PowerShell) with Fallbacks..." -ForegroundColor Cyan
 Write-Host "=======================================================" -ForegroundColor Cyan
 
 function Run-WithFallback {
@@ -86,7 +86,7 @@ foreach ($toolPair in $gotools) {
 }
 
 $runScript = @"
-Write-Host "🚀 Starting Security Management Platform V6.0..." -ForegroundColor Cyan
+Write-Host "🚀 Starting Security Management Platform V6.5..." -ForegroundColor Cyan
 if (`$env:VIRTUAL_ENV -eq `$null) { .\venv\Scripts\Activate.ps1 }
 python main.py
 "@

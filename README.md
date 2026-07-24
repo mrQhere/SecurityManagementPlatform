@@ -1,8 +1,8 @@
-# Security Management Platform (SMP) V6.0
+# Security Management Platform (SMP) V6.5
 
 **The Complete Enterprise Security Orchestrator**
 
-Security Management Platform (SMP) V6.0 is an all-in-one vulnerability scanning and intelligence orchestration platform. Maintained by [@mrQhere](https://github.com/mrQhere) at [https://github.com/mrQhere/SecurityManagementPlatform](https://github.com/mrQhere/SecurityManagementPlatform).
+Security Management Platform (SMP) V6.5 is an all-in-one vulnerability scanning and intelligence orchestration platform. Maintained by [@mrQhere](https://github.com/mrQhere) at [https://github.com/mrQhere/SecurityManagementPlatform](https://github.com/mrQhere/SecurityManagementPlatform).
 
 It brings together over 30 security tools, CVE intelligence, compliance mapping, and executive reporting into a single dashboard.
 

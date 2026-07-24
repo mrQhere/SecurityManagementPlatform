@@ -1,5 +1,5 @@
 """
-Compliance Mapper V6.0
+Compliance Mapper V6.5
 =======================
 Maps SMP finding types and CWE IDs to compliance control references:
   - OWASP Top 10 2021

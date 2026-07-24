@@ -1,5 +1,5 @@
 """
-Narrative Logger — SMP V6.0
+Narrative Logger — SMP V6.5
 ============================
 Translates raw scanner pipeline events into human-readable, step-by-step
 walkthrough messages, inspired by the PentestGPT live-console pattern.

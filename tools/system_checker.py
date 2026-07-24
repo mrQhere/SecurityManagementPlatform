@@ -1,5 +1,5 @@
 """
-System Resource Pre-Scan Checker V6.0
+System Resource Pre-Scan Checker V6.5
 ======================================
 Checks CPU, RAM, disk space, and network before a scan starts.
 If any threshold is exceeded, the caller gets a structured warning

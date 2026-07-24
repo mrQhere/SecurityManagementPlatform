@@ -1,5 +1,5 @@
 """
-System Check Dialog V6.0
+System Check Dialog V6.5
 =========================
 Shows a pre-scan warning dialog when system resources are low.
 Gives the analyst a "Continue Anyway" or "Cancel" choice.
