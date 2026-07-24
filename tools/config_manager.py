@@ -90,7 +90,7 @@ DEFAULT_SETTINGS = {
     "shodan_api_key": "",
     "censys_api_key": "",
     "cloud_enum_keywords": "",
-    # ── V6.0 — New Security Features ──────────────────────────────────────────
+    # ── V6.5 — New Security Features ──────────────────────────────────────────
     # MAC Changer — enhanced: show result in dashboard
     "mac_changer_enabled": True,
     "mac_display_result": True,   # Show changed MAC in dashboard status bar

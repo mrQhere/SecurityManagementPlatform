@@ -1,5 +1,5 @@
 """
-Gobuster Scanner — SMP V6.0
+Gobuster Scanner — SMP V6.5
 ============================
 Runs Gobuster for fast directory, file, DNS, and vhost brute-forcing.
 Complements ffuf by providing a second fuzzing engine with different

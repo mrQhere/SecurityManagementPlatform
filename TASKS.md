@@ -7,7 +7,7 @@
 
 ---
 
-## 1. Version Bump — V6.0 → V6.5
+## 1. Version Bump — V6.5 → V6.5
 - [x] `config/metadata.json` — version updated
 - [x] `main.py` — header updated
 - [x] `run.sh` — version string updated

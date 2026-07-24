@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 title SMP Setup - Windows Installer
 echo =======================================================
-echo 🚀 Starting SMP V6.0 Auto-Setup for Windows (Batch) with Fallbacks...
+echo 🚀 Starting SMP V6.5 Auto-Setup for Windows (Batch) with Fallbacks...
 echo =======================================================
 
 where winget >nul 2>&1
@@ -114,7 +114,7 @@ for %%I in (1 2 3 4) do (
 )
 
 echo @echo off > run.bat
-echo echo 🚀 Starting Security Management Platform V6.0... >> run.bat
+echo echo 🚀 Starting Security Management Platform V6.5... >> run.bat
 echo call venv\Scripts\activate.bat >> run.bat
 echo python main.py %%* >> run.bat
 

@@ -82,7 +82,7 @@ def trigger_scan_job():
 
 def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
     """
-    V6.0 P0 Fix — Wait for the DB to be decrypted and accessible.
+    V6.5 P0 Fix — Wait for the DB to be decrypted and accessible.
     Returns True when DB is ready, False if all retries exhausted.
     This ensures CVE sync never starts before the DB is available,
     which was the root cause of all-data-lost-on-reopen bugs.
@@ -109,11 +109,11 @@ def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
 
 
 def trigger_intel_job():
-    """Hourly threat intelligence feed update job — V6.0: waits for DB to be ready."""
+    """Hourly threat intelligence feed update job — V6.5: waits for DB to be ready."""
     logger.info("Scheduler Triggered: Threat intelligence update starting.")
     add_log_entry("INFO", "Scheduler Triggered: Threat intelligence update starting.")
 
-    # ── V6.0 P0 FIX: Ensure DB is decrypted before syncing ──────────────────
+    # ── V6.5 P0 FIX: Ensure DB is decrypted before syncing ──────────────────
     if not _wait_for_db_ready(max_retries=3, wait_seconds=5):
         add_log_entry("WARNING", "Intel sync skipped: DB not ready (still encrypting/decrypting).")
         return

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 SMP Version Bumper — updates version everywhere it matters.
-Usage: python3 tools/bump_version.py V6.0
+Usage: python3 tools/bump_version.py V6.5
 """
 import sys, json, os, re, glob
 

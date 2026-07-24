@@ -1,4 +1,4 @@
-# Security Management Platform (SMP) V6.0
+# Security Management Platform (SMP) V6.5
 # =========================================
 # Self-contained Docker image bundling all required system tools,
 # Go security tools, Python dependencies, and the SMP GUI-less API.
@@ -10,7 +10,7 @@
 FROM ubuntu:22.04
 
 LABEL maintainer="@mrQhere <https://github.com/mrQhere/SecurityManagementPlatform>"
-LABEL description="Security Management Platform V6.0 — All-in-one vulnerability scanning platform"
+LABEL description="Security Management Platform V6.5 — All-in-one vulnerability scanning platform"
 LABEL version="6.0"
 
 # Suppress interactive prompts during apt installs

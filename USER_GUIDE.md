@@ -181,7 +181,7 @@ No description available.
 ### `dirb.py`
 
 ```text
-Dirb Scanner — SMP V6.0
+Dirb Scanner — SMP V6.5
 =========================
 Runs Dirb for classic web content discovery using dictionary-based scanning.
 Provides a third fuzzing engine alongside ffuf and gobuster, using its own
@@ -228,7 +228,7 @@ No description available.
 ### `gobuster.py`
 
 ```text
-Gobuster Scanner — SMP V6.0
+Gobuster Scanner — SMP V6.5
 ============================
 Runs Gobuster for fast directory, file, DNS, and vhost brute-forcing.
 Complements ffuf by providing a second fuzzing engine with different
@@ -314,7 +314,7 @@ No description available.
 ### `netcat_probe.py`
 
 ```text
-Netcat Probe Scanner — SMP V6.0
+Netcat Probe Scanner — SMP V6.5
 ================================
 Uses netcat (nc) for raw TCP/UDP port probing and banner grabbing.
 Complements Nmap by providing direct, low-noise service banner collection
@@ -436,7 +436,7 @@ Optimized pipeline order (maximum efficiency — cheap/fast OSINT first, deep sc
 ### `screenshot_capture.py`
 
 ```text
-Screenshot Capture V6.0
+Screenshot Capture V6.5
 ========================
 Captures screenshots of vulnerable endpoints as cryptographic evidence
 for reports. Uses playwright (headless Chromium) as primary method
@@ -452,7 +452,7 @@ Usage:
 ### `secrets_scanner.py`
 
 ```text
-Secrets Scanner V6.0
+Secrets Scanner V6.5
 =====================
 Real pattern-based secrets detection in HTTP responses, HTML, JS files,
 and raw scanner output. Replaces the empty stubs (trufflehog/gitleaks).
@@ -633,7 +633,7 @@ No description available.
 ### `baseline_manager.py`
 
 ```text
-Port Baseline Manager V6.0
+Port Baseline Manager V6.5
 ============================
 Stores and compares per-target port profiles across scans.
 After the first scan, a "baseline" is saved. All subsequent scans
@@ -650,7 +650,7 @@ Fallback chain:
 
 ```text
 SMP Version Bumper — updates version everywhere it matters.
-Usage: python3 tools/bump_version.py V6.0
+Usage: python3 tools/bump_version.py V6.5
 ```
 
 <br>
@@ -658,7 +658,7 @@ Usage: python3 tools/bump_version.py V6.0
 ### `compliance_mapper.py`
 
 ```text
-Compliance Mapper V6.0
+Compliance Mapper V6.5
 =======================
 Maps SMP finding types and CWE IDs to compliance control references:
   - OWASP Top 10 2021
@@ -692,7 +692,7 @@ No description available.
 ### `dynamic_pipeline.py`
 
 ```text
-Dynamic Pipeline — SMP V6.0
+Dynamic Pipeline — SMP V6.5
 ==============================
 Stage-feeding scan pipeline inspired by the PentestGPT multi-stage approach.
 
@@ -728,7 +728,7 @@ Encryption Manager — manages SQLite database encryption and decryption at appl
 ### `event_bus.py`
 
 ```text
-In-Process Event Bus V6.0
+In-Process Event Bus V6.5
 ==========================
 Thread-safe publish/subscribe event bus replacing the old unsafe UDP IPC socket.
 Allows decoupled communication between scanner threads and the UI.
@@ -756,7 +756,7 @@ No description available.
 ### `finding_deduplicator.py`
 
 ```text
-Finding Deduplicator V6.0
+Finding Deduplicator V6.5
 ==========================
 Merges structurally identical findings from multiple scanners into a single
 finding with all source scanners cited (e.g. Nuclei + Nikto both reporting
@@ -799,7 +799,7 @@ Key design decisions:
 ### `narrative_logger.py`
 
 ```text
-Narrative Logger — SMP V6.0
+Narrative Logger — SMP V6.5
 ============================
 Translates raw scanner pipeline events into human-readable, step-by-step
 walkthrough messages, inspired by the PentestGPT live-console pattern.
@@ -876,7 +876,7 @@ Ratings:
 ### `sbom_generator.py`
 
 ```text
-SBOM Generator V6.0
+SBOM Generator V6.5
 ====================
 Generates a CycloneDX JSON Software Bill of Materials from technology
 fingerprinting data collected during a scan.
@@ -904,7 +904,7 @@ No description available.
 ### `session_manager.py`
 
 ```text
-Session Manager V6.0
+Session Manager V6.5
 ====================
 Tracks user activity and fires an auto-lock signal after a configurable
 idle timeout. Designed to work with the PySide6 dashboard without requiring
@@ -923,7 +923,7 @@ Usage:
 ### `system_checker.py`
 
 ```text
-System Resource Pre-Scan Checker V6.0
+System Resource Pre-Scan Checker V6.5
 ======================================
 Checks CPU, RAM, disk space, and network before a scan starts.
 If any threshold is exceeded, the caller gets a structured warning
