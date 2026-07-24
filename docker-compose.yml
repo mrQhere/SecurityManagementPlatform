@@ -1,0 +1,58 @@
+services:
+
+  smp:
+    container_name: smp
+    image: smp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # REST API — accessible at http://localhost:8000/api/v6/docs
+      - "8000:8000"
+    volumes:
+      # Persist encrypted databases across container restarts
+      - smp-database:/app/database
+      # Persist generated reports
+      - smp-reports:/app/reports
+      # Persist audit logs
+      - smp-logs:/app/logs
+      # Persist configuration (settings.json.enc, etc.)
+      - smp-config:/app/config
+      # Persist cache (CVE intel sync state)
+      - smp-cache:/app/cache
+      # Persist backups
+      - smp-backup:/app/backup
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SMP_HEADLESS=1
+    stdin_open: false
+    tty: false
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v6/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  smp-database:
+    name: smp-database
+  smp-reports:
+    name: smp-reports
+  smp-logs:
+    name: smp-logs
+  smp-config:
+    name: smp-config
+  smp-cache:
+    name: smp-cache
+  smp-backup:
+    name: smp-backup

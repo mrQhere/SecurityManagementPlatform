@@ -1,6 +1,6 @@
 # =============================================================================
-# Security Management Platform (SMP) V6.0
-# Mega Cooperative — Authorised Personnel Only
+# Security Management Platform (SMP) V6.5
+# mrQhere — Authorised Personnel Only
 # =============================================================================
 import sys
 import os
@@ -83,10 +83,10 @@ def main():
     args, unknown = parser.parse_known_args()
     
     if args.api:
-        print("[*] Starting SMP V6.0 in Headless API Mode...")
+        print("[*] Starting SMP V6.5 in Headless API Mode...")
         enforce_single_instance()
         init_directories()
-        # ── V6.0 P0 FIX: Decrypt before DB access ─────────────────────────
+        # ── V6.5 P0 FIX: Decrypt before DB access ─────────────────────────
         from tools.encryption_manager import decrypt_databases
         decrypt_databases()
         init_db()
