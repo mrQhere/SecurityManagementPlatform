@@ -1,99 +1,152 @@
-# Security Management Platform (SMP) V6.5
+# Security Management Platform (SMP) V7
 
-**The Complete Enterprise Security Orchestrator**
+[![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 
-Security Management Platform (SMP) V6.5 is an all-in-one vulnerability scanning and intelligence orchestration platform. Maintained by [@mrQhere](https://github.com/mrQhere) at [https://github.com/mrQhere/SecurityManagementPlatform](https://github.com/mrQhere/SecurityManagementPlatform).
+Local-first VAPT platform. Zero cloud. Encrypted at rest. Runs entirely on your hardware.
 
-It brings together over 30 security tools, CVE intelligence, compliance mapping, and executive reporting into a single dashboard.
+Maintained by [@mrQhere](https://github.com/mrQhere).
 
-## Key Features
+---
 
-* **Adaptive Stage-Feeding Pipeline**: Phase 1 OSINT findings dynamically activate Phase 3 exploit scanners. WordPress detected → WPScan runs. SSH open → Hydra runs. No wasted time on irrelevant tools.
-* **Live Narrative Walkthrough**: Every scanner step emits a human-readable explanation — what is being tested, why, and what was found. Persisted per scan and streamed to the dashboard in real time.
-* **Docker Deployment**: Full one-command deployment via Docker and Docker Compose. All 30+ tools bundled. No manual dependency installation.
-* **Encrypted Database**: AES-256 (Fernet) and PBKDF2 (600,000 iterations).
-* **Secured REST API**: Headless operation via FastAPI with JWT Authentication and Rate Limiting.
-* **Intelligence and OSINT**: GreyNoise IP intelligence and real-time CVE syncing.
-* **Compliance Ready**: Automated mapping to OWASP Top 10 2021, CIS Controls v8, and ISO 27001:2022.
-* **SBOM Generation**: Automatic CycloneDX Software Bill of Materials.
-* **OPSEC Safe**: Dynamic MAC address changing and port baselining.
+## What it is
 
-## Quick Start — Docker (Recommended)
+SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
 
-No dependency installation required. Everything is bundled.
+**The core pitch is not tool count.** It is:
+
+1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS (exploitation probability), GreyNoise (active wild scanning), and CISA KEV (known exploited vulnerabilities) to produce a multi-source risk score. See: [`intelligence/`](intelligence/) and [`tools/risk_scorer.py`](tools/risk_scorer.py).
+
+2. **Provable local-only operation** — every outbound intelligence call is recorded to `logs/egress_audit.log` with service name, URL, timestamp, and ALLOWED/BLOCKED status. Set `SMP_LOCAL_ONLY=1` to block all external calls. See: [`tools/egress_auditor.py`](tools/egress_auditor.py).
+
+3. **Two deliverables per scan** — each completed scan produces a pentest report (HTML + PDF) and a CycloneDX SBOM automatically. See: [`tools/sbom_generator.py`](tools/sbom_generator.py), wired into [`tools/report_generator.py`](tools/report_generator.py).
+
+4. **Compliance gap analysis** — findings are mapped to OWASP Top 10, CIS Controls v8, ISO 27001:2022, SOC 2 Type II, and PCI-DSS v4.0 control IDs. The output distinguishes between "here are 40 vulnerabilities" and "here is what is blocking your SOC 2 audit." See: [`tools/compliance_mapper.py`](tools/compliance_mapper.py).
+
+5. **SQLCipher encryption, not optional** — SMP will not start if `pysqlcipher3` is missing. "Encrypted at rest" is unconditionally enforced, not a fallback. See: [`tools/db_manager.py`](tools/db_manager.py).
+
+---
+
+## What it is not
+
+- It is not an AI agent. There is no LLM layer.
+- It does not compete on tool count. HexStrike and PentAGI have more scanners. That is not the differentiator here.
+- It does not require cloud registration, API keys, or telemetry.
+
+---
+
+## Risk correlation stack
+
+When a CVE or finding is identified, SMP enriches it with:
+
+| Source | What it adds | Code |
+|--------|-------------|------|
+| NVD | CVSS base score, affected products | [`intelligence/nvd.py`](intelligence/nvd.py) |
+| EPSS (FIRST.org) | Exploitation probability score (0–1) | [`intelligence/epss.py`](intelligence/epss.py) |
+| GreyNoise | Is this IP actively scanning the internet right now? | [`intelligence/greynoise.py`](intelligence/greynoise.py) |
+| CISA KEV | Is this CVE on the Known Exploited Vulnerabilities list? | [`intelligence/cisa.py`](intelligence/cisa.py) |
+| MITRE ATT&CK | Tactic and technique mapping | [`intelligence/mitre_mapper.py`](intelligence/mitre_mapper.py) |
+
+The composite score is computed in [`tools/risk_scorer.py`](tools/risk_scorer.py).
+
+---
+
+## Scanner pipeline
+
+Three-phase DAG execution. Phase 3 steps activate conditionally based on Phase 1/2 findings:
+
+| Phase | Tools | Trigger |
+|-------|-------|---------|
+| 1 — Recon | HTTPx, WhatWeb, Subfinder, CRT.sh, HackerTarget, Whois, Wayback, theHarvester, Traceroute | Always |
+| 2 — Active | Nmap, SSL, Security Headers, CORS, Nikto, Nuclei, ffuf, SQLMap, Shodan, Gitleaks | Always |
+| 3 — Conditional | WPScan, Dalfox, Arjun, DNSx, Katana, Commix, JWT Scanner, Masscan, ParamSpider, Cloud Enum | WordPress detected → WPScan; port 22 open → Hydra; etc. |
+
+Pipeline code: [`scanners/scan_runner.py`](scanners/scan_runner.py), [`scanners/core/dag.py`](scanners/core/dag.py).
+
+---
+
+## Compliance mapping
+
+Every finding is mapped to control IDs across five frameworks:
+
+- OWASP Top 10 2021
+- CIS Controls v8
+- ISO 27001:2022 Annex A
+- SOC 2 Type II (Trust Services Criteria CC6–CC9)
+- PCI-DSS v4.0 (Requirements 6, 7, 8, 11, 12)
+
+The summary output includes `audit_blocking_findings` — the specific Critical/High findings that directly violate SOC 2 or PCI-DSS controls. Code: [`tools/compliance_mapper.py`](tools/compliance_mapper.py).
+
+---
+
+## Quick start
 
 ```bash
-# Build and run the API server
+# Install dependencies (prebuilt binaries, ~30 seconds for Go tools)
+./setup.sh
+
+# Activate venv
+source venv/bin/activate
+
+# Run desktop GUI
+./run.sh
+
+# Run headless REST API
+python main.py --api
+```
+
+### Local-only mode (no outbound calls)
+
+```bash
+SMP_LOCAL_ONLY=1 ./run.sh
+```
+
+All intelligence API calls will be blocked and logged as BLOCKED in `logs/egress_audit.log`.
+
+### Docker
+
+```bash
 make docker-build
 make docker-run
-
-# Check the API is healthy
-make docker-health
-
-# Access the Swagger API docs
-open http://localhost:8000/api/v6/docs
-
-# Open a shell inside the container
-make docker-shell
+# API at http://localhost:8000/api/v6/docs
 ```
 
-## Quick Start — Local
+---
 
-```bash
-# Install all system and Python dependencies
-make install
-
-# Run the desktop GUI
-make run
-
-# Run headless API only
-make run-api
-```
-
-## Adaptive Pipeline
-
-The scanner pipeline is no longer a fixed linear list. It runs in three stages:
-
-| Stage | Scanners | Behaviour |
-|-------|----------|-----------|
-| Phase 1 — Recon | HTTPx, WhatWeb, Subfinder, CRT.sh, HackerTarget, Whois, Wayback, theHarvester, Traceroute | Always runs. Feeds findings into Phase 3 decision logic. |
-| Phase 2 — Active | Nmap, SSL, Headers, CORS, Nikto, Nuclei, ffuf, SQLMap, Shodan, Gitleaks, etc. | Always runs. Findings further refine Phase 3. |
-| Phase 3 — Exploit | WPScan, Dalfox, Arjun, DNSx, Katana, Commix, JWT, Masscan, ParamSpider, Cloud Enum, Hydra, ZAP | Conditionally activated based on Phase 1 and 2 results. |
-
-**Example**: If Nmap finds port 22 open, Hydra is automatically added. If WhatWeb detects WordPress, WPScan is triggered. Each branch decision is logged in the Live Narrative.
-
-## Live Narrative
-
-Every scan generates a human-readable walkthrough log at `logs/narrative/scan_<id>.log`:
-
-```
-[14:02:01] [STAGE]   [STAGE:RECON]   Stage started — Passive reconnaissance.
-[14:02:03] [INFO]    [HTTPX]         Checking whether the target is alive and collecting HTTP metadata.
-[14:02:18] [INFO]    [WHATWEB]       Fingerprinting the technology stack — frameworks, CMS, server software.
-[14:03:45] [INFO]    [NMAP]          Port and service scanning — identifying open ports and running services.
-[14:04:02] [FINDING] [NMAP]          [HIGH] Finding confirmed — Port 22 open — SSH service exposed.
-[14:04:02] [BRANCH]  [PIPELINE]      Dynamic branch — NMAP result triggered HYDRA. Reason: SSH port 22 open.
-[14:04:02] [BRANCH]  [PIPELINE]      Dynamic branch — CMS result triggered WPSCAN. Reason: WordPress CMS detected.
-```
-
-The narrative is also streamed to the GUI dashboard over the real-time IPC bus.
-
-## REST API Reference
+## REST API
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | /api/v6/auth/token | No | Obtain JWT token |
 | GET | /api/v6/health | No | Health check |
-| GET | /api/v6/target | Yes | List all targets |
-| POST | /api/v6/target | Yes | Add a target |
+| GET | /api/v6/target | Yes | List targets |
+| POST | /api/v6/target | Yes | Add target |
 | GET | /api/v6/scan | Yes | List scans |
-| GET | /api/v6/findings | Yes | Get findings for a scan |
-| GET | /api/v6/cve/stats | Yes | CVE database statistics |
-| GET | /api/v6/risk/score | Yes | Risk scores per target |
+| GET | /api/v6/findings | Yes | Findings for scan |
+| GET | /api/v6/cve/stats | Yes | CVE database stats |
+| GET | /api/v6/risk/score | Yes | Risk scores |
 | GET | /api/v6/version | Yes | Platform version |
 
-Full interactive docs at `http://localhost:8000/api/v6/docs`.
+Interactive docs: `http://localhost:8000/api/v6/docs`
 
-## Legal Notice
+---
 
-This software is maintained by [@mrQhere](https://github.com/mrQhere). Unauthorized access, modification, or distribution may be restricted based on the repository license.
+## Encryption
+
+- Databases are encrypted at rest using SQLCipher (AES-256). SMP will not start without `pysqlcipher3`.
+- Master password: PBKDF2-SHA256 with 600,000 iterations (NIST 2024 recommendation).
+- Raw scan outputs are compressed (gzip) and encrypted with Fernet before storage.
+
+---
+
+## Requirements
+
+- Python 3.10+
+- `libsqlcipher-dev` + `pysqlcipher3` (hard requirement)
+- Linux or macOS
+
+---
+
+## Legal
+
+Use only against systems you have written authorisation to test.  
+Maintained by [@mrQhere](https://github.com/mrQhere) · © mrQhere. See [LICENSE](LICENSE).

@@ -1,0 +1,49 @@
+name: SMP CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  verify:
+    name: Verify SMP Components
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libsqlcipher-dev \
+            libsqlcipher0 \
+            nmap \
+            perl \
+            git \
+            build-essential
+
+      - name: Create virtual environment & install Python deps
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip --quiet
+          # pysqlcipher3 needs libsqlcipher-dev headers
+          pip install pysqlcipher3 --quiet
+          pip install -r requirements.txt --quiet
+
+      - name: Run verification suite
+        run: |
+          source venv/bin/activate
+          python tools/verify_smp.py -v
+        env:
+          SMP_CI: "1"
+          PYTHONPATH: ${{ github.workspace }}

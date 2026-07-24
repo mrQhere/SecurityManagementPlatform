@@ -1,17 +1,17 @@
-# Security Management Platform (SMP) V6.5
-# =========================================
+# Security Management Platform (SMP) V7
+# ========================================
 # Self-contained Docker image bundling all required system tools,
-# Go security tools, Python dependencies, and the SMP GUI-less API.
+# Go security tools, Python dependencies, and the SMP API.
 #
-# Build:   docker build -t smp:latest .
-# Run API: docker run -p 8000:8000 smp:latest
-# Shell:   docker run -it smp:latest /bin/bash
+# Build:   docker build -t smp:v7 .
+# Run API: docker run -p 8000:8000 smp:v7
+# Shell:   docker run -it smp:v7 /bin/bash
 
 FROM ubuntu:22.04
 
 LABEL maintainer="@mrQhere <https://github.com/mrQhere/SecurityManagementPlatform>"
-LABEL description="Security Management Platform V6.5 — All-in-one vulnerability scanning platform"
-LABEL version="6.0"
+LABEL description="Security Management Platform V7 — Local-first vulnerability scanning and correlation platform"
+LABEL version="7.0"
 
 # Suppress interactive prompts during apt installs
 ENV DEBIAN_FRONTEND=noninteractive

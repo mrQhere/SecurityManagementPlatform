@@ -1,22 +1,28 @@
 """
-Compliance Mapper V6.5
-=======================
+Compliance Mapper V7
+=====================
 Maps SMP finding types and CWE IDs to compliance control references:
   - OWASP Top 10 2021
   - CIS Controls v8
   - ISO 27001:2022 Annex A
+  - SOC 2 Type II (Trust Services Criteria)
+  - PCI-DSS v4.0 (Requirements 6, 11)
 
 Usage:
     from tools.compliance_mapper import map_finding_to_controls
     controls = map_finding_to_controls("SQL Injection", "CWE-89")
-    # Returns: {"owasp": "A03:2021", "cis": "CIS 16.1", "iso": "A.8.28"}
+    # Returns: {"owasp": [...], "cis": [...], "iso27001": [...],
+    #            "soc2": [...], "pci_dss": [...]}
+
+Control ID reference format:
+  SOC 2  → CC6.1, CC6.6, CC7.2, ...
+  PCI-DSS → Req 6.3.1, Req 6.4.1, Req 11.3.1, ...
 """
 import logging
-import re
 
 logger = logging.getLogger("smp")
 
-# ── OWASP Top 10 2021 Mapping ────────────────────────────────────────────────
+# ── OWASP Top 10 2021 ─────────────────────────────────────────────────────────
 _OWASP_2021 = {
     "A01:2021 - Broken Access Control": [
         "broken access control", "idor", "directory traversal", "path traversal",
@@ -57,7 +63,7 @@ _OWASP_2021 = {
     ],
 }
 
-# ── CIS Controls v8 Mapping ──────────────────────────────────────────────────
+# ── CIS Controls v8 ───────────────────────────────────────────────────────────
 _CIS_CONTROLS_V8 = {
     "CIS 1 - Inventory and Control of Enterprise Assets": [
         "asset", "inventory", "unauthorized device",
@@ -94,7 +100,7 @@ _CIS_CONTROLS_V8 = {
     ],
 }
 
-# ── ISO 27001:2022 Annex A Mapping ───────────────────────────────────────────
+# ── ISO 27001:2022 Annex A ────────────────────────────────────────────────────
 _ISO_27001_2022 = {
     "A.5.9 - Inventory of Information and other Assets": [
         "asset", "inventory",
@@ -131,6 +137,90 @@ _ISO_27001_2022 = {
     ],
 }
 
+# ── SOC 2 Type II (Trust Services Criteria) ───────────────────────────────────
+# Source: AICPA Trust Services Criteria (2017 with 2022 points of focus)
+_SOC2_TYPE_II = {
+    "CC6.1 - Logical and Physical Access Controls": [
+        "access control", "idor", "authorization", "unauthorized", "privilege",
+        "authentication", "cwe-284", "cwe-285", "cwe-287",
+    ],
+    "CC6.2 - Prior to Issuing System Credentials": [
+        "authentication", "weak password", "brute force", "default credentials",
+        "cwe-521", "cwe-307",
+    ],
+    "CC6.3 - Role-Based Access and Least Privilege": [
+        "privilege escalation", "idor", "broken access control", "cwe-284",
+    ],
+    "CC6.6 - Security Threats from Outside Boundaries": [
+        "ssrf", "injection", "xss", "sql injection", "command injection",
+        "xxe", "cwe-89", "cwe-79", "cwe-78", "cwe-918",
+    ],
+    "CC6.7 - Transmission of Data": [
+        "ssl", "tls", "weak cipher", "plaintext", "certificate", "cwe-311", "cwe-326",
+    ],
+    "CC6.8 - Prevention and Detection of Unauthorized Software": [
+        "malware", "backdoor", "unauthorized software", "cve-", "vulnerable component",
+    ],
+    "CC7.1 - Detection of Configuration Changes": [
+        "misconfiguration", "default credentials", "cors", "security headers", "cwe-16",
+    ],
+    "CC7.2 - Monitoring for Anomalies and Threats": [
+        "ssrf", "scanning", "reconnaissance", "traceroute", "port", "cwe-918",
+    ],
+    "CC7.3 - Evaluation of Security Events": [
+        "logging", "monitoring", "audit", "insufficient logging", "cwe-778",
+    ],
+    "CC8.1 - Change Management Process": [
+        "outdated", "patch", "cve-", "retire.js", "vulnerable component",
+    ],
+    "CC9.2 - Vendor and Business Partner Risk": [
+        "supply chain", "third party", "dependency", "cwe-1035",
+    ],
+}
+
+# ── PCI-DSS v4.0 ─────────────────────────────────────────────────────────────
+# Source: PCI Security Standards Council PCI DSS v4.0 (March 2022)
+_PCI_DSS_V4 = {
+    "Req 6.2.4 - Software Engineering Techniques (Injection Prevention)": [
+        "sql injection", "sqli", "command injection", "xxe", "ldap injection",
+        "cwe-89", "cwe-77", "cwe-78",
+    ],
+    "Req 6.3.1 - Security Vulnerabilities Identified and Addressed": [
+        "cve-", "outdated", "vulnerable component", "patch", "retire.js",
+        "cwe-1035", "cwe-937",
+    ],
+    "Req 6.3.2 - Inventory of Bespoke and Custom Software": [
+        "software inventory", "asset", "sbom", "dependency",
+    ],
+    "Req 6.4.1 - Web Application Protection (WAF / DAST)": [
+        "xss", "csrf", "open redirect", "cors", "injection", "cwe-79", "cwe-352",
+    ],
+    "Req 6.4.2 - Automated Technical Solution for Web Apps": [
+        "xss", "sql injection", "vulnerability scan", "penetration test",
+    ],
+    "Req 7.2.1 - Access Control Model": [
+        "access control", "idor", "authorization", "privilege", "cwe-284",
+    ],
+    "Req 8.3.2 - Strong Cryptography for Authentication": [
+        "authentication", "weak password", "brute force", "cwe-521", "cwe-307",
+    ],
+    "Req 8.6.1 - Interactive Login Accounts (MFA)": [
+        "brute force", "authentication", "jwt", "session", "cwe-307", "cwe-522",
+    ],
+    "Req 11.3.1 - External Penetration Testing": [
+        "penetration test", "vulnerability scan", "open port", "nmap",
+    ],
+    "Req 11.3.2 - Internal Penetration Testing": [
+        "ssrf", "internal", "network", "port", "firewall",
+    ],
+    "Req 12.3.2 - Targeted Risk Analysis": [
+        "risk", "cvss", "epss", "severity", "critical",
+    ],
+    "Req 4.2.1 - Strong Cryptography in Transit": [
+        "ssl", "tls", "weak cipher", "certificate", "plaintext", "cwe-311", "cwe-326",
+    ],
+}
+
 
 def _match_controls(title: str, cwe_id: str, control_map: dict) -> list:
     """Match a finding to controls using keyword and CWE matching."""
@@ -148,39 +238,46 @@ def _match_controls(title: str, cwe_id: str, control_map: dict) -> list:
 
 def map_finding_to_controls(title: str, cwe_id: str = "") -> dict:
     """
-    Map a finding to compliance controls.
-    
-    Args:
-        title: Finding title/description
-        cwe_id: Optional CWE ID (e.g. "CWE-89")
-    
-    Returns:
-        dict with keys: owasp, cis, iso27001 (each a list of matched controls)
-    """
-    owasp   = _match_controls(title, cwe_id, _OWASP_2021)
-    cis     = _match_controls(title, cwe_id, _CIS_CONTROLS_V8)
-    iso     = _match_controls(title, cwe_id, _ISO_27001_2022)
+    Map a finding to compliance controls across all frameworks.
 
+    Args:
+        title:  Finding title/description
+        cwe_id: Optional CWE ID (e.g. "CWE-89")
+
+    Returns:
+        dict with keys: owasp, cis, iso27001, soc2, pci_dss
+        (each a list of matched control strings, or ["Not directly mapped"])
+    """
     return {
-        "owasp":    owasp   or ["Not directly mapped"],
-        "cis":      cis     or ["Not directly mapped"],
-        "iso27001": iso     or ["Not directly mapped"],
+        "owasp":    _match_controls(title, cwe_id, _OWASP_2021)   or ["Not directly mapped"],
+        "cis":      _match_controls(title, cwe_id, _CIS_CONTROLS_V8) or ["Not directly mapped"],
+        "iso27001": _match_controls(title, cwe_id, _ISO_27001_2022)  or ["Not directly mapped"],
+        "soc2":     _match_controls(title, cwe_id, _SOC2_TYPE_II)    or ["Not directly mapped"],
+        "pci_dss":  _match_controls(title, cwe_id, _PCI_DSS_V4)      or ["Not directly mapped"],
     }
 
 
 def get_compliance_summary(findings: list) -> dict:
     """
     Get a compliance coverage summary across all findings.
-    
+
     Args:
         findings: List of finding dicts (with 'title' and optionally 'cwe_id')
-    
+
     Returns:
-        dict with compliance coverage percentages and top gaps
+        dict with:
+          - per-framework coverage percentage
+          - per-framework matched control IDs
+          - blocking_controls: controls violated in Critical/High findings
+            (the ones that matter most for an audit conversation)
     """
-    owasp_hit = set()
-    cis_hit   = set()
-    iso_hit   = set()
+    owasp_hit: set = set()
+    cis_hit:   set = set()
+    iso_hit:   set = set()
+    soc2_hit:  set = set()
+    pci_hit:   set = set()
+
+    blocking: list = []  # Critical/High findings with their SOC2/PCI control IDs
 
     for f in findings:
         controls = map_finding_to_controls(
@@ -190,16 +287,65 @@ def get_compliance_summary(findings: list) -> dict:
         owasp_hit.update(controls["owasp"])
         cis_hit.update(controls["cis"])
         iso_hit.update(controls["iso27001"])
+        soc2_hit.update(controls["soc2"])
+        pci_hit.update(controls["pci_dss"])
 
-    owasp_hit.discard("Not directly mapped")
-    cis_hit.discard("Not directly mapped")
-    iso_hit.discard("Not directly mapped")
+        severity = (f.get("severity") or "").lower()
+        if severity in ("critical", "high"):
+            soc2_blocking  = [c for c in controls["soc2"]    if c != "Not directly mapped"]
+            pci_blocking   = [c for c in controls["pci_dss"] if c != "Not directly mapped"]
+            if soc2_blocking or pci_blocking:
+                blocking.append({
+                    "title":    f.get("title", ""),
+                    "severity": f.get("severity", ""),
+                    "soc2":     soc2_blocking,
+                    "pci_dss":  pci_blocking,
+                })
+
+    for s in (owasp_hit, cis_hit, iso_hit, soc2_hit, pci_hit):
+        s.discard("Not directly mapped")
 
     return {
-        "owasp_top10_coverage": round(len(owasp_hit) / len(_OWASP_2021) * 100),
-        "cis_controls_coverage": round(len(cis_hit) / len(_CIS_CONTROLS_V8) * 100),
-        "iso27001_coverage": round(len(iso_hit) / len(_ISO_27001_2022) * 100),
-        "owasp_categories_hit": sorted(owasp_hit),
-        "cis_categories_hit": sorted(cis_hit),
-        "iso_categories_hit": sorted(iso_hit),
+        "owasp_top10_coverage":  round(len(owasp_hit) / max(len(_OWASP_2021), 1) * 100),
+        "cis_controls_coverage": round(len(cis_hit)   / max(len(_CIS_CONTROLS_V8), 1) * 100),
+        "iso27001_coverage":     round(len(iso_hit)   / max(len(_ISO_27001_2022), 1) * 100),
+        "soc2_coverage":         round(len(soc2_hit)  / max(len(_SOC2_TYPE_II), 1) * 100),
+        "pci_dss_coverage":      round(len(pci_hit)   / max(len(_PCI_DSS_V4), 1) * 100),
+        # Per-framework matched control IDs
+        "owasp_categories_hit":  sorted(owasp_hit),
+        "cis_categories_hit":    sorted(cis_hit),
+        "iso_categories_hit":    sorted(iso_hit),
+        "soc2_controls_hit":     sorted(soc2_hit),
+        "pci_dss_controls_hit":  sorted(pci_hit),
+        # High/Critical findings that block an audit — the most actionable output
+        "audit_blocking_findings": blocking,
     }
+
+
+def format_compliance_table(summary: dict) -> str:
+    """
+    Return a compact text table of compliance coverage — useful for report footers.
+
+    Example output:
+        Framework        Coverage  Controls Matched
+        OWASP Top 10       70%     7/10
+        CIS Controls        45%     5/11
+        ISO 27001          55%     6/11
+        SOC 2 Type II       40%     4/10
+        PCI-DSS v4.0        50%     6/12
+    """
+    lines = [
+        "Framework          Coverage   Controls Matched",
+        "─" * 48,
+        f"OWASP Top 10        {summary['owasp_top10_coverage']:>3}%     "
+        f"{len(summary['owasp_categories_hit'])}/{len(_OWASP_2021)}",
+        f"CIS Controls v8     {summary['cis_controls_coverage']:>3}%     "
+        f"{len(summary['cis_categories_hit'])}/{len(_CIS_CONTROLS_V8)}",
+        f"ISO 27001:2022      {summary['iso27001_coverage']:>3}%     "
+        f"{len(summary['iso_categories_hit'])}/{len(_ISO_27001_2022)}",
+        f"SOC 2 Type II       {summary['soc2_coverage']:>3}%     "
+        f"{len(summary['soc2_controls_hit'])}/{len(_SOC2_TYPE_II)}",
+        f"PCI-DSS v4.0        {summary['pci_dss_coverage']:>3}%     "
+        f"{len(summary['pci_dss_controls_hit'])}/{len(_PCI_DSS_V4)}",
+    ]
+    return "\n".join(lines)

@@ -15,6 +15,11 @@ _HEADERS = {
 _MAX_RETRIES = 5
 _RETRY_DELAYS = [10, 30, 60, 120]
 
+try:
+    from tools.egress_auditor import egress_auditor
+except ImportError:
+    egress_auditor = None
+
 
 def sync_epss():
     """Fetches EPSS scores for CVEs currently lacking them in our database."""
@@ -43,6 +48,14 @@ def sync_epss():
             params = {"cve": cve_query}
             
             response = None
+            # Record egress call before attempting the API request
+            if egress_auditor:
+                egress_auditor.record("EPSS (FIRST.org)", EPSS_API_URL,
+                                      f"EPSS exploitation probability — batch of {len(cve_list)} CVEs")
+                from tools.egress_auditor import local_only_mode_active
+                if local_only_mode_active():
+                    logger.info("[EgressAudit] EPSS sync skipped — local-only mode active")
+                    break
             for attempt in range(_MAX_RETRIES):
                 try:
                     response = requests.get(EPSS_API_URL, headers=_HEADERS, params=params, timeout=25)

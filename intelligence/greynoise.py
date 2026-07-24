@@ -25,6 +25,11 @@ _GREYNOISE_API = "https://api.greynoise.io/v3/community/{ip}"
 _TIMEOUT       = 5
 _CACHE = {}  # Simple in-memory cache per session
 
+try:
+    from tools.egress_auditor import egress_auditor
+except ImportError:
+    egress_auditor = None
+
 
 def _is_rfc1918(ip: str) -> bool:
     """Check if IP is private/loopback."""
@@ -94,6 +99,14 @@ def lookup_ip(ip: str, api_key: str = "") -> dict:
         return result
 
     # Primary: GreyNoise Community API
+    url = _GREYNOISE_API.format(ip=ip)
+    if egress_auditor:
+        egress_auditor.record("GreyNoise", url, "IP reputation / wild scanning check")
+        from tools.egress_auditor import local_only_mode_active
+        if local_only_mode_active():
+            result = _local_heuristic(ip)
+            _CACHE[ip] = result
+            return result
     try:
         import requests
         headers = {"Accept": "application/json"}
@@ -101,7 +114,7 @@ def lookup_ip(ip: str, api_key: str = "") -> dict:
             headers["key"] = api_key
 
         resp = requests.get(
-            _GREYNOISE_API.format(ip=ip),
+            url,
             headers=headers,
             timeout=_TIMEOUT
         )
