@@ -243,7 +243,7 @@ class TestSMPComponents(unittest.TestCase):
         self.assertEqual(len(findings), 3)
         
         # Generate reports
-        html_path, pdf_path = generate_scan_reports(scan_id, target, findings, previous_scan=None)
+        html_path, pdf_path, sbom_path = generate_scan_reports(scan_id, target, findings, previous_scan=None)
         
         # Check files exist and are not empty
         self.assertIsNotNone(html_path)

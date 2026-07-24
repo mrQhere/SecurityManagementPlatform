@@ -1101,11 +1101,13 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         if severity_escalated:
             add_alert(target_id, "Severity Increased", "High")
 
-        # ── Report Generation ──────────────────────────────────────────────
+        # ── Report Generation (pentest report + SBOM in one run) ──────────
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        html_report, pdf_report = generate_scan_reports(
+        html_report, pdf_report, sbom_report = generate_scan_reports(
             scan_id, target, current_findings, previous_scan
         )
+        if sbom_report:
+            add_log_entry("INFO", f"SBOM Generated: {os.path.basename(sbom_report)}")
         add_log_entry("INFO", "Report Generated")
 
         # ── SMTP Alerts ────────────────────────────────────────────────────

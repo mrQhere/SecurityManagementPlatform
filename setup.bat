@@ -2,7 +2,8 @@
 setlocal EnableDelayedExpansion
 title SMP Setup - Windows Installer
 echo =======================================================
-echo 🚀 Starting SMP V6.5 Auto-Setup for Windows (Batch) with Fallbacks...
+echo 🚀 Starting SMP V7 Auto-Setup for Windows (Batch) with Fallbacks...
+echo © mrQhere
 echo =======================================================
 
 where winget >nul 2>&1

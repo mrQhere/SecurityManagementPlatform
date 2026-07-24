@@ -4,8 +4,24 @@ try:
     from pysqlcipher3 import dbapi2 as sqlite3
     SQLCIPHER_AVAILABLE = True
 except ImportError:
-    import sqlite3
-    SQLCIPHER_AVAILABLE = False
+    import sys as _sys
+    _sys.stderr.write(
+        "\n"
+        "╔══════════════════════════════════════════════════════════════╗\n"
+        "║  FATAL: pysqlcipher3 is not installed.                       ║\n"
+        "║                                                              ║\n"
+        "║  SMP requires SQLCipher for encrypted-at-rest storage.       ║\n"
+        "║  Running without it would store pentest data in plaintext.   ║\n"
+        "║                                                              ║\n"
+        "║  Fix:                                                        ║\n"
+        "║    sudo apt install libsqlcipher-dev libsqlcipher0           ║\n"
+        "║    pip install pysqlcipher3                                  ║\n"
+        "║                                                              ║\n"
+        "║  Then re-run SMP.                                            ║\n"
+        "╚══════════════════════════════════════════════════════════════╝\n"
+        "\n"
+    )
+    _sys.exit(1)
 import shutil
 import time
 import zipfile
@@ -281,20 +297,12 @@ def get_redundancy_connection():
     for attempt in range(retries):
         try:
             conn = sqlite3.connect(REDUNDANCY_DB_PATH, timeout=30.0)
-            
-            # ── V5.3 — SQLCipher Encryption for redundancy.db ────────────────
-            if SQLCIPHER_AVAILABLE:
-                # Use a default system-wide key for simplicity in redundancy
-                conn.execute("PRAGMA key = 'smp-default-sqlcipher-key';")
-            else:
-                if not getattr(get_redundancy_connection, "_warned", False):
-                    logging.getLogger("smp").warning(
-                        "[Security] pysqlcipher3 not installed! redundancy.db is falling back to unencrypted SQLite. "
-                        "Install pysqlcipher3 for full security."
-                    )
-                    get_redundancy_connection._warned = True
-                    
+
+            # SQLCipher is a hard requirement — pysqlcipher3 is always available here
+            conn.execute("PRAGMA key = 'smp-default-sqlcipher-key';")
+
             conn.execute("PRAGMA foreign_keys = ON;")
+
             try:
                 conn.execute("PRAGMA journal_mode = WAL;")
                 conn.execute("PRAGMA synchronous = NORMAL;")

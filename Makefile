@@ -4,7 +4,7 @@ SMP_LOGS_DIR=logs
 SMP_BACKUP_DIR=backup
 
 docker-build:
-	docker build -t smp:latest .
+	docker build -t smp:v7 .
 
 docker-run:
 	docker compose up -d
@@ -19,11 +19,11 @@ docker-shell:
 	docker exec -it smp /bin/bash
 
 docker-health:
-	curl -s http://localhost:8000/api/v6/health | python3 -m json.tool
+	curl -s http://localhost:8000/api/v7/health | python3 -m json.tool
 
 docker-clean:
 	docker compose down -v
-	docker image rm smp:latest || true
+	docker image rm smp:v7 || true
 
 install:
 	chmod +x setup.sh

@@ -465,7 +465,34 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
         logger.warning("ReportLab not installed — PDF report skipped.")
         pdf_path = None
 
-    return html_path, pdf_path
+    # ── SBOM generation — runs automatically alongside pentest report ──────────
+    sbom_path = None
+    try:
+        from tools.sbom_generator import generate_sbom_for_scan
+        sbom_dir  = os.path.join(BASE_DIR, "reports", "sbom")
+        sbom_path = generate_sbom_for_scan(scan_id, url, output_dir=sbom_dir)
+        if sbom_path:
+            logger.info(f"SBOM generated: {sbom_path}")
+        else:
+            logger.info("SBOM skipped — no technology components detected during scan.")
+    except Exception as e:
+        logger.warning(f"SBOM generation failed (non-fatal): {e}")
+
+    # ── Egress audit summary — attach to context for logging / future appendix ──
+    try:
+        from tools.egress_auditor import egress_auditor
+        egress_summary = egress_auditor.get_session_summary()
+        logger.info(
+            f"[EgressAudit] Session complete — "
+            f"{egress_summary['allowed']} outbound calls allowed, "
+            f"{egress_summary['blocked']} blocked. "
+            f"Services contacted: {', '.join(egress_summary['external_services']) or 'none'}"
+        )
+    except Exception:
+        pass
+
+    return html_path, pdf_path, sbom_path
+
 
 
 # ── Context builder ───────────────────────────────────────────────────────────

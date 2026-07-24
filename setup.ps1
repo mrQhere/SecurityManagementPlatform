@@ -1,4 +1,5 @@
-Write-Host "🚀 Starting SMP V6.5 Auto-Setup for Windows (PowerShell) with Fallbacks..." -ForegroundColor Cyan
+Write-Host "🚀 Starting SMP V7 Auto-Setup for Windows (PowerShell) with Fallbacks..." -ForegroundColor Cyan
+Write-Host "© mrQhere" -ForegroundColor DarkCyan
 Write-Host "=======================================================" -ForegroundColor Cyan
 
 function Run-WithFallback {

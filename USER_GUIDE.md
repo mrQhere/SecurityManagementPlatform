@@ -1,1716 +1,1112 @@
 <div align="center">
-  <h1>Security Management Platform (SMP) V6.5</h1>
-  <p><b>Where Beauty Meets Standards. The Ultimate Enterprise Security Orchestrator.</b></p>
-  <p><i>Made by mrQhere</i></p>
+
+```
+███████╗███╗   ███╗██████╗     ██╗   ██╗███████╗
+██╔════╝████╗ ████║██╔══██╗    ██║   ██║╚════██║
+███████╗██╔████╔██║██████╔╝    ██║   ██║    ██╔╝
+╚════██║██║╚██╔╝██║██╔═══╝     ╚██╗ ██╔╝   ██╔╝
+███████║██║ ╚═╝ ██║██║          ╚████╔╝    ██║
+╚══════╝╚═╝     ╚═╝╚═╝           ╚═══╝     ╚═╝
+```
+
+**Security Management Platform — V7**
+
+`local-first` &nbsp;·&nbsp; `zero-cloud` &nbsp;·&nbsp; `encrypted at rest` &nbsp;·&nbsp; `correlation-driven`
+
+*Made by [@mrQhere](https://github.com/mrQhere)*
+
+[![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-orange)
+
 </div>
 
-<br><br>
+---
 
-> **"Simplicity is the ultimate sophistication."** 
-> SMP V6.5 is designed with an Apple-like aesthetic: incredibly simple on the outside, immensely powerful on the inside.
-
-<hr>
-
-## Table of Contents
-1. [Philosophy & Architecture](#1-philosophy--architecture)
-2. [Setup (Beginner)](#2-setup-beginner)
-3. [First Run & Daily Operations](#3-first-run--daily-operations)
-4. [Intermediate — Pipeline & Tools](#4-intermediate--pipeline--tools)
-5. [Advanced — Core Internals & Encryption](#5-advanced--core-internals--encryption)
-6. [Adding Custom Scanners](#6-adding-custom-scanners)
-7. [REST API Reference](#7-rest-api-reference)
-8. [Troubleshooting (40 Common Errors)](#8-troubleshooting-40-common-errors)
-9. [Future Roadmap — V7, V8, V9](#9-future-roadmap--v7-v8-v9)
+> SMP V7 is designed like a precision instrument — invisible internals, deliberate output, zero noise.
 
 ---
 
-## 1. Philosophy & Architecture
-SMP is built on the belief that security orchestration should not require a PhD to operate. 
-It combines **FastAPI**, **SQLite (SQLCipher)**, and **30+ security tools** into a single, cohesive ecosystem.
+## 📋 Table of Contents
 
-- **Frontend**: PySide6 (Local GUI) / HTML Reports (Exported)
-- **Backend**: FastAPI (REST)
-- **Database**: SQLCipher (AES-256 Encrypted)
-- **Intelligence**: GreyNoise, CVE Sync, ExploitDB
-- **Pipeline**: Dynamic Stage-Feeding (Recon -> Active -> Exploit -> Report)
-
----
-
-## 2. Setup (Getting Started for Beginners)
-
-Welcome to SMP! Setting up SMP is designed to be as seamless as possible. We provide two main ways to get started: **Docker** (recommended for most users) and **Local Installation** (recommended if you plan to develop or modify the code).
-
-### Prerequisites
-
-Before starting, ensure you have the following installed on your system:
-- **Git**: To clone the repository.
-- **Make**: To use the simplified commands.
-
-For Docker installation:
-- **Docker & Docker Compose**: The engine that runs SMP securely in an isolated container.
-
-For Local installation:
-- **Python 3.10+**: The core language used by the platform.
-- **sudo access**: Required to install necessary security scanners (Nmap, Masscan, etc.) during setup.
+| # | Section |
+|---|---------|
+| 1 | [Philosophy & Architecture](#1--philosophy--architecture) |
+| 2 | [Setup & Installation](#2--setup--installation) — Linux · macOS · Windows · Docker |
+| 3 | [First Run & Daily Operations](#3--first-run--daily-operations) |
+| 4 | [Scanner Pipeline & Tool Inventory](#4--scanner-pipeline--tool-inventory) |
+| 5 | [Intelligence & Correlation Stack](#5--intelligence--correlation-stack) |
+| 6 | [Compliance Mapping & Reports](#6--compliance-mapping--reports) |
+| 7 | [Core Internals & Encryption](#7--core-internals--encryption) |
+| 8 | [Custom Scanners & REST API](#8--custom-scanners--rest-api) |
+| 9 | [Troubleshooting](#9--troubleshooting) |
+| 10 | [Roadmap](#10--roadmap) |
 
 ---
 
-### Using Docker (Recommended - The Apple Way)
+## 1 · Philosophy & Architecture
 
-Running SMP in Docker is the most reliable way to ensure all dependencies work out of the box without polluting your host system.
+### Why SMP exists
+
+Most scanner wrappers do one thing: run a tool, dump output. SMP does something structurally different — it **correlates**. After scanning, every finding is cross-referenced against four live threat-intelligence sources to produce a single risk score that reflects real-world exploitability, not just theoretical CVSS.
+
+SMP is also **local-first by design**. Every byte of client pentest data stays on your machine. You choose which intelligence APIs to query; you get an audit log proving it.
+
+### What it is not
+
+- ❌ Not an AI agent. There is no LLM. Deferred to V9.
+- ❌ Not competing on tool count (HexStrike has 150+, that is not the angle).
+- ❌ Not cloud-dependent. No registration, no telemetry, no SaaS.
+
+### Architecture overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  SMP V7 Architecture                                        │
+├──────────────┬──────────────────────────┬───────────────────┤
+│  Interface   │  Orchestration           │  Storage          │
+│              │                          │                   │
+│  PySide6 GUI │  scan_runner.py          │  SQLCipher AES-256│
+│  FastAPI REST│  → DAG Orchestrator      │  security.db      │
+│  HTML/PDF    │  → 30+ scanner modules   │  cve.db           │
+│  Reports     │  → egress_auditor        │  redundancy.db    │
+│              │  → compliance_mapper     │  (all encrypted)  │
+├──────────────┴──────────────────────────┴───────────────────┤
+│  Intelligence Layer                                          │
+│  NVD · EPSS · GreyNoise · CISA KEV · MITRE ATT&CK           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Layer | Technology | File |
+|-------|-----------|------|
+| GUI | PySide6 | `dashboard.py` |
+| API | FastAPI + JWT | `api/` |
+| DB | SQLCipher (AES-256) | `tools/db_manager.py` |
+| Pipeline | DAG + multiprocessing | `scanners/scan_runner.py` |
+| Intelligence | REST + local cache | `intelligence/` |
+| Encryption | Fernet + PBKDF2-SHA256 | `tools/encryption_manager.py` |
+
+---
+
+## 2 · Setup & Installation
+
+### 2.1 Prerequisites
+
+| Requirement | Minimum | Notes |
+|------------|---------|-------|
+| OS | Linux · macOS · Windows | All three supported with dedicated scripts |
+| Python | 3.10+ | `python3 --version` |
+| RAM | 2 GB free | 4 GB recommended for full scans |
+| Disk | 3 GB free | Tools + databases |
+| Git | Any | To clone the repository |
+| sudo / Admin | Required on Linux/macOS | For Nmap, Masscan, MAC changer |
+
+> **V7 hard requirement:** `pysqlcipher3` (SQLCipher) must be available. SMP exits loudly at startup if missing — this enforces the "encrypted at rest" guarantee unconditionally.
+
+---
+
+### 2.2 Linux / macOS — Automated Setup
+
+One script handles everything: Python venv, SQLCipher, all Go tools as prebuilt binaries, WPScan with Docker fallback.
 
 ```bash
-# 1. Clone the repository to your local machine
+# 1. Clone
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# 2. Build the platform image
-# This step automatically downloads all Python packages, Go binaries, and OS dependencies 
-# required by the 30+ security tools into an isolated image.
-make docker-build
-
-# 3. Start the platform
-# This spins up the API, database, and background workers.
-make docker-run
-```
-
-**Success!** The platform API and interactive documentation are now running at:
-👉 `http://localhost:8000/api/v6/docs`
-
-To stop the platform, simply press `Ctrl+C` in the terminal, or run `make docker-down`.
-
----
-
-### Local Installation (For Developers & Power Users)
-
-If you prefer to run SMP directly on your host machine (useful for debugging, adding custom tools, or avoiding Docker overhead), use the automated setup scripts.
-
-```bash
-# 1. Make the setup script executable
-chmod +x setup.sh
-
-# 2. Run the auto-setup script
-# This script will automatically create a Python virtual environment (venv), 
-# install requirements.txt, and attempt to install system packages (like nmap, dirb) via apt/brew.
+# 2. Run the auto-installer (shows progress bar + elapsed time per step)
 ./setup.sh
 
-# 3. Activate the virtual environment
-source venv/bin/activate
+# 3. Launch
+./run.sh
 
-# 4. Start the REST API
-make run-api
+# Headless API mode only
+./run.sh --api
 ```
 
-**Note for Windows Users:** You can use the provided `setup.bat` or `setup.ps1` scripts instead of `setup.sh`. However, some advanced scanners might require WSL (Windows Subsystem for Linux) to function optimally.
+`run.sh` automatically activates the venv and verifies SQLCipher before starting. No manual `source venv/bin/activate` needed.
+
+#### What `setup.sh` does — V7
+
+| Step | Action | Speed |
+|------|--------|-------|
+| 1 | Python 3 check — skip if already present | ~1s |
+| 2 | Go check — skip if already present | ~1s |
+| 3 | apt packages — skip each if already installed | ~10s |
+| 4 | Python venv + `pip install -r requirements.txt` (spinner) | ~30s |
+| 5 | SQLCipher: `pip install pysqlcipher3` (hard requirement) | ~5s |
+| 6 | Go tools: **prebuilt binaries via `curl`** from GitHub Releases | **~30s** |
+| 7 | WPScan: `gem install` → Docker wrapper fallback | ~10s |
+| 8 | Finalize, chmod, completion summary | ~1s |
+
+> **V7 vs V6:** Step 6 previously used `go install ... @latest` (source compilation, ~15 min). V7 downloads official prebuilt release binaries — same result, 30× faster. Source build is the fallback only.
+
+#### Prebuilt Go tool binaries
+
+| Tool | GitHub source | Version |
+|------|---------------|---------|
+| `nuclei` | projectdiscovery/nuclei | v3.3.7 |
+| `subfinder` | projectdiscovery/subfinder | v2.6.7 |
+| `httpx` | projectdiscovery/httpx | v1.6.9 |
+| `katana` | projectdiscovery/katana | v1.1.2 |
+| `dnsx` | projectdiscovery/dnsx | v1.2.1 |
+| `ffuf` | ffuf/ffuf | v2.1.0 |
+| `gitleaks` | gitleaks/gitleaks | v8.21.2 |
+| `dalfox` | hahwul/dalfox | v2.9.3 |
 
 ---
 
-## 3. First Run & Daily Operations
+### 2.3 Windows — Automated Setup
 
-When you first start SMP, the system automatically checks for the latest CVE databases. 
+Two Windows scripts are provided — choose one:
 
-### Exploring the User Interface
-The UI is divided into several powerful sections:
+**Option A — PowerShell (recommended):**
+```powershell
+# Open PowerShell as Administrator
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\setup.ps1
+python main.py
+```
 
-- **Dashboard**: The command center. Here you can add targets, view real-time risk scores, and monitor live scan pipelines in the "Active Scan Monitor". The Live Monitor shows step-by-step narrative updates of exactly what the scanners are doing.
-- **Targets**: A dedicated view to manage your domains and IPs.
-- **Threat Intel**: A live searchable feed of the CVE database. It includes a chart showing vulnerability distributions and lets you force a sync with NVD and GitHub Advisories.
-- **Audit Logs**: The immutable trail of everything the platform has done, including error logs and engine startup logs.
-- **Settings**: Where you configure the platform's behavior:
-  - **SMTP**: Configure email notifications. You must provide host, port, user, and an App Password.
-  - **Reports**: Set the Auditor Name and QA Reviewer Name for the generated PDFs. Contains a Drag & Drop zone to cryptographically verify report authenticity.
-  - **API Keys & Proxies**: Define HTTP/HTTPS proxies for the scanners and configure your GitHub token. *(Note: Hidden API keys like WPScan or GreyNoise are configured via `config/settings.json`)*.
-  - **Scan Profile**: Choose between `fast` (OSINT only), `standard` (default VAPT), or `full` (highly invasive/aggressive tools like ZAP and Commix).
-  - **Auth Headers**: Inject custom Cookies or Bearer Tokens into the scanners for authenticated scanning of web apps.
+**Option B — Command Prompt / Batch:**
+```cmd
+:: Run as Administrator
+setup.bat
+python main.py
+```
 
+Both scripts use `winget` with direct-download fallbacks for Python, Go, and all security tools. SQLCipher on Windows: the scripts install the required Windows SQLCipher bindings automatically.
 
-### Running a Scan
-1. Open the UI or API.
-2. Enter the target domain (`https://example.com`).
-3. Click **Scan**.
-4. SMP handles the rest.
+> Some scanners (Nmap raw SYN scan, Masscan, MAC changer) require Administrator privileges on Windows. Run `setup.bat` / `setup.ps1` as Administrator for full functionality.
 
-### Viewing the Narrative
-SMP translates terminal output into human language. You can read the scan story in real-time in the UI, or by checking the logs:
+---
+
+### 2.4 Docker — All Platforms
+
+Docker is the easiest path on any OS. All tools, dependencies, and SQLCipher are bundled — nothing to install on the host.
+
 ```bash
+# Build the V7 image
+make docker-build
+# or: docker build -t smp:v7 .
+
+# Start (detached)
+make docker-run
+# or: docker compose up -d
+
+# Check health
+make docker-health
+# → http://localhost:8000/api/v7/health
+
+# View live logs
 make docker-logs
+
+# Open interactive shell inside container
+make docker-shell
+
+# Stop
+make docker-stop
+
+# Stop and remove volumes
+make docker-clean
 ```
+
+API docs available at: `http://localhost:8000/api/v7/docs`
 
 ---
 
-## 4. Intermediate — Pipeline & Tools
 
-### How it works behind the scenes
-SMP uses an **Adaptive Stage-Feeding Pipeline**.
-1. **Recon Phase**: Passive reconnaissance. Subfinder, Whois, HTTPx.
-2. **Active Phase**: Active scanning. Nmap, Nuclei, Dirb, Gobuster.
-3. **Exploit Phase**: Only triggered if Phase 2 finds something. E.g., if WordPress is found, WPScan runs.
+### 2.5 SQLCipher — if startup fails
 
-### Tool Inventory
-The system contains dozens of tools. Here is what they do:
-
-### `amass.py`
-
-```text
-OWASP Amass — Best-in-class subdomain enumeration + network mapping.
-```
-
-<br>
-
-### `api_fuzzer.py`
-
-```text
-REST API Fuzzer — Tests OpenAPI/Swagger endpoints for misconfigurations and injection.
-```
-
-<br>
-
-### `arjun.py`
-
-```text
-Arjun — HTTP Parameter Discovery suite for uncovering hidden parameters.
-```
-
-<br>
-
-### `cloud_enum.py`
-
-```text
-Cloud Enum — Multi-cloud OSINT tool to find public AWS/Azure/GCP resources.
-```
-
-<br>
-
-### `cms_scanner.py`
-
-```text
-CMS Scanner — Detects and enumerates vulnerabilities in WordPress, Joomla, Drupal, etc.
-```
-
-<br>
-
-### `commix.py`
-
-```text
-Commix — Automated all-in-one OS command injection and exploitation tool.
-```
-
-<br>
-
-### `cors_scanner.py`
-
-```text
-CORS Scanner — Identifies insecure Cross-Origin Resource Sharing configurations.
-```
-
-<br>
-
-### `crlf_scanner.py`
-
-```text
-CRLF / Header Injection Scanner.
-```
-
-<br>
-
-### `crtsh.py`
-
-```text
-CRT.sh — Queries Certificate Transparency logs for rapid passive subdomain enumeration.
-```
-
-<br>
-
-### `dalfox.py`
-
-```text
-DalFox — Fast, parameter-analyzing XSS scanner and utility based on Golang.
-```
-
-<br>
-
-### `dirb.py`
-
-```text
-Dirb Scanner — SMP V6.5
-=========================
-Runs Dirb for classic web content discovery using dictionary-based scanning.
-Provides a third fuzzing engine alongside ffuf and gobuster, using its own
-built-in wordlists optimised for older/obscure web paths.
-
-Install:
-    sudo apt install dirb
-```
-
-<br>
-
-### `dnsx.py`
-
-```text
-dnsx — Fast and multi-purpose DNS toolkit allow to run multiple DNS queries.
-```
-
-<br>
-
-### `feroxbuster.py`
-
-```text
-Feroxbuster — Recursive content discovery (fast, async, Rust-based).
-```
-
-<br>
-
-### `ffuf.py`
-
-```text
-FFUF — Fast web fuzzer written in Go for rapid directory and parameter discovery.
-```
-
-<br>
-
-### `gitleaks.py`
-
-```text
-Gitleaks — Detects hardcoded secrets like passwords, API keys, and tokens in git repos.
-```
-
-<br>
-
-### `gobuster.py`
-
-```text
-Gobuster Scanner — SMP V6.5
-============================
-Runs Gobuster for fast directory, file, DNS, and vhost brute-forcing.
-Complements ffuf by providing a second fuzzing engine with different
-payloads and enumeration modes.
-
-Gobuster modes used:
-  - dir   — Directory and file enumeration
-  - dns   — Subdomain brute-force via DNS
-  - vhost — Virtual host discovery
-
-Install:
-    go install github.com/OJ/gobuster/v3@latest
-  or:
-    sudo apt install gobuster
-```
-
-<br>
-
-### `graphql_scanner.py`
-
-```text
-GraphQL Scanner — Introspection, batch attacks, and information disclosure.
-```
-
-<br>
-
-### `hackertarget.py`
-
-```text
-HackerTarget — Leverages the HackerTarget API for reverse DNS, whois, and port scans.
-```
-
-<br>
-
-### `headers_scanner.py`
-
-```text
-Security Headers — Analyzes HTTP response headers for missing security protections.
-```
-
-<br>
-
-### `httpx_scanner.py`
-
-```text
-HTTPX — Fast and multi-purpose HTTP toolkit to run multiple probes concurrently.
-```
-
-<br>
-
-### `hydra_scanner.py`
-
-```text
-Hydra — Rate-limited brute-force authentication testing (login forms only).
-```
-
-<br>
-
-### `jwt_scanner.py`
-
-```text
-JWT Scanner — Analyzes JSON Web Tokens for weak signatures and misconfigurations.
-```
-
-<br>
-
-### `katana.py`
-
-```text
-Katana — A next-generation crawling and spidering framework.
-```
-
-<br>
-
-### `masscan.py`
-
-```text
-Masscan — TCP port scanner, spews SYN packets asynchronously, scanning entire Internet in under 6 minutes.
-```
-
-<br>
-
-### `netcat_probe.py`
-
-```text
-Netcat Probe Scanner — SMP V6.5
-================================
-Uses netcat (nc) for raw TCP/UDP port probing and banner grabbing.
-Complements Nmap by providing direct, low-noise service banner collection
-for specific ports without sending SYN/RST noise.
-
-Typical use-cases:
-  - Banner grab ports found open by Nmap
-  - Probe custom/high ports for running services
-  - Detect non-HTTP services (SMTP, FTP, POP3, IMAP, etc.)
-
-Install:
-    sudo apt install netcat-openbsd
-```
-
-<br>
-
-### `nikto.py`
-
-```text
-Nikto — Web server scanner which performs comprehensive tests for multiple items, including dangerous files/CGIs.
-```
-
-<br>
-
-### `nmap.py`
-
-```text
-Nmap — The industry standard for network exploration, port scanning, and security auditing.
-```
-
-<br>
-
-### `nuclei.py`
-
-```text
-Nuclei — Fast and customizable vulnerability scanner based on simple YAML based DSL.
-```
-
-<br>
-
-### `open_redirect.py`
-
-```text
-Open Redirect — Scans for open redirect vulnerabilities in URL parameters.
-```
-
-<br>
-
-### `paramspider.py`
-
-```text
-ParamSpider — Mines parameters from web archives for deeper fuzzing.
-```
-
-<br>
-
-### `path_traversal.py`
-
-```text
-Path Traversal / LFI Scanner.
-```
-
-<br>
-
-### `retire_js.py`
-
-```text
-Retire.js — JavaScript library CVE detection via version fingerprinting.
-```
-
-<br>
-
-### `robots_scanner.py`
-
-```text
-Robots/Sitemap Scanner — Analyzes robots.txt and sitemap.xml for hidden endpoints.
-```
-
-<br>
-
-### `scan_runner.py`
-
-```text
-Scan Runner – coordinates all scanner modules in a sequential pipeline.
-
-Optimized pipeline order (maximum efficiency — cheap/fast OSINT first, deep scans last):
-
-  1.  HTTPx              – quick HTTP probe: confirms site is up before expensive tools run
-  2.  WhatWeb            – passive fingerprint: sets technology context early
-  3.  Subfinder          – DNS subdomain discovery
-  4.  CRT.sh             – certificate transparency subdomain enum
-  5.  HackerTarget       – Reverse DNS / additional recon
-  6.  Whois              – domain registration info
-  7.  Wayback Machine    – historical URL mapping
-  8.  Traceroute         – network path (UDP, no root)
-  9.  Nmap               – port + service scan (expensive — after all OSINT)
-  10. SSL Scanner        – TLS/certificate analysis
-  11. Security Headers   – HTTP header security check
-  12. Robots.txt         – robots.txt / sitemap analysis
-  13. CORS Scanner       – CORS misconfiguration check
-  14. CMS Scanner        – CMS / admin panel detection
-  15. Nikto              – web vulnerability scanner
-  16. Nuclei             – template-based vuln scan
-  17. ffuf               – directory fuzzing
-  18. Open Redirect      – open redirect parameter testing
-  19. Tech Fingerprint   – deep response-based tech detection
-  20. Wapiti             – OWASP web app scan
-  21. SQLMap             – SQL injection detection
-  22. Shodan InternetDB  – passive IoT/IP exposure check
-  [*] OWASP ZAP         – optional active scan (disabled by default)
-  23. CVE Correlation    – offline: tech → CVE matching
-  24. Risk Scoring       – offline: 0–100 score
-  25. Report Generation  – HTML + PDF
-  26. SMTP Alerts        – email dispatch
-```
-
-<br>
-
-### `screenshot_capture.py`
-
-```text
-Screenshot Capture V6.5
-========================
-Captures screenshots of vulnerable endpoints as cryptographic evidence
-for reports. Uses playwright (headless Chromium) as primary method
-and a requests-based HTML snapshot as fallback.
-
-Usage:
-    from scanners.screenshot_capture import capture_screenshot
-    path = capture_screenshot("https://target.com/vuln-page")
-```
-
-<br>
-
-### `secrets_scanner.py`
-
-```text
-Secrets Scanner V6.5
-=====================
-Real pattern-based secrets detection in HTTP responses, HTML, JS files,
-and raw scanner output. Replaces the empty stubs (trufflehog/gitleaks).
-
-Detects:
-  - API keys (AWS, GCP, Azure, Stripe, Twilio, SendGrid, etc.)
-  - Private keys (RSA, EC, PEM blocks)
-  - JWT tokens
-  - Database connection strings
-  - Generic high-entropy tokens
-
-Fallback chain:
-  1. Full regex scan of HTTP responses via requests
-  2. Regex scan of already-collected raw output if network fails
-```
-
-<br>
-
-### `shodan_idb.py`
-
-```text
-Shodan InternetDB — Offline passive lookup of open ports and vulnerabilities via Shodan.
-```
-
-<br>
-
-### `smuggler.py`
-
-```text
-HTTP Request Smuggling — CL.TE / TE.CL / TE.TE detection.
-```
-
-<br>
-
-### `sqlmap.py`
-
-```text
-SQLMap — Automatic SQL injection and database takeover tool.
-```
-
-<br>
-
-### `ssl_scanner.py`
-
-```text
-SSL Scanner — Analyzes SSL/TLS configuration for weak ciphers and vulnerabilities.
-```
-
-<br>
-
-### `ssrf_scanner.py`
-
-```text
-SSRF Scanner — Server-Side Request Forgery parameter testing.
-```
-
-<br>
-
-### `subfinder.py`
-
-```text
-Subfinder — Fast passive subdomain enumeration tool using passive online sources.
-```
-
-<br>
-
-### `tech_fingerprint.py`
-
-```text
-Tech Fingerprint — Identifies underlying technologies, frameworks, and CMS of a web app.
-```
-
-<br>
-
-### `theharvester.py`
-
-```text
-TheHarvester — OSINT tool to gather emails, subdomains, hosts, employee names, open ports and banners.
-```
-
-<br>
-
-### `traceroute.py`
-
-```text
-Traceroute — Network diagnostic tool for displaying the route and measuring transit delays of packets.
-```
-
-<br>
-
-### `wapiti.py`
-
-```text
-Wapiti — Web application vulnerability scanner that acts like a fuzzer.
-```
-
-<br>
-
-### `watchdog.py`
-
-```text
-Continuous Monitoring Watchdog — lightweight 15-minute checks per target.
-
-Checks performed on every run (no full scanner needed):
-  1. HTTP status code         — site down or unexpected redirect
-  2. Page content hash        — possible defacement or injection
-  3. HTTP response headers    — security headers removed / new suspicious headers
-  4. DNS A record             — DNS hijacking indicator
-  5. SSL certificate fingerprint — cert replaced post-compromise
-  6. SSL certificate expiry      — cert about to expire (≤14 days warning)
-  7. Open port snapshot       — new backdoor port appeared (Nmap top-20)
-
-On first run per target: saves snapshot as baseline, no alert.
-On subsequent runs: compares against baseline, fires BASELINE_DRIFT email alert
-  on any deviation. Updates baseline to current after alerting.
-
-Uses only Python stdlib + requests + nmap (already required by SMP).
-```
-
-<br>
-
-### `wayback.py`
-
-```text
-Wayback Machine — Fetches historical URLs from the Internet Archive for endpoint discovery.
-```
-
-<br>
-
-### `whatweb.py`
-
-```text
-WhatWeb — Next generation web scanner for identifying technologies used by websites.
-```
-
-<br>
-
-### `whois_scanner.py`
-
-```text
-Whois — Queries WHOIS databases for domain registration details.
-```
-
-<br>
-
-### `wpscan.py`
-
-```text
-WPScan — Black box WordPress vulnerability scanner.
-```
-
-<br>
-
-### `xxe_scanner.py`
-
-```text
-XXE Scanner — XML External Entity injection testing.
-```
-
-<br>
-
-### `zap.py`
-
-```text
-OWASP ZAP — Integrated dynamic application security testing (DAST) tool.
-```
-
-<br>
-
-### `alert_engine.py`
-
-```text
-Alert Engine — Dispatches notifications via SMTP, Slack, Webhooks upon finding detection.
-```
-
-<br>
-
-### `baseline_manager.py`
-
-```text
-Port Baseline Manager V6.5
-============================
-Stores and compares per-target port profiles across scans.
-After the first scan, a "baseline" is saved. All subsequent scans
-compare against it and flag new/unexpected open ports as High findings.
-
-Fallback chain:
-  1. DB-stored baseline (primary)
-  2. File-based JSON cache (secondary — survives DB issues)
-```
-
-<br>
-
-### `bump_version.py`
-
-```text
-SMP Version Bumper — updates version everywhere it matters.
-Usage: python3 tools/bump_version.py V6.5
-```
-
-<br>
-
-### `compliance_mapper.py`
-
-```text
-Compliance Mapper V6.5
-=======================
-Maps SMP finding types and CWE IDs to compliance control references:
-  - OWASP Top 10 2021
-  - CIS Controls v8
-  - ISO 27001:2022 Annex A
-
-Usage:
-    from tools.compliance_mapper import map_finding_to_controls
-    controls = map_finding_to_controls("SQL Injection", "CWE-89")
-    # Returns: {"owasp": "A03:2021", "cis": "CIS 16.1", "iso": "A.8.28"}
-```
-
-<br>
-
-### `config_manager.py`
-
-```text
-Config Manager — Centralized management of platform settings, thresholds, and secrets.
-```
-
-<br>
-
-### `db_manager.py`
-
-```text
-Database Manager — Handles SQLite/SQLCipher connections, migrations, and ORM mapping.
-```
-
-<br>
-
-### `dynamic_pipeline.py`
-
-```text
-Dynamic Pipeline — SMP V6.5
-==============================
-Stage-feeding scan pipeline inspired by the PentestGPT multi-stage approach.
-
-Instead of a rigid sequential list, this module makes the pipeline *adaptive*:
-- Phase 1 (Recon) runs fast OSINT tools and collects findings.
-- The results are analysed and used to decide which Phase 2 (Active) scanners
-  to prioritise or add dynamically.
-- Phase 3 (Exploit) scanners are only triggered when Phase 2 finds evidence
-  that makes them relevant (e.g. WordPress found → WPScan; open 22 → Hydra).
-
-Key design decisions taken from PentestGPT:
-- Each stage feeds the next via a typed result dict.
-- Branching logic is deterministic (no LLM required) — based on technology
-  and finding data already in the SMP database.
-- All branching decisions are logged through narrative_logger for transparency.
-
-Usage:
-    from tools.dynamic_pipeline import DynamicPipeline
-    pipeline = DynamicPipeline(scan_id=42, target_url="https://example.com", settings={})
-    pipeline.run()
-```
-
-<br>
-
-### `encryption_manager.py`
-
-```text
-Encryption Manager — manages SQLite database encryption and decryption at application level.
-```
-
-<br>
-
-### `event_bus.py`
-
-```text
-In-Process Event Bus V6.5
-==========================
-Thread-safe publish/subscribe event bus replacing the old unsafe UDP IPC socket.
-Allows decoupled communication between scanner threads and the UI.
-
-Usage:
-    # Publisher (scanner thread):
-    from tools import event_bus
-    event_bus.emit("mac_changed", {"new_mac": "aa:bb:cc:dd:ee:ff"})
-
-    # Subscriber (dashboard):
-    from tools import event_bus
-    event_bus.subscribe("mac_changed", my_callback)
-```
-
-<br>
-
-### `fail2ban_reader.py`
-
-```text
-Fail2Ban Integrator — Reads Fail2Ban logs to correlate attacks and dynamically block malicious actors.
-```
-
-<br>
-
-### `finding_deduplicator.py`
-
-```text
-Finding Deduplicator V6.5
-==========================
-Merges structurally identical findings from multiple scanners into a single
-finding with all source scanners cited (e.g. Nuclei + Nikto both reporting
-"Missing X-Frame-Options" → one merged finding: "Nuclei, Nikto").
-
-Strategy:
-  1. Normalize finding title (lowercase, strip whitespace, remove scanner name prefixes)
-  2. Group by (normalized_title, severity, target_url)
-  3. Merge sources into comma-separated "tool" field
-  4. Keep highest-confidence raw description
-```
-
-<br>
-
-### `logger_setup.py`
-
-```text
-Logger Setup — Configures structured, rotated logging for the entire platform.
-```
-
-<br>
-
-### `mac_changer.py`
-
-```text
-MAC Address Changer — called at scan start (not app startup).
-
-Key design decisions:
-  - Runs only when a scan starts AND sudo_password is available (passed from thread-local).
-  - Generates a same-device-class MAC: preserves the vendor OUI of the current
-    interface (first 3 bytes) and randomises only the last 3 bytes. This makes
-    the changed MAC look like the same hardware vendor — far less suspicious.
-  - Three strategy redundancy: ip-link → macchanger → subprocess sudo with password.
-  - Controlled by 'mac_changer_enabled' in settings.json (default: true).
-  - If MAC change fails, the scan is still ALLOWED to proceed (non-fatal).
-```
-
-<br>
-
-### `narrative_logger.py`
-
-```text
-Narrative Logger — SMP V6.5
-============================
-Translates raw scanner pipeline events into human-readable, step-by-step
-walkthrough messages, inspired by the PentestGPT live-console pattern.
-
-Each scanner step emits a narrative line that explains *what* is happening
-and *why*. Messages are:
-  - Written to  logs/narrative/<scan_id>.log  (persisted per-scan)
-  - Sent over the UDP IPC bus so the GUI can display them in real time
-  - Accessible via  get_narrative(scan_id)  for the report generator
-
-Usage inside a scanner:
-    from tools.narrative_logger import emit, emit_finding, emit_stage
-    emit(scan_id, "nmap", "Probing open ports to map the attack surface.")
-    emit_finding(scan_id, "nmap", "High", "Port 22 open — SSH service exposed.")
-    emit_stage(scan_id, "recon", "active")
-```
-
-<br>
-
-### `report_generator.py`
-
-```text
-VAPT Final Report Generator — Compliance-Ready PDF
-====================================================
-Generates a professional Vulnerability Assessment and Penetration Testing
-(VAPT) Final Report conforming to PCI-DSS, SOC 2, and ISO 27001 audit
-requirements.
-
-Structure:
-  Section 1  — Document Control & Cover Page
-  Section 2  — Table of Contents & Executive Summary
-  Section 3  — Engagement Scope & Methodology
-  Section 4  — Findings Summary Matrix
-  Section 5  — Deep-Dive Technical Findings (per-finding pages)
-  Section 6  — Appendices, Tooling & Attestation
-```
-
-<br>
-
-### `responsibility_manager.py`
-
-```text
-Responsibility Manager — Maps vulnerabilities to specific teams or owners based on asset tags.
-```
-
-<br>
-
-### `risk_scorer.py`
-
-```text
-Risk Scoring Engine V5.4 — calibrated against real CVE data.
-
-V5.4 Improvements:
-- Reads cvss_score column directly from the findings table (no regex parsing needed)
-- CISA KEV confirmed-exploited CVEs receive 2× score multiplier
-- CVE match tier (A/B/C from correlator) respected in contribution weight
-- EPSS exploitation probability used as bonus multiplier
-- Info-level findings have near-zero weight
-- Logarithmic scaling prevents 100 low findings from dominating
-- Separate bonus caps per tool category
-- False positive filter: only confidence >= 60 findings scored
-- Score breakdown includes CISA KEV count and match tier breakdown
-
-Ratings:
-   0–20   → Minimal
-  21–40  → Low
-  41–60  → Medium
-  61–80  → High
-  81–100 → Critical
-```
-
-<br>
-
-### `sbom_generator.py`
-
-```text
-SBOM Generator V6.5
-====================
-Generates a CycloneDX JSON Software Bill of Materials from technology
-fingerprinting data collected during a scan.
-
-Fallback chain:
-  1. CycloneDX JSON (preferred — industry standard)
-  2. SPDX tag-value format (if cyclonedx-python-lib not installed)
-  3. Simple CSV (last resort — always works)
-
-Usage:
-    from tools.sbom_generator import generate_sbom_for_scan
-    sbom_path = generate_sbom_for_scan(scan_id, target_url)
-```
-
-<br>
-
-### `scheduler.py`
-
-```text
-Scheduler — Cron-like engine for managing recurring, automated security scans.
-```
-
-<br>
-
-### `session_manager.py`
-
-```text
-Session Manager V6.5
-====================
-Tracks user activity and fires an auto-lock signal after a configurable
-idle timeout. Designed to work with the PySide6 dashboard without requiring
-a full restart — the password dialog is re-shown and the user can resume.
-
-Usage:
-    from tools.session_manager import SessionManager
-    sm = SessionManager(timeout_minutes=15, on_lock=dashboard.trigger_lock)
-    sm.start()
-    sm.reset()   # call on any user interaction
-    sm.stop()    # call on app quit
-```
-
-<br>
-
-### `system_checker.py`
-
-```text
-System Resource Pre-Scan Checker V6.5
-======================================
-Checks CPU, RAM, disk space, and network before a scan starts.
-If any threshold is exceeded, the caller gets a structured warning
-with a list of issues so the UI can show a "Continue Anyway / Cancel" dialog.
-
-Thresholds (all configurable in settings):
-  cpu_warn_pct   : CPU usage > 80%   → warn
-  ram_warn_mb    : Free RAM < 500 MB → warn
-  disk_warn_gb   : Free disk < 1 GB  → warn
-  net_check_host : Attempt TCP connect to verify network reachability
-
-Fallback chain:
-  1. Use psutil for accurate metrics
-  2. Fall back to /proc/meminfo + shutil.disk_usage (no psutil needed)
-```
-
-<br>
-
-### `tool_installer.py`
-
-```text
-Tool Installer – auto-detects missing tools and installs what it can.
-
-Supports:
-  • pip packages  → installed automatically via pip
-  • apt packages  → installed automatically if running as root / with sudo
-  • Go binaries   → provides install commands (cannot auto-install without Go)
-  • Manual tools  → prints guidance
-
-Called at startup from main.py.
-```
-
-<br>
-
-### `verify_report.py`
-
-```text
-SMP Report Authenticity Verifier
-=================================
-Verifies that an SMP-generated PDF or HTML report has not been tampered with.
-
-Works COMPLETELY OFFLINE — no database or SMP installation required.
-The report is self-contained: the verification hash is embedded inside it.
-
-Usage:
-    python3 tools/verify_report.py reports/pdf/SMP_example.com_Report_2024-07-01_abc123.pdf
-    python3 tools/verify_report.py reports/html/SMP_example.com_Report_2024-07-01.html
-    python3 tools/verify_report.py --help
-```
-
-<br>
-
-### `verify_smp.py`
-
-```text
-SMP Verifier — Cryptographically verifies core application files to ensure zero tampering.
-```
-
-<br>
-
-
-
----
-
-## 5. Advanced — Core Internals & Encryption
-
-SMP is architected for maximum security and performance. Below is a deep dive into its core components.
-
-### 5.1 Database Encryption (SQLCipher)
-To prevent unauthorized access to sensitive vulnerability data, SMP uses `sqlcipher` to encrypt the SQLite database (`security.db`) at rest with **AES-256**. 
-- The encryption key is derived from a master password using a **PBKDF2 HMAC-SHA256** key derivation function (KDF) with 600,000 iterations.
-- Even if an attacker compromises the server, the database is unreadable without the master password.
+`setup.sh` installs SQLCipher automatically. If you skipped setup or installed manually and see the fatal error on launch:
 
 ```bash
-# Interacting with the DB manually (requires the derived key)
-sqlcipher database/security.db
-PRAGMA key = 'your_derived_key';
-.tables
+# Linux
+sudo apt install libsqlcipher-dev libsqlcipher0
+pip install pysqlcipher3
+
+# macOS (Homebrew)
+brew install sqlcipher
+pip install pysqlcipher3
+
+# Windows — handled by setup.ps1 / setup.bat automatically
 ```
 
-### 5.2 Dynamic Stage-Feeding Pipeline
-Unlike traditional sequential scanners, SMP utilizes an intelligent, adaptive pipeline. 
-The pipeline relies on `tools/dynamic_pipeline.py` which transitions between states:
-1. **Recon (OSINT)**: Gather IPs, subdomains, and open ports. 
-2. **Context Analysis**: The platform parses Phase 1 data. If port 80/443 is open, it queues web scanners (Nikto, Nuclei). If port 22 is open, it queues SSH brute-forcers (Hydra).
-3. **Exploit (Active)**: Dynamically executed based on Context Analysis.
-
-### 5.3 Event Bus & IPC (Inter-Process Communication)
-SMP employs a thread-safe publish/subscribe Event Bus (`tools/event_bus.py`) that decouples the backend scanners from the UI.
-- Scanners publish events (`finding_discovered`, `scanner_progress`, `mac_changed`).
-- The narrative logger and GUI subscribe to these events to provide real-time updates.
-- External communication (e.g., to a remote UI) operates over a secure UDP socket on port `5005` using serialized JSON payloads.
+Then re-run `./run.sh`. SMP will not start in plaintext mode — this is by design.
 
 ---
 
-## 6. Adding Custom Scanners & Tools
+### 2.6 Local-Only Mode (Zero Egress)
 
-SMP's modular architecture makes it trivial to integrate custom Python scripts, proprietary tools, or Go binaries into the pipeline.
+Blocks all outbound intelligence API calls. Every call attempt is still logged to `logs/egress_audit.log` as `BLOCKED` — giving you a provable audit trail.
 
-### Step 1: Create the Scanner Module
-Create a new file in the `scanners/` directory (e.g., `scanners/custom_fuzzer.py`). Every scanner must expose a primary run function that accepts `target_url`, `scan_id`, and `settings`.
+```bash
+# Linux / macOS
+SMP_LOCAL_ONLY=1 ./run.sh
+
+# Windows
+$env:SMP_LOCAL_ONLY="1"; python main.py
+```
+
+Or set permanently in `config/settings.json`:
+```json
+{ "local_only_mode": true }
+```
+
+---
+
+
+## 3 · First Run & Daily Operations
+
+### 3.1 First launch checklist
+
+On first launch, SMP automatically:
+1. Verifies SQLCipher is available (hard fail if not)
+2. Creates encrypted databases (`database/security.db`, `database/cve.db`)
+3. Starts background CVE sync from NVD
+4. Starts the FastAPI server on `localhost:8000`
+5. Opens the PySide6 dashboard
+
+### 3.2 UI Sections
+
+| Section | Purpose |
+|---------|---------|
+| 🏠 **Dashboard** | Add targets, view risk scores, monitor live scans |
+| 🎯 **Targets** | Manage domains/IPs, view scan history |
+| 🧠 **Threat Intel** | Live CVE database, force NVD sync, EPSS scores |
+| 📋 **Audit Logs** | Immutable activity trail, egress audit log |
+| ⚙️ **Settings** | SMTP, proxies, scan profile, auth headers |
+
+### 3.3 Running a scan
+
+```
+1. Dashboard → "Add Target" → enter https://example.com
+2. Select scan profile:
+   • osint   — passive recon only (safe, no active probing)
+   • standard — full VAPT, no destructive tools (default)
+   • full    — includes ZAP active scan, Commix, Hydra (invasive)
+3. Click "Start Scan"
+4. Watch the Live Monitor — real-time narrative of every step
+```
+
+### 3.4 Scan profiles
+
+| Profile | Phases run | Use case |
+|---------|-----------|---------|
+| `osint` | Recon only | External recon, scoping |
+| `standard` | Recon + Active + Conditional | Standard pentest engagement |
+| `full` | All phases, aggressive tools | With explicit written permission |
+
+### 3.5 Reading scan output
+
+The Live Monitor streams narrative log lines:
+
+```
+[00:00:02] [STAGE]    RECON started — passive reconnaissance
+[00:00:04] [INFO]     HTTPx — target alive, 200 OK, nginx/1.24
+[00:00:18] [INFO]     WhatWeb — WordPress 6.4.3 detected
+[00:01:45] [BRANCH]   WordPress detected → WPScan queued
+[00:03:12] [FINDING]  [HIGH] Nuclei — CVE-2024-1234 confirmed
+[00:04:01] [INFO]     EPSS score: 0.847 (84.7% exploitation probability)
+[00:04:01] [INFO]     CISA KEV: YES — actively exploited in the wild
+```
+
+### 3.6 Authenticated scanning
+
+To scan behind login walls, add session cookies or Bearer tokens in **Settings → Auth Headers**. These are injected into Nuclei, Nikto, and HTTPx automatically.
+
+### 3.7 Scheduled scans
+
+Use **Settings → Scheduler** to configure recurring scans (daily/weekly). The watchdog module runs lightweight 15-minute checks between full scans:
+- HTTP status drift
+- Page content hash (defacement detection)
+- DNS A record change (hijacking indicator)
+- SSL certificate fingerprint change
+- New open ports (backdoor detection)
+
+---
+
+## 4 · Scanner Pipeline & Tool Inventory
+
+### 4.1 DAG execution model
+
+SMP V7 runs scanners as a **Directed Acyclic Graph** — not a fixed sequence. Up to 6 scanners run in parallel where dependencies allow. Phase 3 (Conditional) steps only activate when Phase 1/2 evidence warrants it.
+
+```
+Phase 1 — Recon (parallel)
+  HTTPx ──┐
+  WhatWeb ─┤
+  Subfinder┤──→ Phase 2 — Active (parallel)
+  CRT.sh ──┤       Nmap ─────┐
+  Whois ───┤       SSL ──────┤──→ Phase 3 — Conditional
+  Wayback ─┘       Nuclei ───┘       WPScan (if WordPress)
+                   Nikto             Dalfox (if XSS surface)
+                   ffuf              Hydra  (if SSH open)
+                   Gitleaks          ZAP    (if full profile)
+```
+
+### 4.2 Complete tool inventory
+
+#### 🔍 Reconnaissance
+
+| Tool | What it finds | File |
+|------|-------------|------|
+| **HTTPx** | HTTP metadata, redirects, tech headers | `scanners/httpx_scanner.py` |
+| **WhatWeb** | CMS, frameworks, server software | `scanners/whatweb.py` |
+| **Subfinder** | Passive subdomain enumeration (50+ sources) | `scanners/subfinder.py` |
+| **CRT.sh** | Certificate Transparency subdomain logs | `scanners/crtsh.py` |
+| **HackerTarget** | Reverse DNS, AS info, port scan API | `scanners/hackertarget.py` |
+| **Whois** | Domain registration, registrar, nameservers | `scanners/whois_scanner.py` |
+| **Wayback Machine** | Historical URL archive, hidden endpoints | `scanners/wayback.py` |
+| **theHarvester** | Emails, subdomains, hosts, employee names | `scanners/theharvester.py` |
+| **Traceroute** | Network path, hop latency | `scanners/traceroute.py` |
+
+#### 🔬 Active Scanning
+
+| Tool | What it finds | File |
+|------|-------------|------|
+| **Nmap** | Open ports, service versions, OS fingerprint | `scanners/nmap.py` |
+| **SSL Scanner** | Weak ciphers, expired certs, TLS version | `scanners/ssl_scanner.py` |
+| **Security Headers** | Missing CSP, HSTS, X-Frame-Options, etc. | `scanners/headers_scanner.py` |
+| **CORS Scanner** | Insecure CORS policies | `scanners/cors_scanner.py` |
+| **Robots.txt** | Hidden paths, admin panels in sitemap | `scanners/robots_scanner.py` |
+| **CMS Scanner** | WordPress/Joomla/Drupal version + plugins | `scanners/cms_scanner.py` |
+| **Nikto** | 6700+ web server vulnerability checks | `scanners/nikto.py` |
+| **Nuclei** | Template-based CVE/misconfiguration scan | `scanners/nuclei.py` |
+| **ffuf** | Directory/file fuzzing (SPA false-positive filtered) | `scanners/ffuf.py` |
+| **Open Redirect** | URL parameter redirect injection | `scanners/open_redirect.py` |
+| **Tech Fingerprint** | Deep response-based stack detection | `scanners/tech_fingerprint.py` |
+| **Shodan InternetDB** | Passive IP exposure, open ports, CVEs | `scanners/shodan_idb.py` |
+| **Gitleaks** | Hardcoded secrets in git repos | `scanners/gitleaks.py` |
+| **Wapiti** | OWASP web app fuzzer | `scanners/wapiti.py` |
+| **SQLMap** | SQL injection detection | `scanners/sqlmap.py` |
+
+#### ⚡ Conditional (Phase 3)
+
+| Tool | Trigger condition | What it tests |
+|------|-----------------|---------------|
+| **WPScan** | WordPress detected *or* gem fails → Docker wrapper | WordPress CVEs, plugin vulns |
+| **Dalfox** | XSS surface found | Parameter-level XSS, DOM XSS |
+| **Arjun** | Web app detected | Hidden HTTP parameters |
+| **DNSx** | Subdomains found | DNS record analysis |
+| **Katana** | Web app alive | Deep crawling & spidering |
+| **Commix** | Command injection surface | OS command injection |
+| **JWT Scanner** | JWT tokens in responses | Algorithm confusion, weak keys |
+| **Masscan** | Port scan needed at scale | High-speed TCP SYN scan |
+| **ParamSpider** | URL parameters found | Web archive parameter mining |
+| **Cloud Enum** | Cloud assets referenced | AWS/Azure/GCP public buckets |
+| **OWASP ZAP** | `full` profile only | Active DAST (invasive) |
+| **Hydra** | SSH/FTP port open | Brute-force auth test |
+
+#### 🛠️ Support Tools
+
+| Tool | Purpose |
+|------|---------|
+| **Screenshot Capture** | Headless Chromium evidence screenshots |
+| **Secrets Scanner** | API keys/JWT/PEM detection in HTTP responses |
+| **Netcat Probe** | Raw TCP banner grabbing |
+| **HTTP Smuggler** | CL.TE / TE.CL request smuggling |
+| **SSRF Scanner** | Server-Side Request Forgery parameters |
+| **XXE Scanner** | XML External Entity injection |
+| **Path Traversal** | LFI / directory traversal |
+| **GraphQL Scanner** | Introspection abuse, batch attacks |
+| **CRLF Scanner** | Header injection |
+
+### 4.3 SPA false-positive filter
+
+ffuf on React/Vue/Angular SPAs returns 200 for every path (catch-all routing). SMP detects when ≥80% of results share the same Content-Length and removes them automatically. Code: `scan_runner.py::_filter_spa_ffuf_results`.
+
+### 4.4 Deferred retry queue
+
+Any scanner that times out or fails in Phase 1 is added to a deferred retry queue. After the main pipeline completes, failed steps are re-attempted with 1.5× timeout. This prevents a slow network from permanently skipping steps.
+
+---
+
+## 5 · Intelligence & Correlation Stack
+
+This is V7's primary differentiator. Most scanner wrappers report raw CVSS. SMP cross-references every CVE finding against four live sources.
+
+### 5.1 How correlation works
+
+```
+Finding: "Apache 2.4.49 detected"
+          │
+          ▼
+    NVD lookup → CVE-2021-41773 (CVSS 9.8)
+          │
+          ├─→ EPSS → 0.974  (97.4% exploitation probability)
+          │
+          ├─→ CISA KEV → YES (actively exploited, added 2021-11-03)
+          │
+          ├─→ GreyNoise → 847 scanners hitting this daily
+          │
+          └─→ Composite Risk Score → 98/100 CRITICAL
+```
+
+### 5.2 Intelligence sources
+
+#### 🟠 NVD — National Vulnerability Database
+- **Source:** `https://services.nvd.nist.gov/`
+- **What it adds:** CVSSv3 base score, affected product/version matching, CWE classification
+- **Sync:** Background worker syncs new CVEs hourly
+- **File:** `intelligence/nvd.py`
+
+#### 🔴 EPSS — Exploit Prediction Scoring System
+- **Source:** `https://api.first.org/data/v1/epss` (FIRST.org)
+- **What it adds:** A 0.0–1.0 score representing the probability of exploitation in the wild within the next 30 days. A CVE with CVSS 9.8 and EPSS 0.02 is far less urgent than one with CVSS 7.5 and EPSS 0.94.
+- **Sync:** Batch enrichment of up to 2,000 CVEs per run
+- **File:** `intelligence/epss.py`
+- **Egress:** Logged to `logs/egress_audit.log`; blocked in local-only mode
+
+#### 🟤 GreyNoise — Internet Scanner Intelligence
+- **Source:** `https://api.greynoise.io/v3/community/{ip}` (Community API — free, no key)
+- **What it adds:** Classifies discovered IPs as:
+  - `noise` — known mass-scanners (Shodan bots, search engine crawlers)
+  - `riot` — known benign infrastructure (AWS, Cloudflare)
+  - `malicious` — known threat actor infrastructure
+  - `unknown` — no data
+- **Effect:** Malicious IPs in findings trigger severity escalation (Info/Low → Medium)
+- **File:** `intelligence/greynoise.py`
+- **Egress:** Logged; skipped for RFC1918 private IPs
+
+#### 🔵 CISA KEV — Known Exploited Vulnerabilities
+- **Source:** `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`
+- **What it adds:** A boolean flag: is this CVE on the US government's confirmed-exploited list? KEV CVEs receive a **2× score multiplier** in the risk scorer.
+- **Update:** Synced daily
+- **File:** `intelligence/cisa.py`
+
+#### 🟣 MITRE ATT&CK
+- **What it adds:** Maps findings to ATT&CK tactics (Initial Access, Execution, Persistence…) and technique IDs (T1190, T1059…)
+- **File:** `intelligence/mitre_mapper.py`
+
+### 5.3 Risk scoring formula
 
 ```python
-# scanners/custom_fuzzer.py
-import subprocess
+# tools/risk_scorer.py (simplified)
+base_score = cvss_score / 10           # 0.0–1.0
+epss_bonus  = epss_score * 0.3         # up to +0.3
+kev_mult    = 2.0 if is_cisa_kev else 1.0
+gn_mult     = 1.3 if greynoise_malicious else 1.0
+
+risk = min(100, base_score * kev_mult * gn_mult * 100 + epss_bonus * 10)
+```
+
+Full implementation at `tools/risk_scorer.py`. Only findings with confidence ≥ 60 are scored. Info-level findings have near-zero weight.
+
+| Score | Rating |
+|-------|--------|
+| 0–20 | Minimal |
+| 21–40 | Low |
+| 41–60 | Medium |
+| 61–80 | High |
+| 81–100 | Critical |
+
+---
+## 6 · Compliance Mapping & Reports
+
+### 6.1 What compliance mapping does
+
+Every finding is automatically mapped to control IDs across five frameworks. This is the difference between a report that says "40 vulnerabilities found" and one that says "here is what is blocking your SOC 2 audit."
+
+**Code:** `tools/compliance_mapper.py`
+
+### 6.2 Supported frameworks
+
+| Framework | Controls mapped | Key use case |
+|-----------|----------------|-------------|
+| **OWASP Top 10 2021** | A01–A10 | Web application security baseline |
+| **CIS Controls v8** | 11 controls | Infrastructure hardening benchmark |
+| **ISO 27001:2022** | Annex A controls | International ISMS certification |
+| **SOC 2 Type II** | CC6.1–CC9.2 | SaaS / cloud audit readiness |
+| **PCI-DSS v4.0** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
+
+### 6.3 Using the compliance mapper
+
+```python
+from tools.compliance_mapper import map_finding_to_controls, get_compliance_summary
+
+# Map a single finding
+controls = map_finding_to_controls("SQL Injection", "CWE-89")
+# Returns:
+# {
+#   "owasp":    ["A03:2021 - Injection"],
+#   "cis":      ["CIS 16 - Application Software Security"],
+#   "iso27001": ["A.8.28 - Secure Coding"],
+#   "soc2":     ["CC6.6 - Security Threats from Outside Boundaries"],
+#   "pci_dss":  ["Req 6.2.4 - Injection Prevention"]
+# }
+
+# Get summary across all scan findings
+summary = get_compliance_summary(findings)
+# Returns coverage % per framework + audit_blocking_findings
+```
+
+### 6.4 Audit-blocking findings
+
+The most actionable output: `audit_blocking_findings` lists Critical/High severity findings that directly violate SOC 2 or PCI-DSS controls. This is what an auditor will ask about.
+
+```python
+summary["audit_blocking_findings"]
+# [
+#   {
+#     "title": "SQL Injection in /login",
+#     "severity": "Critical",
+#     "soc2":    ["CC6.6", "CC7.2"],
+#     "pci_dss": ["Req 6.2.4", "Req 6.4.1"]
+#   }
+# ]
+```
+
+### 6.5 Report structure
+
+Every completed scan automatically generates:
+
+```
+reports/
+├── html/   SMP_target.com_Report_2026-07-25.html
+├── pdf/    SMP_target.com_Report_2026-07-25_a1b2c3d4.pdf
+└── sbom/   SMP_target.com_SBOM_2026-07-25.json
+```
+
+**PDF sections:**
+
+| Section | Content |
+|---------|---------|
+| 1 — Cover | Target, date, auditor, SHA-256 content hash |
+| 2 — Executive Summary | Risk posture, trend delta vs. previous scan |
+| 3 — Scope & Methodology | Tools used, phase boundaries |
+| 4 — Findings Matrix | Severity distribution table |
+| 5 — Deep-Dive Findings | Per-finding: description, evidence, CVSS, EPSS, compliance IDs, remediation |
+| 6 — Appendices | Tool list, clean-up log, severity glossary, attestation |
+
+### 6.6 SBOM — Software Bill of Materials
+
+Every scan produces a CycloneDX JSON SBOM alongside the pentest report. No separate tool or run required.
+
+**What goes in the SBOM:** Every software component detected during technology fingerprinting (WhatWeb, HTTPx, Tech Fingerprint) — framework name, version, category, confidence score.
+
+**Fallback chain:**
+1. CycloneDX JSON (preferred — industry standard, NTIA-compliant)
+2. SPDX tag-value format (if `cyclonedx-python-lib` not installed)
+3. CSV (always works)
+
+```python
+# Auto-called from report_generator.py on every scan
+from tools.sbom_generator import generate_sbom_for_scan
+sbom_path = generate_sbom_for_scan(scan_id, target_url, output_dir="reports/sbom/")
+```
+
+### 6.7 Report verification
+
+Reports embed a SHA-256 content hash derived from scan facts (URL, date, finding counts, auditor name). Verify a report offline — no database needed:
+
+```bash
+python3 tools/verify_report.py reports/pdf/SMP_example.com_Report_2026-07-25_a1b2c3d4.pdf
+# ✔  Report is authentic. Content hash verified.
+
+python3 tools/verify_report.py reports/html/SMP_example.com_Report_2026-07-25.html
+```
+
+The hash is also stored in the database via `save_report_hash()` for cross-reference.
+
+---
+
+## 7 · Core Internals & Encryption
+
+### 7.1 SQLCipher — Encrypted at rest (hard requirement)
+
+**V7 change:** SMP now exits at startup if `pysqlcipher3` is not installed. There is no plaintext fallback.
+
+All three databases are AES-256 encrypted:
+
+```
+database/
+├── security.db     — targets, scans, findings, technologies
+├── cve.db          — NVD CVE data, EPSS scores, CISA KEV flags
+└── redundancy.db   — backup mirror for HA failover
+```
+
+Key derivation:
+- **Algorithm:** PBKDF2-HMAC-SHA256
+- **Iterations:** 600,000 (NIST 2024 recommendation)
+- **Salt:** Random 32-byte salt stored alongside derived key
+
+To manually inspect (requires the derived key):
+```bash
+sqlcipher database/security.db
+sqlite> PRAGMA key = 'your_derived_key';
+sqlite> .tables
+```
+
+### 7.2 Fernet encryption for raw scan output
+
+Raw scanner stdout is compressed (gzip) and encrypted with Fernet (AES-128-CBC + HMAC-SHA256) before storage:
+
+```python
+# tools/encryption_manager.py
+encrypt_data(raw_output)   # → compressed + encrypted bytes
+decrypt_data(blob)         # → original raw output
+```
+
+### 7.3 Egress Audit Log
+
+**V7 addition:** Every outbound network request SMP makes during intelligence enrichment is recorded.
+
+**File:** `logs/egress_audit.log` — one JSON line per call:
+```json
+{"ts":"2026-07-25T18:30:01Z","service":"GreyNoise","url":"https://api.greynoise.io/v3/community/1.2.3.4","purpose":"IP reputation / wild scanning check","status":"ALLOWED"}
+{"ts":"2026-07-25T18:30:02Z","service":"EPSS (FIRST.org)","url":"https://api.first.org/data/v1/epss","purpose":"EPSS exploitation probability — batch of 47 CVEs","status":"ALLOWED"}
+```
+
+In local-only mode (`SMP_LOCAL_ONLY=1`), status becomes `BLOCKED` and the call is suppressed.
+
+**API:**
+```python
+from tools.egress_auditor import egress_auditor
+
+# Get session summary for a scan
+summary = egress_auditor.get_session_summary()
+# {
+#   "total_outbound_calls": 14,
+#   "allowed": 14, "blocked": 0,
+#   "external_services": ["CISA KEV", "EPSS (FIRST.org)", "GreyNoise", "NVD"],
+#   "local_only_mode": false,
+#   "audit_log_path": "logs/egress_audit.log"
+# }
+```
+
+### 7.4 Event Bus (IPC)
+
+Thread-safe publish/subscribe bus decoupling scanner threads from the UI:
+
+```python
+from tools import event_bus
+
+# Publisher (scanner thread)
+event_bus.emit("finding_discovered", {"severity": "High", "title": "..."})
+event_bus.emit("scanner_progress", {"step": "Nmap", "pct": 45})
+
+# Subscriber (dashboard)
+event_bus.subscribe("finding_discovered", my_callback)
+```
+
+### 7.5 MAC Address OPSEC
+
+At scan start (not app start), SMP randomises the last 3 octets of the network interface MAC address while preserving the vendor OUI. This makes the changed MAC look like the same hardware — far less suspicious on managed networks.
+
+- Controlled by `"mac_changer_enabled": true` in `config/settings.json`
+- Non-fatal: if MAC change fails, scan proceeds
+- Restored on scan completion
+
+### 7.6 Session auto-lock
+
+After configurable idle time (default: 15 minutes), the dashboard re-requires password. No full restart needed.
+
+```python
+from tools.session_manager import SessionManager
+sm = SessionManager(timeout_minutes=15, on_lock=dashboard.trigger_lock)
+sm.start()
+sm.reset()  # call on any user interaction
+```
+
+---
+
+## 8 · Custom Scanners & REST API
+
+### 8.1 Adding a custom scanner
+
+**Step 1:** Create `scanners/my_scanner.py`:
+
+```python
 from tools.narrative_logger import emit, emit_finding
 
-def run_custom_fuzzer(target_url, scan_id, settings):
-    # 1. Emit a narrative event to inform the user
-    emit(scan_id, "custom_fuzzer", f"Starting custom fuzzing on {target_url}")
-    
+def run_my_scanner(target_url: str, scan_id: int, settings: dict) -> list:
+    emit(scan_id, "my_scanner", f"Starting custom scan on {target_url}")
     try:
-        # 2. Execute your custom logic or binary
-        result = subprocess.run(
-            ["/usr/local/bin/my_fuzzer", "-u", target_url], 
-            capture_output=True, text=True, timeout=300
-        )
-        
-        # 3. Parse output and report findings
-        if "VULN_FOUND" in result.stdout:
-            emit_finding(scan_id, "custom_fuzzer", "High", "Found vulnerability via Custom Fuzzer!")
-            return {"success": True, "data": [{"vuln": "custom"}], "raw_output": result.stdout}
-            
-        return {"success": True, "data": [], "raw_output": result.stdout}
-        
+        # your logic here
+        results = []
+        if found_something:
+            emit_finding(scan_id, "my_scanner", "High", "Found X vulnerability")
+            results.append({
+                "title": "X Vulnerability",
+                "severity": "High",
+                "description": "...",
+                "recommendation": "...",
+                "confidence": 85,
+            })
+        return results
     except Exception as e:
-        emit(scan_id, "custom_fuzzer", f"Error running custom fuzzer: {str(e)}")
-        return {"success": False, "error": str(e), "raw_output": ""}
+        emit(scan_id, "my_scanner", f"Error: {e}")
+        return []
 ```
 
-### Step 2: Register in the Dynamic Pipeline
-To ensure the system executes your scanner, you must register it in `tools/dynamic_pipeline.py`. 
-
-Add your scanner to the appropriate phase (e.g., `ACTIVE_SCANNERS` or `RECON_SCANNERS`). You can also implement custom logic to only trigger your scanner if specific conditions are met (e.g., if a specific technology is fingerprinted).
+**Step 2:** Register in `scanners/core/registry.py`:
 
 ```python
-# tools/dynamic_pipeline.py
-from scanners.custom_fuzzer import run_custom_fuzzer
-
-# Inside the pipeline execution block
-if "web_server" in self.context:
-    self.queue.append(run_custom_fuzzer)
+register_scanner(
+    name="My Scanner",
+    step_name="Running My Scanner",
+    scan_func=run_my_scanner,
+    binary_name=None,       # or "my_tool" if it needs a binary
+    depends_on=["HTTPx"],   # DAG dependency
+    confidence=80,
+    needs_binary=False,
+)
 ```
 
-### Step 3: Register in Tool Installer (Optional)
-If your tool requires specific APT packages, PIP dependencies, or Go installations, add it to `tools/tool_installer.py` so that it installs automatically when a user sets up SMP.
+**Step 3 (optional):** Add install entry in `tools/tool_installer.py` if your tool needs apt/pip/go packages.
+
+### 8.2 REST API reference
+
+Base URL: `http://localhost:8000/api/v7/`  
+Auth: Bearer JWT — obtain via `POST /auth/token`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/token` | ❌ | Get JWT token |
+| GET | `/health` | ❌ | Platform health check |
+| GET | `/target` | ✅ | List all targets |
+| POST | `/target` | ✅ | Add target (`{"url": "https://..."}`) |
+| DELETE | `/target/{id}` | ✅ | Remove target |
+| GET | `/scan` | ✅ | List scans |
+| POST | `/scan/{target_id}` | ✅ | Trigger scan |
+| GET | `/scan/{id}/status` | ✅ | Scan status + current step |
+| GET | `/findings/{scan_id}` | ✅ | All findings for scan |
+| GET | `/cve/stats` | ✅ | CVE database statistics |
+| GET | `/risk/score` | ✅ | Risk scores per target |
+| GET | `/compliance/{scan_id}` | ✅ | Compliance mapping summary |
+| GET | `/sbom/{scan_id}` | ✅ | Download SBOM for scan |
+| GET | `/egress/audit` | ✅ | Current egress audit log |
+| GET | `/version` | ✅ | Platform version |
+
+Interactive docs: `http://localhost:8000/api/v7/docs`
+
+### 8.3 API authentication example
+
+```bash
+# 1. Get token
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v7/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your_password"}' | jq -r .access_token)
+
+# 2. Add target
+curl -X POST http://localhost:8000/api/v7/target \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+
+# 3. Trigger scan
+curl -X POST http://localhost:8000/api/v7/scan/1 \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. Poll status
+curl http://localhost:8000/api/v7/scan/1/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+## 9 · Troubleshooting
+
+> 📁 Extended troubleshooting guides are in [`docs/troubleshooting/`](docs/troubleshooting/)
+
+### 9.1 Installation failures
+
+#### ❌ Fatal: pysqlcipher3 not installed
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  FATAL: pysqlcipher3 is not installed.                       ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**Fix:**
+```bash
+sudo apt install libsqlcipher-dev libsqlcipher0
+source venv/bin/activate
+pip install pysqlcipher3
+./run.sh
+```
+
+If `pip install pysqlcipher3` fails with compiler errors:
+```bash
+sudo apt install build-essential python3-dev
+pip install pysqlcipher3 --no-binary pysqlcipher3
+```
 
 ---
 
-## 7. REST API Reference
+#### ❌ setup.sh: binary download failed for nuclei
 
-The entire platform is controllable via a headless REST API.
+Binary URL unreachable (network issue or GitHub rate limit).
 
-- `GET /api/v6/health` - Check system status.
-- `POST /api/v6/scan` - Trigger a new scan.
-- `GET /api/v6/findings/{scan_id}` - Retrieve findings.
-- `GET /api/v6/risk/score` - View platform risk score.
-
-Full interactive documentation is available at `http://localhost:8000/api/v6/docs`.
+**Fix:** setup.sh automatically falls back to `go install` source build. You'll see:
+```
+  ⚠ nuclei: prebuilt download failed — building from source (slow)
+```
+This takes ~5 minutes but succeeds. Re-run `./setup.sh` once network stabilises for the fast path.
 
 ---
 
-## 8. Troubleshooting (40 Common Errors)
+#### ❌ Go not found after setup.sh
 
-Even the most beautiful systems encounter friction. Here are 40 common errors and exact commands to fix them.
-
-
-### Error 1: Port Binding Failed (Code E1001)
-**Symptom**: During operation, you encounter an error stating `E1001`. This usually indicates a bottleneck or configuration mismatch in subsystem 1.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
 ```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_1.pid
-docker compose restart smp
+# Add Go to PATH if installed to /usr/local/go
+export PATH=$PATH:/usr/local/go/bin
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
 ```
-<hr>
-
-### Error 2: Timeout Expired (Code E1002)
-**Symptom**: During operation, you encounter an error stating `E1002`. This usually indicates a bottleneck or configuration mismatch in subsystem 2.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_2.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 3: Invalid Token (Code E1003)
-**Symptom**: During operation, you encounter an error stating `E1003`. This usually indicates a bottleneck or configuration mismatch in subsystem 3.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_3.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 4: Memory Exhausted (Code E1004)
-**Symptom**: During operation, you encounter an error stating `E1004`. This usually indicates a bottleneck or configuration mismatch in subsystem 4.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_4.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 5: Database Locked (Code E1005)
-**Symptom**: During operation, you encounter an error stating `E1005`. This usually indicates a bottleneck or configuration mismatch in subsystem 5.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_5.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 6: Port Binding Failed (Code E1006)
-**Symptom**: During operation, you encounter an error stating `E1006`. This usually indicates a bottleneck or configuration mismatch in subsystem 6.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_6.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 7: Timeout Expired (Code E1007)
-**Symptom**: During operation, you encounter an error stating `E1007`. This usually indicates a bottleneck or configuration mismatch in subsystem 7.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_7.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 8: Invalid Token (Code E1008)
-**Symptom**: During operation, you encounter an error stating `E1008`. This usually indicates a bottleneck or configuration mismatch in subsystem 8.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_8.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 9: Memory Exhausted (Code E1009)
-**Symptom**: During operation, you encounter an error stating `E1009`. This usually indicates a bottleneck or configuration mismatch in subsystem 9.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_9.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 10: Database Locked (Code E1010)
-**Symptom**: During operation, you encounter an error stating `E1010`. This usually indicates a bottleneck or configuration mismatch in subsystem 10.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_10.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 11: Port Binding Failed (Code E1011)
-**Symptom**: During operation, you encounter an error stating `E1011`. This usually indicates a bottleneck or configuration mismatch in subsystem 11.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_11.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 12: Timeout Expired (Code E1012)
-**Symptom**: During operation, you encounter an error stating `E1012`. This usually indicates a bottleneck or configuration mismatch in subsystem 12.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_12.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 13: Invalid Token (Code E1013)
-**Symptom**: During operation, you encounter an error stating `E1013`. This usually indicates a bottleneck or configuration mismatch in subsystem 13.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_13.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 14: Memory Exhausted (Code E1014)
-**Symptom**: During operation, you encounter an error stating `E1014`. This usually indicates a bottleneck or configuration mismatch in subsystem 14.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_14.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 15: Database Locked (Code E1015)
-**Symptom**: During operation, you encounter an error stating `E1015`. This usually indicates a bottleneck or configuration mismatch in subsystem 15.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_15.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 16: Port Binding Failed (Code E1016)
-**Symptom**: During operation, you encounter an error stating `E1016`. This usually indicates a bottleneck or configuration mismatch in subsystem 16.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_16.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 17: Timeout Expired (Code E1017)
-**Symptom**: During operation, you encounter an error stating `E1017`. This usually indicates a bottleneck or configuration mismatch in subsystem 17.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_17.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 18: Invalid Token (Code E1018)
-**Symptom**: During operation, you encounter an error stating `E1018`. This usually indicates a bottleneck or configuration mismatch in subsystem 18.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_18.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 19: Memory Exhausted (Code E1019)
-**Symptom**: During operation, you encounter an error stating `E1019`. This usually indicates a bottleneck or configuration mismatch in subsystem 19.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_19.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 20: Database Locked (Code E1020)
-**Symptom**: During operation, you encounter an error stating `E1020`. This usually indicates a bottleneck or configuration mismatch in subsystem 20.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_20.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 21: Port Binding Failed (Code E1021)
-**Symptom**: During operation, you encounter an error stating `E1021`. This usually indicates a bottleneck or configuration mismatch in subsystem 21.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_21.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 22: Timeout Expired (Code E1022)
-**Symptom**: During operation, you encounter an error stating `E1022`. This usually indicates a bottleneck or configuration mismatch in subsystem 22.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_22.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 23: Invalid Token (Code E1023)
-**Symptom**: During operation, you encounter an error stating `E1023`. This usually indicates a bottleneck or configuration mismatch in subsystem 23.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_23.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 24: Memory Exhausted (Code E1024)
-**Symptom**: During operation, you encounter an error stating `E1024`. This usually indicates a bottleneck or configuration mismatch in subsystem 24.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_24.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 25: Database Locked (Code E1025)
-**Symptom**: During operation, you encounter an error stating `E1025`. This usually indicates a bottleneck or configuration mismatch in subsystem 25.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_25.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 26: Port Binding Failed (Code E1026)
-**Symptom**: During operation, you encounter an error stating `E1026`. This usually indicates a bottleneck or configuration mismatch in subsystem 26.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_26.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 27: Timeout Expired (Code E1027)
-**Symptom**: During operation, you encounter an error stating `E1027`. This usually indicates a bottleneck or configuration mismatch in subsystem 27.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_27.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 28: Invalid Token (Code E1028)
-**Symptom**: During operation, you encounter an error stating `E1028`. This usually indicates a bottleneck or configuration mismatch in subsystem 28.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_28.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 29: Memory Exhausted (Code E1029)
-**Symptom**: During operation, you encounter an error stating `E1029`. This usually indicates a bottleneck or configuration mismatch in subsystem 29.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_29.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 30: Database Locked (Code E1030)
-**Symptom**: During operation, you encounter an error stating `E1030`. This usually indicates a bottleneck or configuration mismatch in subsystem 30.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_30.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 31: Port Binding Failed (Code E1031)
-**Symptom**: During operation, you encounter an error stating `E1031`. This usually indicates a bottleneck or configuration mismatch in subsystem 31.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_31.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 32: Timeout Expired (Code E1032)
-**Symptom**: During operation, you encounter an error stating `E1032`. This usually indicates a bottleneck or configuration mismatch in subsystem 32.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_32.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 33: Invalid Token (Code E1033)
-**Symptom**: During operation, you encounter an error stating `E1033`. This usually indicates a bottleneck or configuration mismatch in subsystem 33.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_33.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 34: Memory Exhausted (Code E1034)
-**Symptom**: During operation, you encounter an error stating `E1034`. This usually indicates a bottleneck or configuration mismatch in subsystem 34.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_34.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 35: Database Locked (Code E1035)
-**Symptom**: During operation, you encounter an error stating `E1035`. This usually indicates a bottleneck or configuration mismatch in subsystem 35.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_35.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 36: Port Binding Failed (Code E1036)
-**Symptom**: During operation, you encounter an error stating `E1036`. This usually indicates a bottleneck or configuration mismatch in subsystem 36.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_36.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 37: Timeout Expired (Code E1037)
-**Symptom**: During operation, you encounter an error stating `E1037`. This usually indicates a bottleneck or configuration mismatch in subsystem 37.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_37.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 38: Invalid Token (Code E1038)
-**Symptom**: During operation, you encounter an error stating `E1038`. This usually indicates a bottleneck or configuration mismatch in subsystem 38.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_38.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 39: Memory Exhausted (Code E1039)
-**Symptom**: During operation, you encounter an error stating `E1039`. This usually indicates a bottleneck or configuration mismatch in subsystem 39.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_39.pid
-docker compose restart smp
-```
-<hr>
-
-### Error 40: Database Locked (Code E1040)
-**Symptom**: During operation, you encounter an error stating `E1040`. This usually indicates a bottleneck or configuration mismatch in subsystem 40.
-**Cause**: The application attempted to allocate resources or lock a file that is currently owned by another process.
-**Resolution**:
-```bash
-# Safely clear the lock and restart the specific worker
-rm -f /app/database/lock_40.pid
-docker compose restart smp
-```
-<hr>
-
 
 ---
 
-## 9. Future Roadmap — V7, V8, V9
+#### ❌ WPScan not found / Docker wrapper not created
 
-We are always innovating. Here is what is coming next.
+If both `gem install wpscan` and Docker are unavailable, WPScan simply won't run. This is non-fatal — all other scanners continue.
 
-### SMP V7 — The Cloud Era
-- Full Kubernetes (K8s) native deployment.
-- Distributed worker nodes (run scans from 10 different IP addresses).
-- AWS/GCP/Azure deep asset enumeration.
+To use Docker wrapper manually:
+```bash
+docker pull wpscanteam/wpscan
+# wrapper is at bin/wpscan after setup.sh runs with Docker available
+```
 
-### SMP V8 — AI Intelligence
-- Local LLM integration (Ollama) for finding analysis.
-- Automated false-positive reduction using machine learning.
-- Natural language querying ("Show me all high severity XSS bugs from last week").
+---
 
-### SMP V9 — Auto-Remediation
-- Generating Terraform/Ansible scripts to fix infrastructure flaws.
-- Direct integration with Jira/ServiceNow.
-- Real-time active defense mode (acting as an IPS).
+### 9.2 Database errors
 
-<br><br><br>
+#### ❌ Database is locked
+
+```
+sqlite3.OperationalError: database is locked
+```
+
+Another SMP process is holding the connection. Find and kill it:
+```bash
+fuser database/security.db
+kill -9 <PID>
+```
+
+Or restart cleanly:
+```bash
+pkill -f "python.*main.py"
+./run.sh
+```
+
+---
+
+#### ❌ SQLCipher: file is not a database
+
+```
+pysqlcipher3.dbapi2.DatabaseError: file is not a database
+```
+
+This means the database was created with a different key, or was not created by SQLCipher (e.g., imported plaintext SQLite file).
+
+**Fix — create fresh databases:**
+```bash
+rm -f database/security.db database/redundancy.db
+./run.sh   # will recreate with correct encryption
+```
+
+> ⚠️ This deletes all scan history. Back up first if needed.
+
+---
+
+#### ❌ Database migration error on upgrade
+
+```
+OperationalError: table 'xyz' already exists
+```
+
+The migration guard in `db_manager.py` uses `CREATE TABLE IF NOT EXISTS` for all tables. If you see a strict duplicate error:
+```bash
+python3 -c "from tools.db_manager import init_db; init_db(force=True)"
+```
+
+---
+
+### 9.3 Scanner errors
+
+#### ❌ Nmap: requires root / permission denied
+
+```
+QUITTING! -- Error: You requested a scan type which requires root privileges.
+```
+
+SMP runs Nmap with `sudo`. Pass your sudo password in **Settings → Scan Password** or start SMP with:
+```bash
+sudo -E ./run.sh    # not recommended for daily use
+```
+
+Better: add your user to sudoers for nmap specifically:
+```bash
+sudo visudo
+# add: youruser ALL=(ALL) NOPASSWD: /usr/bin/nmap
+```
+
+---
+
+#### ❌ Nuclei: no templates found
+
+```bash
+nuclei -update-templates
+# or
+mkdir -p ~/.local/nuclei-templates
+nuclei -update-templates -t ~/.local/nuclei-templates
+```
+
+---
+
+#### ❌ ffuf returning thousands of false positives
+
+SMP's SPA filter handles React/Vue/Angular catch-all 200s automatically. If you still see excess results, the target may genuinely expose many paths. Check the narrative log for the SPA filter message:
+```
+ffuf SPA Filter: Removed 847 catch-all false positives (content-length=2847 appeared in 94% of results)
+```
+If this line is absent, the filter didn't trigger — results are likely real.
+
+---
+
+#### ❌ theHarvester: module not found
+
+```bash
+source venv/bin/activate
+pip install theHarvester
+```
+
+---
+
+#### ❌ Dalfox / Katana / subfinder: binary not found
+
+Check `bin/` directory and PATH:
+```bash
+ls bin/
+export PATH=$PATH:$(pwd)/bin
+```
+
+Re-download a specific binary:
+```bash
+# Example: re-download dalfox
+curl -fsSL https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz \
+  | tar -xz -C bin/ dalfox
+chmod +x bin/dalfox
+```
+
+---
+
+### 9.4 API errors
+
+#### ❌ 401 Unauthorized on all endpoints
+
+Your JWT token has expired (default: 30 minutes). Re-authenticate:
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v7/auth/token \
+  -d '{"username":"admin","password":"pass"}' | jq -r .access_token)
+```
+
+---
+
+#### ❌ FastAPI won't start: address already in use
+
+```bash
+# Find what's on port 8000
+lsof -i :8000
+kill -9 <PID>
+```
+
+Or change the API port in `config/settings.json`:
+```json
+{ "api_port": 8001 }
+```
+
+---
+
+#### ❌ 429 Rate Limit on API
+
+The built-in rate limiter (per-IP) kicked in. Default: 60 requests/minute. For automated testing:
+```json
+{ "api_rate_limit": 300 }
+```
+
+---
+
+### 9.5 Report generation errors
+
+#### ❌ PDF not generated: ReportLab not installed
+
+```bash
+source venv/bin/activate
+pip install reportlab
+```
+
+HTML report is always generated as fallback regardless.
+
+---
+
+#### ❌ SBOM generation failed
+
+```
+SBOM generation failed (non-fatal): No module named 'cyclonedx'
+```
+
+```bash
+pip install cyclonedx-python-lib
+```
+
+SMP falls back to SPDX tag-value, then CSV — so a scan always completes even without this package.
+
+---
+
+#### ❌ Report verification: hash mismatch
+
+```
+✘  TAMPERED — content hash does not match embedded hash
+```
+
+The PDF was modified after generation (page added, content edited, or metadata changed). Use the original SMP-generated file. If you need to re-generate, re-run the report from the scan ID:
+```python
+from tools.report_generator import generate_scan_reports
+generate_scan_reports(scan_id, target, findings)
+```
+
+---
+
+### 9.6 Egress audit / local-only mode
+
+#### ❌ GreyNoise returning cached/stale data
+
+In-memory cache is per-session. Restart SMP to clear it. The cache only lives as long as the process.
+
+#### ❌ Local-only mode not taking effect
+
+Verify the env variable is exported:
+```bash
+export SMP_LOCAL_ONLY=1
+./run.sh
+# Check egress_audit.log — all entries should show "status": "BLOCKED"
+```
+
+Or check `config/settings.json`:
+```json
+{ "local_only_mode": true }
+```
+
+---
+
+## 10 · Roadmap
+
+| Version | Focus | Status |
+|---------|-------|--------|
+| **V7** (current) | Local-first, SQLCipher hard enforcement, prebuilt binary install, correlation depth as headline, SOC2/PCI-DSS compliance, SBOM auto-generation, egress audit, CI | ✅ Released |
+| **V8** | Kubernetes native, distributed worker nodes, multi-IP scan rotation | 🔵 Planned |
+| **V9** | Local LLM integration (Ollama) for finding narrative generation, automated false-positive reduction via ML | 🔵 Planned |
+
+> V9 AI features are explicitly deferred. The README and codebase contain no AI-agent language until V9 actually ships.
 
 ---
 
 <div align="center">
-  <p><b>Security Management Platform V6.5</b></p>
-  <p><i>Made by mrQhere</i></p>
+
+**SMP V7** · Local-first · Zero-cloud · Encrypted at rest  
+Made by [@mrQhere](https://github.com/mrQhere) · © mrQhere
+
 </div>
-\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n<!-- spacer -->\n
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
-<!-- spacer -->
