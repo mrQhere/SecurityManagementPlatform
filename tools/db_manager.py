@@ -387,8 +387,9 @@ def get_db_connection():
             # Attach the unencrypted CVE database
             conn.execute("ATTACH DATABASE ? AS cve_db", (CVE_DB_PATH,))
             
-            if not db_existed:
-                _initialize_db_schema(conn)
+            # Always run schema migrations — handles both fresh and existing DBs.
+            # _initialize_db_schema is idempotent (CREATE TABLE IF NOT EXISTS / ALTER TABLE).
+            _initialize_db_schema(conn)
             return conn
         except sqlite3.OperationalError as e:
             if "locked" in str(e).lower() and attempt < retries - 1:
@@ -615,15 +616,8 @@ def _initialize_db_schema(conn):
 
     # Performance indexes
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_technologies_name ON technologies(name);")
-    # CVE indexes – wrapped in try/except because cve.db may not be attached yet
-    # (e.g. in test environments or on first install before the NVD sync runs)
-    try:
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_added_date ON cves(added_date);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_severity ON cves(severity);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cves_cvss ON cves(cvss_score);")
-    except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
-        pass  # cve.db not attached — indexes will be created when cve.db is available
+    # CVE indexes live in cve_db (the attached CVE database), not main.
+    # They are already created by _initialize_cve_db_schema; no action needed here.
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_scan_id ON findings(scan_id);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_findings_severity ON findings(severity);")
 
@@ -1043,9 +1037,10 @@ def get_scan(scan_id):
                     (cached["target_id"],)
                 ).fetchone()
                 if row:
-                    cached["url"] = row["url"]
-                    cached["company_name"] = row.get("company_name")
-                    cached["submitted_to"] = row.get("submitted_to")
+                    row_dict = dict(row)
+                    cached["url"] = row_dict.get("url")
+                    cached["company_name"] = row_dict.get("company_name")
+                    cached["submitted_to"] = row_dict.get("submitted_to")
                 return cached
             except sqlite3.Error as e:
                 logger.error(f"Database error: {e}")
@@ -1056,9 +1051,10 @@ def get_scan(scan_id):
                         (cached["target_id"],)
                     ).fetchone()
                     if row:
-                        cached["url"] = row["url"]
-                        cached["company_name"] = row.get("company_name")
-                        cached["submitted_to"] = row.get("submitted_to")
+                        row_dict = dict(row)
+                        cached["url"] = row_dict.get("url")
+                        cached["company_name"] = row_dict.get("company_name")
+                        cached["submitted_to"] = row_dict.get("submitted_to")
                     return cached
                 except sqlite3.Error as e:
                     logger.error(f"Database error: {e}")
@@ -2025,7 +2021,7 @@ def backup_cve_database():
         conn = get_db_connection()
         rows = conn.execute(
             "SELECT cve, title, severity, description, published_date, source, "
-            "epss_score, cvss_score, cvss_vector, affected_products, keywords FROM cves ORDER BY id DESC LIMIT 50000"
+            "epss_score, cvss_score, cvss_vector, affected_products, keywords FROM cve_db.cves ORDER BY id DESC LIMIT 50000"
         ).fetchall()
         conn.close()
 
