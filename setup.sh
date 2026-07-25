@@ -146,6 +146,7 @@ sudo apt-get update -qq
 # Ubuntu 24.04+ (Noble) renamed libsqlcipher0 → libsqlcipher0t64 as part of
 # the 64-bit time_t transition. Probe both names after the index is current.
 SQLCIPHER_RT=""
+SQLCIPHER_BUILD_FROM_SOURCE=false
 if apt-cache show libsqlcipher0t64 &>/dev/null 2>&1; then
     SQLCIPHER_RT="libsqlcipher0t64"
     ok "SQLCipher runtime: libsqlcipher0t64 (Ubuntu 24.04+)"
@@ -153,12 +154,12 @@ elif apt-cache show libsqlcipher0 &>/dev/null 2>&1; then
     SQLCIPHER_RT="libsqlcipher0"
     ok "SQLCipher runtime: libsqlcipher0 (Ubuntu 22.04 / Debian)"
 else
-    warn "libsqlcipher runtime not found in repos — libsqlcipher-dev alone will be used."
-    warn "pysqlcipher3 will still build correctly from -dev headers."
+    warn "libsqlcipher0 / libsqlcipher0t64 not found in apt — will build SQLCipher from source."
+    SQLCIPHER_BUILD_FROM_SOURCE=true
 fi
 
 OS_TOOLS=(nmap nikto whatweb traceroute masscan ruby ruby-dev build-essential
-          perl git libsqlcipher-dev
+          perl git libsqlcipher-dev openssl libssl-dev
           libxcb-cursor0 libxcb-cursor-dev)
 [[ -n "$SQLCIPHER_RT" ]] && OS_TOOLS+=("$SQLCIPHER_RT")
 
@@ -175,6 +176,37 @@ else
     echo "  Installing: ${MISSING_APT[*]}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${MISSING_APT[@]}"
     ok "OS packages installed"
+fi
+
+# ── SQLCipher source build (last resort) ─────────────────────────────────────
+if $SQLCIPHER_BUILD_FROM_SOURCE; then
+    # Check if already built from a previous run
+    if ldconfig -p 2>/dev/null | grep -q 'libsqlcipher'; then
+        ok "SQLCipher already present via ldconfig (previous source build)"
+        SQLCIPHER_BUILD_FROM_SOURCE=false
+    else
+        echo "  Building SQLCipher from source (one-time, ~2 min)..."
+        _SC_TMP=$(mktemp -d)
+        if git clone --depth=1 https://github.com/sqlcipher/sqlcipher.git "$_SC_TMP" 2>/dev/null; then
+            pushd "$_SC_TMP" > /dev/null
+            ./configure \
+                --enable-tempstore=yes \
+                CFLAGS="-DSQLITE_HAS_CODEC" \
+                LDFLAGS="-lcrypto" \
+                --prefix=/usr/local \
+                &>/dev/null
+            make -j"$(nproc)" &>/dev/null
+            sudo make install &>/dev/null
+            sudo ldconfig
+            popd > /dev/null
+            rm -rf "$_SC_TMP"
+            ok "SQLCipher built and installed from source"
+        else
+            rm -rf "$_SC_TMP"
+            warn "SQLCipher source build failed (no git/network). pysqlcipher3 may fail."
+            warn "Try manually: sudo apt install libsqlcipher-dev libsqlcipher0t64"
+        fi
+    fi
 fi
 
 # =============================================================================
@@ -300,7 +332,7 @@ done
 finish_bar
 
 # =============================================================================
-# STEP 6 — WPScan (gem → Docker fallback)
+# STEP 6 — WPScan (gem → pip → Docker → stub)
 # =============================================================================
 step "6/7  WPScan"
 
@@ -308,20 +340,39 @@ if have wpscan; then
     ok "wpscan already available"
 elif gem install wpscan --no-user-install 2>/dev/null && have wpscan; then
     ok "wpscan installed via gem"
-else
-    warn "gem install wpscan failed — creating Docker wrapper"
-    if ! have docker; then
-        warn "Docker not available either. WPScan will not be usable."
-    else
-        cat > "$BIN_DIR/wpscan" << 'WPSCAN_WRAPPER'
+elif pip install wpscanpy --quiet 2>/dev/null && python3 -c "import wpscanpy" 2>/dev/null; then
+    # Create a thin wrapper so 'wpscan' resolves as a command
+    cat > "$BIN_DIR/wpscan" << 'WPSCAN_PY_WRAPPER'
 #!/usr/bin/env bash
-# WPScan Docker wrapper — created by SMP V7 setup
+exec python3 -m wpscanpy "$@"
+WPSCAN_PY_WRAPPER
+    chmod +x "$BIN_DIR/wpscan"
+    ok "wpscan installed via pip (wpscanpy)"
+elif have docker; then
+    cat > "$BIN_DIR/wpscan" << 'WPSCAN_WRAPPER'
+#!/usr/bin/env bash
+# WPScan Docker wrapper — created by SMP setup
 exec docker run --rm --network=host wpscanteam/wpscan "$@"
 WPSCAN_WRAPPER
-        chmod +x "$BIN_DIR/wpscan"
-        ok "wpscan Docker wrapper created at bin/wpscan"
-        echo "  Note: first run will pull the wpscanteam/wpscan image (~50 MB)"
-    fi
+    chmod +x "$BIN_DIR/wpscan"
+    ok "wpscan Docker wrapper created at bin/wpscan"
+    echo "  Note: first run will pull the wpscanteam/wpscan image (~50 MB)"
+else
+    # All methods failed — create a stub that explains what to do
+    cat > "$BIN_DIR/wpscan" << 'WPSCAN_STUB'
+#!/usr/bin/env bash
+echo ""
+echo "  ⚠  WPScan is not installed."
+echo "  Install one of the following and re-run setup.sh:"
+echo "    gem:    sudo gem install wpscan"
+echo "    pip:    pip install wpscanpy"
+echo "    docker: docker pull wpscanteam/wpscan"
+echo ""
+exit 1
+WPSCAN_STUB
+    chmod +x "$BIN_DIR/wpscan"
+    warn "WPScan: gem/pip/docker all unavailable. A stub was created at bin/wpscan."
+    warn "WordPress scans will be skipped. Install Ruby, pip wpscanpy, or Docker to enable."
 fi
 
 # =============================================================================
@@ -341,6 +392,6 @@ echo    "║  ✔  SMP Setup Complete                       ║"
 printf  "║  ⏱  Total time: %-28s ║\n" "$TOTAL"
 echo    "╚══════════════════════════════════════════════╝"
 echo -e "${RESET}"
-echo "  Next steps:"
-echo "    source venv/bin/activate"
-echo "    ./run.sh"
+echo "  ▶  Ready. Launch SMP:"
+echo "      ./run.sh"
+echo ""
