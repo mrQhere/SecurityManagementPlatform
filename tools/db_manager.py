@@ -168,33 +168,31 @@ def _initialize_cve_db_schema(conn):
         );
     """)
 
-    # Create FTS5 virtual table for rapid full-text search
+    # Create FTS4 virtual table for rapid full-text search
     cursor.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS cves_fts 
         USING fts4(
             cve, title, description, affected_products, keywords,
-            content='cves', content_rowid='id'
+            content='cves'
         );
     """)
     
     # Create triggers to keep FTS table in sync with cves table
     cursor.execute("""
         CREATE TRIGGER IF NOT EXISTS cves_ai AFTER INSERT ON cves BEGIN
-            INSERT INTO cves_fts(rowid, cve, title, description, affected_products, keywords) 
+            INSERT INTO cves_fts(docid, cve, title, description, affected_products, keywords) 
             VALUES (new.id, new.cve, new.title, new.description, new.affected_products, new.keywords);
         END;
     """)
     cursor.execute("""
         CREATE TRIGGER IF NOT EXISTS cves_ad AFTER DELETE ON cves BEGIN
-            INSERT INTO cves_fts(cves_fts, rowid, cve, title, description, affected_products, keywords) 
-            VALUES('delete', old.id, old.cve, old.title, old.description, old.affected_products, old.keywords);
+            DELETE FROM cves_fts WHERE docid = old.id;
         END;
     """)
     cursor.execute("""
         CREATE TRIGGER IF NOT EXISTS cves_au AFTER UPDATE ON cves BEGIN
-            INSERT INTO cves_fts(cves_fts, rowid, cve, title, description, affected_products, keywords) 
-            VALUES('delete', old.id, old.cve, old.title, old.description, old.affected_products, old.keywords);
-            INSERT INTO cves_fts(rowid, cve, title, description, affected_products, keywords) 
+            DELETE FROM cves_fts WHERE docid = old.id;
+            INSERT INTO cves_fts(docid, cve, title, description, affected_products, keywords) 
             VALUES (new.id, new.cve, new.title, new.description, new.affected_products, new.keywords);
         END;
     """)
