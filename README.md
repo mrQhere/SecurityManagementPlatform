@@ -16,7 +16,7 @@ SMP is a penetration testing orchestration platform that runs ~30 open-source sc
 
 1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS (exploitation probability), GreyNoise (active wild scanning), and CISA KEV (known exploited vulnerabilities) to produce a multi-source risk score. See: [`intelligence/`](intelligence/) and [`tools/risk_scorer.py`](tools/risk_scorer.py).
 
-2. **Provable local-only operation** — every outbound intelligence call is recorded to `logs/egress_audit.log` with service name, URL, timestamp, and ALLOWED/BLOCKED status. Set `SMP_LOCAL_ONLY=1` to block all external calls. See: [`tools/egress_auditor.py`](tools/egress_auditor.py).
+2. **Provable local-only operation** — all four outbound intelligence sources (NVD, EPSS, GreyNoise, CISA KEV) record every network call to `logs/egress_audit.log` with service name, URL, timestamp, and ALLOWED/BLOCKED status. Set `SMP_LOCAL_ONLY=1` to block all external calls at runtime. See: [`tools/egress_auditor.py`](tools/egress_auditor.py).
 
 3. **Two deliverables per scan** — each completed scan produces a pentest report (HTML + PDF) and a CycloneDX SBOM automatically. See: [`tools/sbom_generator.py`](tools/sbom_generator.py), wired into [`tools/report_generator.py`](tools/report_generator.py).
 
