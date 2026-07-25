@@ -1,20 +1,26 @@
-# 🔧 Installation Troubleshooting — SMP V7
+# 🔧 Installation Troubleshooting — SMP
 
 ## pysqlcipher3 fails to install
 
-SMP V7 will not start without SQLCipher. This is a hard requirement.
+SMP will not start without SQLCipher. This is a hard requirement.
 
+**Ubuntu 24.04 (Noble) and newer:**
 ```bash
-# Step 1: system library
-sudo apt install libsqlcipher-dev libsqlcipher0 build-essential python3-dev
-
-# Step 2: pip
+sudo apt install libsqlcipher-dev libsqlcipher0t64 build-essential python3-dev
 source venv/bin/activate
 pip install pysqlcipher3
-
-# Step 3: verify
 python3 -c "from pysqlcipher3 import dbapi2; print('SQLCipher OK')"
 ```
+
+**Ubuntu 22.04 / Debian Bookworm and older:**
+```bash
+sudo apt install libsqlcipher-dev libsqlcipher0 build-essential python3-dev
+source venv/bin/activate
+pip install pysqlcipher3
+python3 -c "from pysqlcipher3 import dbapi2; print('SQLCipher OK')"
+```
+
+> **Not sure which Ubuntu?** Run `lsb_release -rs` — `24.04+` → `libsqlcipher0t64`, older → `libsqlcipher0`.
 
 If pip fails with `_sqlite3.h not found`:
 ```bash
@@ -101,12 +107,44 @@ chmod +x setup.sh
 
 ---
 
+---
+
+## Qt platform plugin crash (xcb / libxcb-cursor0)
+
+**Symptom:**
+```
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb"
+Aborted (core dumped)
+```
+
+**Cause:** Qt 6.5+ (shipped with PySide6 ≥6.5) requires `libxcb-cursor0`. It is not installed by default on most Ubuntu/Debian systems.
+
+**Auto-fix:** `./run.sh` detects this and installs it automatically with `sudo apt-get install libxcb-cursor0`. Just run `./run.sh` and enter your sudo password when prompted.
+
+**Manual fix (if auto-install fails):**
+```bash
+sudo apt-get install libxcb-cursor0 libxcb-cursor-dev
+./run.sh
+```
+
+**No sudo / headless server?** Run SMP in API-only mode — no Qt required:
+```bash
+./run.sh --api
+# Dashboard at http://localhost:8000/api/v7/docs
+```
+
+`./run.sh` also auto-detects headless environments (no `$DISPLAY` / `$WAYLAND_DISPLAY`) and switches to API mode automatically.
+
+---
+
 ## apt packages not installing (non-root)
 
 ```bash
 # setup.sh uses sudo internally — ensure sudo is configured
 sudo echo "sudo works"
 
-# If in a container without sudo
-apt-get update && apt-get install -y libsqlcipher-dev libsqlcipher0 nmap
+# If in a container without sudo, install directly as root
+apt-get update && apt-get install -y \
+  libsqlcipher-dev libsqlcipher0t64 \
+  libxcb-cursor0 nmap
 ```

@@ -97,7 +97,7 @@ have() { command -v "$1" &>/dev/null || [[ -x "$BIN_DIR/$1" ]]; }
 
 # =============================================================================
 echo -e "\n${BOLD}╔══════════════════════════════════════════════╗"
-echo    "║  SMP V7 — Installer                          ║"
+echo    "║  SMP — Installer                             ║"
 echo    "║  Local-first. Zero-cloud. Encrypted at rest. ║"
 echo -e "╚══════════════════════════════════════════════╝${RESET}"
 
@@ -135,17 +135,36 @@ fi
 # =============================================================================
 step "3/7  OS Packages (apt)"
 
+# ── Refresh apt cache first so apt-cache show queries are accurate ────────────
+# apt-cache operates only on the LOCAL index. On a fresh clone or after a
+# long gap the index may not list packages that exist in the repo. We update
+# unconditionally here (takes ~2s) before any probing.
+echo "  Refreshing apt package index..."
+sudo apt-get update -qq
+
+# ── Detect correct SQLCipher runtime library name ─────────────────────────────
+# Ubuntu 24.04+ (Noble) renamed libsqlcipher0 → libsqlcipher0t64 as part of
+# the 64-bit time_t transition. Probe both names after the index is current.
+SQLCIPHER_RT=""
+if apt-cache show libsqlcipher0t64 &>/dev/null 2>&1; then
+    SQLCIPHER_RT="libsqlcipher0t64"
+    ok "SQLCipher runtime: libsqlcipher0t64 (Ubuntu 24.04+)"
+elif apt-cache show libsqlcipher0 &>/dev/null 2>&1; then
+    SQLCIPHER_RT="libsqlcipher0"
+    ok "SQLCipher runtime: libsqlcipher0 (Ubuntu 22.04 / Debian)"
+else
+    warn "libsqlcipher runtime not found in repos — libsqlcipher-dev alone will be used."
+    warn "pysqlcipher3 will still build correctly from -dev headers."
+fi
+
 OS_TOOLS=(nmap nikto whatweb traceroute masscan ruby ruby-dev build-essential
-          perl git libsqlcipher-dev libsqlcipher0)
+          perl git libsqlcipher-dev
+          libxcb-cursor0 libxcb-cursor-dev)
+[[ -n "$SQLCIPHER_RT" ]] && OS_TOOLS+=("$SQLCIPHER_RT")
 
 MISSING_APT=()
 for t in "${OS_TOOLS[@]}"; do
-    # Check binary for tool packages, dpkg for lib packages
-    if dpkg -s "$t" &>/dev/null 2>&1; then
-        : # already installed via dpkg
-    elif [[ "$t" == lib* ]] && ! dpkg -s "$t" &>/dev/null 2>&1; then
-        MISSING_APT+=("$t")
-    elif ! dpkg -s "$t" &>/dev/null 2>&1; then
+    if ! dpkg -s "$t" &>/dev/null 2>&1; then
         MISSING_APT+=("$t")
     fi
 done
@@ -154,8 +173,6 @@ if [[ ${#MISSING_APT[@]} -eq 0 ]]; then
     ok "All OS packages already installed"
 else
     echo "  Installing: ${MISSING_APT[*]}"
-    sudo apt-get update -qq
-    # apt itself shows a progress bar via its own UI — just pipe it
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${MISSING_APT[@]}"
     ok "OS packages installed"
 fi
@@ -320,7 +337,7 @@ find "$BIN_DIR" -type f -exec chmod +x {} \; 2>/dev/null || true
 TOTAL=$(elapsed)
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════╗"
-echo    "║  ✔  SMP V7 Setup Complete                    ║"
+echo    "║  ✔  SMP Setup Complete                       ║"
 printf  "║  ⏱  Total time: %-28s ║\n" "$TOTAL"
 echo    "╚══════════════════════════════════════════════╝"
 echo -e "${RESET}"
