@@ -91,7 +91,7 @@ class TestSMPComponents(unittest.TestCase):
 
         # Setup test password to initialize encryption key and allow DB access
         from tools.encryption_manager import setup_password
-        setup_password("testpassword123")
+        setup_password("TestPassword123@")
 
         # Initialize DB and directories in temporary space
         init_db()
