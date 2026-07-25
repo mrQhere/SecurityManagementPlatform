@@ -189,9 +189,9 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                     "SELECT c.cve, c.title, c.severity, c.description, c.source, "
                     "c.cvss_score, c.epss_score, c.affected_products, "
                     "COALESCE(c.cisa_known_exploited, 0) AS cisa_kev "
-                    "FROM cves c "
-                    "JOIN cves_fts f ON c.id = f.rowid "
-                    "WHERE cves_fts MATCH ?",
+                    "FROM cve_db.cves c "
+                    "JOIN cve_db.cves_fts f ON c.id = f.rowid "
+                    "WHERE cve_db.cves_fts MATCH ?",
                     (match_query,)
                 )
                 candidates = [dict(row) for row in cursor.fetchall()]
@@ -201,7 +201,7 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                     cursor.execute(
                         "SELECT cve, title, severity, description, source, "
                         "cvss_score, epss_score "
-                        "FROM cves WHERE description LIKE ?",
+                        "FROM cve_db.cves WHERE description LIKE ?",
                         (f"%{tech_name}%",)
                     )
                     candidates = [dict(row) for row in cursor.fetchall()]

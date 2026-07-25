@@ -93,8 +93,8 @@ def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
         try:
             if is_decryption_ok():
                 # Verify DB is actually accessible
-                from tools.db_manager import get_db_connection
-                conn = get_db_connection()
+                from tools.db_manager import get_cve_db_connection
+                conn = get_cve_db_connection()
                 conn.execute("SELECT 1 FROM cves LIMIT 1")
                 logger.info(f"[Scheduler] DB ready check passed (attempt {attempt})")
                 return True

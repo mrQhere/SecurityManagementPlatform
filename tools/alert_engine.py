@@ -475,7 +475,7 @@ def scan_and_alert_matched_technology_cves(target_url, scan_id, smtp_config):
         db_token = f"%{sanitized_name}%"
         
         db_cursor.execute(
-            "SELECT cve, severity, description FROM cves WHERE (description LIKE ? OR cve LIKE ?) AND severity IN ('Critical', 'High')",
+            "SELECT cve, severity, description FROM cve_db.cves WHERE (description LIKE ? OR cve LIKE ?) AND severity IN ('Critical', 'High')",
             (db_token, db_token)
         )
         associated_cves = db_cursor.fetchall()
