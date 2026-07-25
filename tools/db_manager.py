@@ -171,7 +171,7 @@ def _initialize_cve_db_schema(conn):
     # Create FTS5 virtual table for rapid full-text search
     cursor.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS cves_fts 
-        USING fts5(
+        USING fts4(
             cve, title, description, affected_products, keywords,
             content='cves', content_rowid='id'
         );
