@@ -1,15 +1,15 @@
 <div align="center">
 
 ```
-███████╗███╗   ███╗██████╗     ██╗   ██╗███████╗
-██╔════╝████╗ ████║██╔══██╗    ██║   ██║╚════██║
-███████╗██╔████╔██║██████╔╝    ██║   ██║    ██╔╝
-╚════██║██║╚██╔╝██║██╔═══╝     ╚██╗ ██╔╝   ██╔╝
-███████║██║ ╚═╝ ██║██║          ╚████╔╝    ██║
-╚══════╝╚═╝     ╚═╝╚═╝           ╚═══╝     ╚═╝
+███████╗███╗   ███╗██████╗
+██╔════╝████╗ ████║██╔══██╗
+███████╗██╔████╔██║██████╔╝
+╚════██║██║╚██╔╝██║██╔═══╝
+███████║██║ ╚═╝ ██║██║
+╚══════╝╚═╝     ╚═╝╚═╝
 ```
 
-**Security Management Platform — V7**
+**Security Management Platform**
 
 `local-first` &nbsp;·&nbsp; `zero-cloud` &nbsp;·&nbsp; `encrypted at rest` &nbsp;·&nbsp; `correlation-driven`
 
@@ -24,7 +24,7 @@
 
 ---
 
-> SMP V7 is designed like a precision instrument — invisible internals, deliberate output, zero noise.
+> SMP is designed like a precision instrument — invisible internals, deliberate output, zero noise.
 
 ---
 
@@ -32,6 +32,7 @@
 
 | # | Section |
 |---|---------|
+| 0 | [⚡ Beginner Quick Start](#0--beginner-quick-start) — **start here if new** |
 | 1 | [Philosophy & Architecture](#1--philosophy--architecture) |
 | 2 | [Setup & Installation](#2--setup--installation) — Linux · macOS · Windows · Docker |
 | 3 | [First Run & Daily Operations](#3--first-run--daily-operations) |
@@ -41,7 +42,59 @@
 | 7 | [Core Internals & Encryption](#7--core-internals--encryption) |
 | 8 | [Custom Scanners & REST API](#8--custom-scanners--rest-api) |
 | 9 | [Troubleshooting](#9--troubleshooting) |
-| 10 | [Roadmap](#10--roadmap) |
+| 10 | [Roadmap & Future Timeline](#10--roadmap--future-timeline) |
+
+---
+
+## 0 · Beginner Quick Start
+
+> **Never used a security scanner before? Start here.** You only need to follow 4 steps.
+
+### What is SMP?
+
+SMP is a tool that checks a website or server for security weaknesses. Think of it as a medical checkup — but for computers. It runs a series of automated tests, then produces a report showing what it found and how serious each issue is.
+
+**It does NOT**:
+- Hack anything without your permission
+- Send your data to any cloud service
+- Require an internet subscription or account
+
+**You need**: A Linux/macOS computer, internet access to download it once, and permission to test the target.
+
+### 4-Step Setup (Linux)
+
+```bash
+# Step 1 — Download SMP
+git clone https://github.com/mrQhere/SecurityManagementPlatform.git
+cd SecurityManagementPlatform
+
+# Step 2 — Install everything automatically (takes ~2 minutes)
+bash setup.sh
+
+# Step 3 — Start SMP
+./run.sh
+
+# Step 4 — Open your browser and go to:
+# http://localhost:8000/api/v7/docs
+```
+
+The installer handles Python, Go, all security tools, and the encrypted database automatically. You do not need to install anything manually.
+
+### Running your first scan
+
+1. SMP opens a dashboard window automatically
+2. Click **"Add Target"** and type a URL you own or have permission to scan (e.g. `https://example.com`)
+3. Select **`standard`** scan profile (safe for most use cases)
+4. Click **"Start Scan"** and watch the Live Monitor
+5. When finished, open the PDF report from the `reports/` folder
+
+### Scan profiles — which one to pick?
+
+| Profile | What it does | Who should use it |
+|---------|-------------|-------------------|
+| `osint` | Passive info gathering only. No active probing. | Beginners, scoping phase |
+| `standard` | Full scan, no destructive tools | Default — most users |
+| `full` | Everything, including brute-force & active exploitation tests | **Professionals with written permission only** |
 
 ---
 
@@ -222,9 +275,16 @@ API docs available at: `http://localhost:8000/api/v7/docs`
 `setup.sh` installs SQLCipher automatically. If you skipped setup or installed manually and see the fatal error on launch:
 
 ```bash
-# Linux
+# Linux — Ubuntu 24.04 (Noble) and newer
+sudo apt install libsqlcipher-dev libsqlcipher0t64
+pip install pysqlcipher3
+
+# Linux — Ubuntu 22.04 / Debian Bookworm and older
 sudo apt install libsqlcipher-dev libsqlcipher0
 pip install pysqlcipher3
+
+# Not sure which Ubuntu you have?
+lsb_release -rs   # 24.04+ → use libsqlcipher0t64 ; 22.04 → use libsqlcipher0
 
 # macOS (Homebrew)
 brew install sqlcipher
@@ -384,20 +444,28 @@ Phase 1 — Recon (parallel)
 
 #### ⚡ Conditional (Phase 3)
 
-| Tool | Trigger condition | What it tests |
-|------|-----------------|---------------|
-| **WPScan** | WordPress detected *or* gem fails → Docker wrapper | WordPress CVEs, plugin vulns |
-| **Dalfox** | XSS surface found | Parameter-level XSS, DOM XSS |
-| **Arjun** | Web app detected | Hidden HTTP parameters |
-| **DNSx** | Subdomains found | DNS record analysis |
-| **Katana** | Web app alive | Deep crawling & spidering |
-| **Commix** | Command injection surface | OS command injection |
-| **JWT Scanner** | JWT tokens in responses | Algorithm confusion, weak keys |
-| **Masscan** | Port scan needed at scale | High-speed TCP SYN scan |
-| **ParamSpider** | URL parameters found | Web archive parameter mining |
-| **Cloud Enum** | Cloud assets referenced | AWS/Azure/GCP public buckets |
-| **OWASP ZAP** | `full` profile only | Active DAST (invasive) |
-| **Hydra** | SSH/FTP port open | Brute-force auth test |
+<table>
+<thead>
+<tr><th>Tool</th><th>Trigger condition</th><th>What it tests</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>WPScan</strong></td><td>WordPress detected</td><td>WordPress CVEs, plugin vulns</td></tr>
+<tr><td><strong>Dalfox</strong></td><td>XSS surface found</td><td>Parameter-level XSS, DOM XSS</td></tr>
+<tr><td><strong>Arjun</strong></td><td>Web app detected</td><td>Hidden HTTP parameters</td></tr>
+<tr><td><strong>DNSx</strong></td><td>Subdomains found</td><td>DNS record analysis</td></tr>
+<tr><td><strong>Katana</strong></td><td>Web app alive</td><td>Deep crawling &amp; spidering</td></tr>
+<tr><td><strong>Masscan</strong></td><td>Port scan needed at scale</td><td>High-speed TCP SYN scan</td></tr>
+<tr><td><strong>ParamSpider</strong></td><td>URL parameters found</td><td>Web archive parameter mining</td></tr>
+<tr><td><strong>Cloud Enum</strong></td><td>Cloud assets referenced</td><td>AWS/Azure/GCP public buckets</td></tr>
+<tr><td><strong>JWT Scanner</strong></td><td>JWT tokens in responses</td><td>Algorithm confusion, weak keys</td></tr>
+<tr><td><td colspan="3"><span style="color:red"><strong>⚠ WARNING — ACTIVE EXPLOITATION — full profile only — requires written permission from target owner</strong></span></td></tr>
+<tr><td><strong>Commix</strong></td><td>Command injection surface found</td><td>OS command injection attempts</td></tr>
+<tr><td><strong>OWASP ZAP</strong></td><td><code>full</code> profile only</td><td>Active DAST — sends malicious payloads</td></tr>
+<tr><td><strong>Hydra</strong></td><td>SSH/FTP port open + <code>full</code> profile</td><td>Brute-force credential attacks</td></tr>
+</tbody>
+</table>
+
+> <span style="color:red">**⚠ LEGAL WARNING**</span> — Tools marked above (Commix, ZAP active scan, Hydra) **send attack payloads** to the target. Running them against systems you do not own or have **written, explicit permission** to test is **illegal** in most jurisdictions (Computer Fraud and Abuse Act, UK Computer Misuse Act, EU Directive 2013/40/EU, and equivalents worldwide). SMP gates these tools behind the `full` profile precisely to prevent accidental use. Always obtain written authorisation before enabling `full` profile.
 
 #### 🛠️ Support Tools
 
@@ -820,13 +888,23 @@ curl http://localhost:8000/api/v7/scan/1/status \
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-**Fix:**
+**Fix — Ubuntu 24.04+ (Noble):**
+```bash
+sudo apt install libsqlcipher-dev libsqlcipher0t64
+source venv/bin/activate
+pip install pysqlcipher3
+./run.sh
+```
+
+**Fix — Ubuntu 22.04 / Debian:**
 ```bash
 sudo apt install libsqlcipher-dev libsqlcipher0
 source venv/bin/activate
 pip install pysqlcipher3
 ./run.sh
 ```
+
+**Not sure which Ubuntu?** Run `lsb_release -rs` — `24.04` → use `libsqlcipher0t64`, anything older → use `libsqlcipher0`.
 
 If `pip install pysqlcipher3` fails with compiler errors:
 ```bash
@@ -1092,21 +1170,57 @@ Or check `config/settings.json`:
 
 ---
 
-## 10 · Roadmap
+## 10 · Roadmap & Future Timeline
 
-| Version | Focus | Status |
-|---------|-------|--------|
-| **V7** (current) | Local-first, SQLCipher hard enforcement, prebuilt binary install, correlation depth as headline, SOC2/PCI-DSS compliance, SBOM auto-generation, egress audit, CI | ✅ Released |
-| **V8** | Kubernetes native, distributed worker nodes, multi-IP scan rotation | 🔵 Planned |
-| **V9** | Local LLM integration (Ollama) for finding narrative generation, automated false-positive reduction via ML | 🔵 Planned |
+### Current release
 
-> V9 AI features are explicitly deferred. The README and codebase contain no AI-agent language until V9 actually ships.
+| Area | What shipped |
+|------|--------------|
+| **Encryption** | SQLCipher AES-256 hard requirement — no plaintext fallback |
+| **Install speed** | Prebuilt Go binaries via curl — 30× faster than `go install` |
+| **Intelligence** | NVD + EPSS + GreyNoise + CISA KEV four-source correlation |
+| **Compliance** | OWASP, CIS, ISO 27001, SOC 2, PCI-DSS auto-mapping |
+| **Auditability** | Egress audit log — every outbound call logged with ALLOWED/BLOCKED |
+| **Reports** | PDF + HTML + CycloneDX SBOM auto-generated per scan |
+| **CI** | GitHub Actions pipeline — install, import, and SQLCipher checks |
+
+### Future milestones
+
+```
+Q3 2026  ──────────────────────────────────────────────────────────────
+         V8-alpha: multi-target queue, parallel scan workers
+         Persistent scan scheduler (cron-style, not one-shot)
+         REST API v2: webhook callbacks on scan completion
+
+Q4 2026  ──────────────────────────────────────────────────────────────
+         V8 stable: Kubernetes worker node support
+         Distributed scan rotation across multiple IPs/proxies
+         Team mode: multi-user auth, per-user audit trails
+
+Q1 2027  ──────────────────────────────────────────────────────────────
+         V9-alpha: Local LLM integration (Ollama)
+           → Auto-generated finding narratives (no cloud)
+           → False-positive reduction via local ML model
+         Custom rule engine: user-defined scan policies
+
+Q2 2027  ──────────────────────────────────────────────────────────────
+         V9 stable: Full local-AI pentest narrative generation
+         MITRE ATT&CK heatmap output in reports
+         Supply-chain scanning: SBOM diff across deployments
+
+2028+    ──────────────────────────────────────────────────────────────
+         Plugin marketplace for third-party scanner modules
+         Hardware token (YubiKey) support for database key unlock
+         Mobile dashboard (read-only, encrypted sync)
+```
+
+> AI features (V9) are explicitly deferred — no LLM code ships until the local-first architecture is airtight. The README and codebase contain no AI-agent language until V9 actually ships.
 
 ---
 
 <div align="center">
 
-**SMP V7** · Local-first · Zero-cloud · Encrypted at rest  
+**SMP** · Local-first · Zero-cloud · Encrypted at rest  
 Made by [@mrQhere](https://github.com/mrQhere) · © mrQhere
 
 </div>
