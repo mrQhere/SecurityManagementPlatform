@@ -9,6 +9,11 @@ from tools.alert_engine import process_cve_alert
 
 logger = logging.getLogger("smp.cve")
 
+try:
+    from tools.egress_auditor import egress_auditor
+except ImportError:
+    egress_auditor = None
+
 CISA_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 CACHE_PATH = os.path.join(BASE_DIR, "cache", "intel_cache.json")
 
@@ -23,6 +28,14 @@ _RETRY_DELAYS = [6, 12, 30]  # seconds between retries
 
 def _resilient_get(url, timeout=30):
     """GET request with retry/backoff for transient server errors."""
+    # Record this outbound call before entering the retry loop
+    if egress_auditor:
+        egress_auditor.record("CISA KEV", url, "CISA Known Exploited Vulnerabilities catalog fetch")
+        from tools.egress_auditor import local_only_mode_active
+        if local_only_mode_active():
+            logger.info("[EgressAudit] CISA request skipped — local-only mode active")
+            return None
+
     for attempt in range(_MAX_RETRIES):
         try:
             response = requests.get(url, headers=_HEADERS, timeout=timeout)

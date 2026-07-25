@@ -20,6 +20,11 @@ from tools.alert_engine import process_cve_alert
 
 logger = logging.getLogger("smp.cve")
 
+try:
+    from tools.egress_auditor import egress_auditor
+except ImportError:
+    egress_auditor = None
+
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
 _HEADERS = {
@@ -41,6 +46,16 @@ def _nvd_get(params: dict, timeout: int = 45):
     Returns the requests.Response on success, or None after all retries fail.
     Handles ChunkedEncodingError ('Response ended prematurely') with auto-retry.
     """
+    # Record this outbound call before the first attempt
+    if egress_auditor:
+        egress_auditor.record("NVD (NIST)", NVD_API_URL,
+                              f"NVD CVE data — startIndex={params.get('startIndex', 0)}, "
+                              f"resultsPerPage={params.get('resultsPerPage', _PAGE_SIZE)}")
+        from tools.egress_auditor import local_only_mode_active
+        if local_only_mode_active():
+            logger.info("[EgressAudit] NVD request skipped — local-only mode active")
+            return None
+
     for attempt in range(_MAX_RETRIES):
         # Determine retry delay safely
         delay = _RETRY_DELAYS[attempt] if attempt < len(_RETRY_DELAYS) else _RETRY_DELAYS[-1]

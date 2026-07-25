@@ -29,16 +29,24 @@ jobs:
             nmap \
             perl \
             git \
-            build-essential
+            build-essential \
+            libpango-1.0-0 \
+            libpangoft2-1.0-0 \
+            libcairo2 \
+            libgdk-pixbuf2.0-0 \
+            libffi-dev \
+            shared-mime-info
 
       - name: Create virtual environment & install Python deps
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip --quiet
-          # pysqlcipher3 needs libsqlcipher-dev headers
-          pip install pysqlcipher3 --quiet
-          pip install -r requirements.txt --quiet
+          # pysqlcipher3 requires explicit compiler flags on Ubuntu 22.04 + modern OpenSSL
+          CFLAGS="-I/usr/include/sqlcipher" LDFLAGS="-lsqlcipher" \
+            pip install pysqlcipher3 --quiet
+          # Install remaining dependencies (pysqlcipher3 already satisfied above)
+          grep -v "^pysqlcipher3" requirements.txt | pip install -r /dev/stdin --quiet
 
       - name: Run verification suite
         run: |
