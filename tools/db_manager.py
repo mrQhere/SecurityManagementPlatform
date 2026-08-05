@@ -121,6 +121,17 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
         logger.error(f"Database error: {e}")
         return ""
 
+def _get_conn(path, **kwargs):
+    """Shared helper to get a SQLCipher encrypted database connection."""
+    if 'timeout' not in kwargs:
+        kwargs['timeout'] = 30.0
+    conn = sqlite3.connect(path, **kwargs)
+    from tools.encryption_manager import get_active_key
+    key = get_active_key()
+    if key:
+        conn.execute("PRAGMA key = ?", (key,))
+    return conn
+
 DB_PATH = os.path.join(BASE_DIR, "database", "security.db")
 ANALYTICS_DB_PATH = os.path.join(BASE_DIR, "database", "analytics.db")
 BACKUP_DIR = os.path.join(BASE_DIR, "backup")
@@ -249,7 +260,7 @@ def init_cve_db():
     """Ensure cve.db exists and has the correct schema, indices, and WAL configuration."""
     init_directories()
     db_existed = os.path.exists(CVE_DB_PATH)
-    conn = sqlite3.connect(CVE_DB_PATH, timeout=30.0)
+    conn = _get_conn(CVE_DB_PATH, timeout=30.0)
     try:
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA synchronous = NORMAL;")
@@ -268,7 +279,7 @@ def get_cve_db_connection():
     delay = 0.5
     for attempt in range(retries):
         try:
-            conn = sqlite3.connect(CVE_DB_PATH, timeout=30.0)
+            conn = _get_conn(CVE_DB_PATH, timeout=30.0)
             conn.execute("PRAGMA journal_mode = WAL;")
             conn.execute("PRAGMA synchronous = NORMAL;")
             conn.row_factory = sqlite3.Row
@@ -294,10 +305,10 @@ def get_redundancy_connection():
     delay = 0.5
     for attempt in range(retries):
         try:
-            conn = sqlite3.connect(REDUNDANCY_DB_PATH, timeout=30.0)
+            conn = _get_conn(REDUNDANCY_DB_PATH, timeout=30.0)
 
             # SQLCipher is a hard requirement — pysqlcipher3 is always available here
-            conn.execute("PRAGMA key = 'smp-default-sqlcipher-key';")
+            
 
             conn.execute("PRAGMA foreign_keys = ON;")
 
@@ -330,7 +341,7 @@ def is_main_db_corrupt_or_missing(scan_id=None):
     if not os.path.exists(DB_PATH):
         return True
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=2.0)
+        conn = _get_conn(DB_PATH, timeout=2.0)
         conn.row_factory = sqlite3.Row
         try:
             if scan_id is not None:
@@ -375,7 +386,7 @@ def get_db_connection():
     delay = 0.5
     for attempt in range(retries):
         try:
-            conn = sqlite3.connect(DB_PATH, timeout=30.0)
+            conn = _get_conn(DB_PATH, timeout=30.0)
             conn.execute("PRAGMA foreign_keys = ON;")
             try:
                 conn.execute("PRAGMA journal_mode = WAL;")
@@ -505,7 +516,7 @@ def _initialize_db_schema(conn):
 
 
     # ── Initialize Analytics DB ────────────────────────────────────────────────
-    analytics_conn = sqlite3.connect(ANALYTICS_DB_PATH)
+    analytics_conn = _get_conn(ANALYTICS_DB_PATH)
     analytics_cursor = analytics_conn.cursor()
     
     analytics_cursor.execute("""
@@ -647,7 +658,7 @@ def _init_backup_databases():
 
     # 1. Active scans raw database
     active_db = os.path.join(BACKUP_DIR, "active_scans.db")
-    conn = sqlite3.connect(active_db, timeout=30.0)
+    conn = _get_conn(active_db, timeout=30.0)
     conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS raw_scans (
@@ -672,7 +683,7 @@ def _init_backup_databases():
 
     # 3. CVE secondary database (backup)
     cve_db = os.path.join(BACKUP_DIR, "cve_secondary.db")
-    conn = sqlite3.connect(cve_db, timeout=30.0)
+    conn = _get_conn(cve_db, timeout=30.0)
     conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS cves_backup (
@@ -698,7 +709,7 @@ def _init_backup_databases():
 
     # 4. Full mirror database — complete copy of every main table for disaster recovery
     full_db = os.path.join(BACKUP_DIR, "full_backup.db")
-    conn = sqlite3.connect(full_db, timeout=30.0)
+    conn = _get_conn(full_db, timeout=30.0)
     conn.execute("PRAGMA journal_mode = WAL;")
     # Targets mirror
     conn.execute("""
@@ -789,7 +800,7 @@ def _restore_from_backup_if_empty():
         if not os.path.exists(full_db):
             return
 
-        backup_conn = sqlite3.connect(full_db, timeout=10.0)
+        backup_conn = _get_conn(full_db, timeout=10.0)
         backup_conn.row_factory = sqlite3.Row
         try:
             targets_bak = backup_conn.execute("SELECT * FROM targets_backup").fetchall()
@@ -892,7 +903,7 @@ def add_target(url, company_name=None, submitted_to=None):
         if target_id:
             try:
                 full_db = os.path.join(BACKUP_DIR, "full_backup.db")
-                bconn = sqlite3.connect(full_db, timeout=10.0)
+                bconn = _get_conn(full_db, timeout=10.0)
                 bconn.execute(
                     "INSERT OR REPLACE INTO targets_backup "
                     "(id, url, status, added_date, last_scan, backed_up_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -1976,7 +1987,7 @@ def backup_scan_to_raw(scan_id, target_url):
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         active_db = os.path.join(BACKUP_DIR, "active_scans.db")
-        conn = sqlite3.connect(active_db, timeout=30.0)
+        conn = _get_conn(active_db, timeout=30.0)
         conn.execute("""
             INSERT INTO raw_scans (scan_id, target_url, start_time, end_time, status,
                 scanned_by, findings_json, technologies_json, risk_score_json, raw_outputs_json, created_at)
@@ -2026,7 +2037,7 @@ def backup_cve_database():
         conn.close()
 
         cve_db = os.path.join(BACKUP_DIR, "cve_secondary.db")
-        bconn = sqlite3.connect(cve_db, timeout=30.0)
+        bconn = _get_conn(cve_db, timeout=30.0)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         # Clear and repopulate
         bconn.execute("DELETE FROM cves_backup")
@@ -2055,7 +2066,7 @@ def get_previous_scans_for_target(target_url, limit=5):
         active_db = os.path.join(BACKUP_DIR, "active_scans.db")
         if not os.path.exists(active_db):
             return []
-        conn = sqlite3.connect(active_db, timeout=30.0)
+        conn = _get_conn(active_db, timeout=30.0)
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             "SELECT * FROM raw_scans WHERE target_url = ? ORDER BY id DESC LIMIT ?",
@@ -2101,7 +2112,7 @@ def trigger_scheduled_system_backup_sequence():
         
     try:
         # Improvement 12: Force checkpoint updates to clear WAL log states cleanly
-        control_connection = sqlite3.connect(live_database_file)
+        control_connection = _get_conn(live_database_file)
         control_cursor = control_connection.cursor()
         control_cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")
         control_connection.close()
@@ -2215,7 +2226,7 @@ def backup_all_tables():
 
         # Insert into backup DB
         full_db = os.path.join(BACKUP_DIR, "full_backup.db")
-        bconn = sqlite3.connect(full_db, timeout=30.0)
+        bconn = _get_conn(full_db, timeout=30.0)
         
         # Clear existing backup to avoid duplicate bloat
         bconn.execute("DELETE FROM targets_backup")
@@ -2276,7 +2287,7 @@ def restore_from_backup():
         if not os.path.exists(full_db):
             return False, "No full backup found."
             
-        bconn = sqlite3.connect(full_db, timeout=30.0)
+        bconn = _get_conn(full_db, timeout=30.0)
         bconn.row_factory = sqlite3.Row
         
         targets = [dict(r) for r in bconn.execute("SELECT * FROM targets_backup").fetchall()]
