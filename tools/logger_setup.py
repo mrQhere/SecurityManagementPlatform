@@ -36,19 +36,24 @@ def setup_logging():
     # Base path for logs
     log_dir = os.path.join(BASE_DIR, "logs")
     
-    # Unified single log file for all subsystems
-    unified_log_path = os.path.join(log_dir, "smp.log")
+    master_path = os.path.join(log_dir, "master.log")
+    scan_path = os.path.join(log_dir, "scan.log")
+    update_path = os.path.join(log_dir, "update.log")
+    error_path = os.path.join(log_dir, "error.log")
+    cve_path = os.path.join(log_dir, "cve.log")
     
     # Create formatters
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     
-    # 1. Master Unified Handler (everything INFO and above)
-    master_handler = RecreatingFileHandler(unified_log_path, encoding="utf-8")
+    # 1. Master Log Handler (everything INFO and above)
+    master_handler = RecreatingFileHandler(master_path, encoding="utf-8")
     master_handler.setLevel(logging.INFO)
     master_handler.setFormatter(formatter)
     
-    # 2. Error Handler (also writes to the same unified log for console/tail tracking if needed, 
-    # but since master captures INFO, it's redundant. We'll just keep the master handler.)
+    # 2. Error Log Handler (ERROR and above)
+    error_handler = RecreatingFileHandler(error_path, encoding="utf-8")
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(formatter)
     
     # 3. SQLite DB Log Handler (INFO and above)
     db_handler = SQLiteLogHandler()
@@ -61,19 +66,29 @@ def setup_logging():
     
     # Add shared handlers to root logger
     logger_root.addHandler(master_handler)
+    logger_root.addHandler(error_handler)
     logger_root.addHandler(db_handler)
     
     # 4. Scan Log Handler (Only for smp.scan logger)
     logger_scan = logging.getLogger("smp.scan")
-    logger_scan.addHandler(master_handler)
+    scan_handler = RecreatingFileHandler(scan_path, encoding="utf-8")
+    scan_handler.setLevel(logging.INFO)
+    scan_handler.setFormatter(formatter)
+    logger_scan.addHandler(scan_handler)
     
     # 5. Update Log Handler (Only for smp.update logger)
     logger_update = logging.getLogger("smp.update")
-    logger_update.addHandler(master_handler)
+    update_handler = RecreatingFileHandler(update_path, encoding="utf-8")
+    update_handler.setLevel(logging.INFO)
+    update_handler.setFormatter(formatter)
+    logger_update.addHandler(update_handler)
     
     # 6. CVE Log Handler (Only for smp.cve logger)
     logger_cve = logging.getLogger("smp.cve")
-    logger_cve.addHandler(master_handler)
+    cve_handler = RecreatingFileHandler(cve_path, encoding="utf-8")
+    cve_handler.setLevel(logging.INFO)
+    cve_handler.setFormatter(formatter)
+    logger_cve.addHandler(cve_handler)
     
     # Ensure standard library warnings are captured
     logging.captureWarnings(True)
