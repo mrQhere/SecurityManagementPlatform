@@ -129,7 +129,7 @@ def _get_conn(path, **kwargs):
     from tools.encryption_manager import get_active_key
     key = get_active_key()
     if key:
-        conn.execute("PRAGMA key = ?", (key,))
+        conn.execute(f"PRAGMA key = '{key}';")
     return conn
 
 DB_PATH = os.path.join(BASE_DIR, "database", "security.db")

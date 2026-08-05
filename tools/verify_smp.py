@@ -308,7 +308,7 @@ class TestSMPComponents(unittest.TestCase):
         keyed_conn = sqlite3.connect(db_path, timeout=5.0)
         key = get_active_key()
         self.assertIsNotNone(key)
-        keyed_conn.execute("PRAGMA key = ?", (key,))
+        keyed_conn.execute(f"PRAGMA key = '{key}';")
         try:
             keyed_conn.execute("SELECT name FROM sqlite_master;")
         except sqlite3.DatabaseError as e:
