@@ -65,14 +65,14 @@ DEFAULT_SETTINGS = {
     "github_token": "",
     # Report identity
     "tester_name": "Security Auditor",
-    # ── V9.1.3 — Scan Profiles ──────────────────────────────────────────────────
+    # ── V9.1.5 — Scan Profiles ──────────────────────────────────────────────────
     # Options: "fast", "standard", "full"
     "scan_profile": "standard",
-    # ── V9.1.3 — Authenticated Scanning ──────────────────────────────────────────
+    # ── V9.1.5 — Authenticated Scanning ──────────────────────────────────────────
     # Dict of custom HTTP headers to inject into supported scanners
     # e.g. {"Cookie": "session=abc123", "Authorization": "Bearer eyJ..."}
     "auth_headers": {},
-    # ── V9.1.3 — New Scanner Binary Paths ──────────────────────────────────────
+    # ── V9.1.5 — New Scanner Binary Paths ──────────────────────────────────────
     "dalfox_path": "dalfox",
     "arjun_path": "arjun",
     "dnsx_path": "dnsx",
@@ -84,13 +84,13 @@ DEFAULT_SETTINGS = {
     "masscan_path": "masscan",
     "paramspider_path": "paramspider",
     "cloud_enum_path": "cloud_enum",
-    # ── V9.1.3 — Proxies & Keys & Features ─────────────────────────────────────
+    # ── V9.1.5 — Proxies & Keys & Features ─────────────────────────────────────
     "http_proxy": "",
     "https_proxy": "",
     "shodan_api_key": "",
     "censys_api_key": "",
     "cloud_enum_keywords": "",
-    # ── V9.1.3 — New Security Features ──────────────────────────────────────────
+    # ── V9.1.5 — New Security Features ──────────────────────────────────────────
     # MAC Changer — enhanced: show result in dashboard
     "mac_changer_enabled": True,
     "mac_display_result": True,   # Show changed MAC in dashboard status bar
