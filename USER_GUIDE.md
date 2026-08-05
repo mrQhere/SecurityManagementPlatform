@@ -782,48 +782,134 @@ sm.reset()  # call on any user interaction
 
 ## 8 · Custom Scanners & REST API
 
-### 8.1 Adding a custom scanner
+### 8.1 Adding a Custom Scanner (Detailed Guide)
 
-**Step 1:** Create `scanners/my_scanner.py`:
+Adding a new tool to SMP involves three phases: **Provisioning**, **Execution Logic**, and **Pipeline Registration**. SMP’s architecture abstracts away the threading and logging, allowing you to focus purely on the tool’s logic.
 
-```python
-from tools.narrative_logger import emit, emit_finding
+#### Phase 1: Provisioning (Tool Requirements)
 
-def run_my_scanner(target_url: str, scan_id: int, settings: dict) -> list:
-    emit(scan_id, "my_scanner", f"Starting custom scan on {target_url}")
-    try:
-        # your logic here
-        results = []
-        if found_something:
-            emit_finding(scan_id, "my_scanner", "High", "Found X vulnerability")
-            results.append({
-                "title": "X Vulnerability",
-                "severity": "High",
-                "description": "...",
-                "recommendation": "...",
-                "confidence": 85,
-            })
-        return results
-    except Exception as e:
-        emit(scan_id, "my_scanner", f"Error: {e}")
-        return []
+If your new tool requires external dependencies (Go binaries, apt packages, pip libraries, or Ruby gems), you must declare them in the automated installer so `setup.sh` and `Docker` handle them gracefully.
+
+**Step 1:** Open `tools/tool_installer.py` (or equivalent setup scripts) and add your tool’s requirements.
+
+*Example — Adding a new Go-based tool:*
+```bash
+# In setup.sh
+# SMP V7 prefers downloading prebuilt binaries for Go tools to save time.
+curl -sL https://github.com/projectdiscovery/newtool/releases/download/v1.0/newtool-linux.zip -o newtool.zip
+unzip newtool.zip -d /usr/local/bin/
 ```
 
-**Step 2:** Register in `scanners/core/registry.py`:
+*Example — Adding a Python-based tool:*
+Add it to `requirements.txt` to ensure it is installed within the virtual environment:
+```text
+new_python_tool>=2.1.0
+```
+
+#### Phase 2: Execution Logic
+
+Create a new wrapper script in the `scanners/` directory. This script will execute the tool, parse its output, and yield structured findings.
+
+**Step 2:** Create `scanners/my_custom_tool.py`:
 
 ```python
+import subprocess
+import json
+from tools.narrative_logger import emit, emit_finding
+
+def run_my_custom_tool(target_url: str, scan_id: int, settings: dict) -> list:
+    """
+    Executes 'my_custom_tool' and parses the output.
+    """
+    # 1. Announce that the tool is starting in the Live Monitor
+    emit(scan_id, "my_custom_tool", f"Starting scan on {target_url}")
+    
+    results = []
+    
+    # 2. Build the command line array (prevents shell injection)
+    command = ["my_custom_tool", "--target", target_url, "--json"]
+    
+    try:
+        # 3. Execute the tool with a strict timeout
+        process = subprocess.run(
+            command, 
+            capture_output=True, 
+            text=True, 
+            timeout=120  # Always enforce timeouts!
+        )
+        
+        # 4. Handle tool-specific errors
+        if process.returncode != 0:
+            emit(scan_id, "my_custom_tool", f"Tool exited with code {process.returncode}")
+            return []
+            
+        # 5. Parse the output (assuming JSON for this example)
+        output_data = json.loads(process.stdout)
+        
+        # 6. Translate raw output into SMP Findings
+        for vuln in output_data.get("vulnerabilities", []):
+            title = vuln.get("name", "Unknown Vulnerability")
+            severity = vuln.get("severity", "Medium")
+            
+            # Broadcast finding to the UI immediately
+            emit_finding(scan_id, "my_custom_tool", severity, title)
+            
+            # Append structured finding to the results list
+            results.append({
+                "title": title,
+                "severity": severity,
+                "description": vuln.get("desc", "No description provided."),
+                "recommendation": vuln.get("remediation", "Investigate manually."),
+                "confidence": 85,  # 0-100 scale
+                "cwe": vuln.get("cwe", "CWE-200") # Optional but recommended
+            })
+            
+    except subprocess.TimeoutExpired:
+        emit(scan_id, "my_custom_tool", "Error: Scan timed out after 120s")
+    except Exception as e:
+        emit(scan_id, "my_custom_tool", f"Unexpected error: {e}")
+        
+    return results
+```
+
+#### Phase 3: Pipeline Registration
+
+SMP uses a Directed Acyclic Graph (DAG) to determine when a tool should run. You must register your tool so the `scan_runner` knows about it.
+
+**Step 3:** Open `scanners/core/registry.py` and register your tool:
+
+```python
+from scanners.my_custom_tool import run_my_custom_tool
+
 register_scanner(
-    name="My Scanner",
-    step_name="Running My Scanner",
-    scan_func=run_my_scanner,
-    binary_name=None,       # or "my_tool" if it needs a binary
-    depends_on=["HTTPx"],   # DAG dependency
-    confidence=80,
-    needs_binary=False,
+    name="My Custom Tool",
+    step_name="Running My Custom Tool",
+    scan_func=run_my_custom_tool,
+    
+    # The name of the binary on the system (used for pre-flight checks)
+    binary_name="my_custom_tool", 
+    
+    # DAG dependencies: This tool will ONLY run after HTTPx finishes successfully.
+    # Use empty list [] for Phase 1 (Recon) tools.
+    depends_on=["HTTPx"], 
+    
+    # Base confidence score for this tool's findings (used by the risk scorer)
+    confidence=85,
+    
+    # If True, SMP will refuse to run this step if the binary is missing
+    needs_binary=True,
+    
+    # (Optional) Restrict this tool to specific scan profiles:
+    # allowed_profiles=["standard", "full"] 
 )
 ```
 
-**Step 3 (optional):** Add install entry in `tools/tool_installer.py` if your tool needs apt/pip/go packages.
+**Testing your new tool:**
+Run a local test using the headless API to ensure your tool fires correctly:
+```bash
+./run.sh --api
+# Trigger a scan via curl or the dashboard and monitor the logs
+```
 
 ### 8.2 REST API reference
 
