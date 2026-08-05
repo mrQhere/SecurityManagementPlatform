@@ -90,11 +90,7 @@ class TestSMPComponents(unittest.TestCase):
         tools.encryption_manager.AUTH_FILE = os.path.join(test_config_dir, "auth.json")
         tools.encryption_manager.DB_FILES = {
             os.path.join(test_db_dir, "security.db"): os.path.join(test_db_dir, "security.db.enc"),
-            os.path.join(test_db_dir, "analytics.db"): os.path.join(test_db_dir, "analytics.db.enc"),
-            os.path.join(test_db_dir, "cve.db"): os.path.join(test_db_dir, "cve.db.enc"),
-            os.path.join(test_db_dir, "redundancy.db"): os.path.join(test_db_dir, "redundancy.db.enc"),
             os.path.join(test_backup_dir, "active_scans.db"): os.path.join(test_backup_dir, "active_scans.db.enc"),
-            os.path.join(test_backup_dir, "cve_secondary.db"): os.path.join(test_backup_dir, "cve_secondary.db.enc"),
         }
         
         tools.config_manager.get_settings_path = lambda: os.path.join(test_config_dir, "settings.json")
