@@ -107,10 +107,7 @@ def setup_password(password: str):
         salt=salt,
         iterations=_PBKDF2_ITERATIONS,
     ).derive(password.encode())
-    ACTIVE_KEY = base64.urlsafe_b64encode(ACTIVE_KEY)
-    
-    # Encrypt existing files if any
-    encrypt_databases()
+    ACTIVE_KEY = ACTIVE_KEY.hex()
 
 def verify_password(password: str) -> bool:
     """Verify master password against stored credentials and load key."""
@@ -131,106 +128,30 @@ def verify_password(password: str) -> bool:
                 salt=salt,
                 iterations=data.get("pbkdf2_iterations", 100000),
             ).derive(password.encode())
-            ACTIVE_KEY = base64.urlsafe_b64encode(ACTIVE_KEY)
+            ACTIVE_KEY = ACTIVE_KEY.hex()
             return True
     except Exception:
         pass
     return False
 
 def encrypt_databases():
-    """Encrypt plain SQLite databases and delete unencrypted copies."""
-    global ACTIVE_KEY
-    if not ACTIVE_KEY:
-        logger.warning("[Encryption] encrypt_databases called but ACTIVE_KEY is not set — skipping.")
-        return
-    fernet = Fernet(ACTIVE_KEY)
-    for plain_path, enc_path in DB_FILES.items():
-        if os.path.exists(plain_path):
-            try:
-                # Read plain text
-                with open(plain_path, "rb") as f:
-                    data = f.read()
-                # Encrypt
-                enc_data = fernet.encrypt(data)
-                # Write to encrypted file (write to temp first, then atomic rename)
-                os.makedirs(os.path.dirname(enc_path), exist_ok=True)
-                tmp_enc = enc_path + ".tmp"
-                with open(tmp_enc, "wb") as f:
-                    f.write(enc_data)
-                # Atomic rename — ensures enc file is never partially written
-                os.replace(tmp_enc, enc_path)
-                logger.info(f"[Encryption] Encrypted: {os.path.basename(plain_path)}")
-                # Securely overwrite and remove plain text file
-                try:
-                    size = os.path.getsize(plain_path)
-                    with open(plain_path, "wb") as f:
-                        f.write(os.urandom(size))
-                    os.remove(plain_path)
-                    logger.info(f"[Encryption] Removed plaintext: {os.path.basename(plain_path)}")
-                except Exception as del_err:
-                    logger.error(f"[Encryption] Failed to remove plaintext {os.path.basename(plain_path)}: {del_err}")
-                    # Force remove even if overwrite failed
-                    try:
-                        os.remove(plain_path)
-                    except Exception:
-                        pass
-            except Exception as e:
-                logger.error(f"[Encryption] Failed to encrypt {os.path.basename(plain_path)}: {e}")
+    """No-op: Database encryption is now handled transparently by SQLCipher."""
+    pass
 
 
 def decrypt_databases():
-    """Decrypt encrypted database files back into plain SQLite databases.
-    
-    Returns True if at least one database was successfully decrypted.
-    Returns False if decryption failed (wrong password, corrupted file, etc.).
+    """No-op: Database encryption is now handled transparently by SQLCipher.
+    Returns True to indicate readiness.
     """
-    global ACTIVE_KEY, _DECRYPTION_SUCCEEDED
-    _DECRYPTION_SUCCEEDED = False
-    if not ACTIVE_KEY:
-        logger.warning("[Encryption] decrypt_databases called but ACTIVE_KEY is not set — skipping.")
-        return False
-    fernet = Fernet(ACTIVE_KEY)
-    any_success = False
-    for plain_path, enc_path in DB_FILES.items():
-        if os.path.exists(enc_path):
-            try:
-                with open(enc_path, "rb") as f:
-                    enc_data = f.read()
-                if not enc_data:
-                    logger.warning(f"[Encryption] Encrypted file is empty: {os.path.basename(enc_path)}")
-                    continue
-                dec_data = fernet.decrypt(enc_data)
-                # Ensure parent directory exists
-                os.makedirs(os.path.dirname(plain_path), exist_ok=True)
-                # Write decrypted data (atomic write via temp file)
-                tmp_plain = plain_path + ".dec_tmp"
-                with open(tmp_plain, "wb") as f:
-                    f.write(dec_data)
-                os.replace(tmp_plain, plain_path)
-                logger.info(f"[Encryption] Decrypted: {os.path.basename(plain_path)} ({len(dec_data):,} bytes)")
-                any_success = True
-            except InvalidToken:
-                logger.error(
-                    f"[Encryption] CRITICAL: Decryption failed for {os.path.basename(enc_path)} — "
-                    "wrong password or corrupted file. Data not restored."
-                )
-            except Exception as e:
-                logger.error(f"[Encryption] Failed to decrypt {os.path.basename(enc_path)}: {e}")
-        else:
-            # No encrypted file — this is a fresh install or first run
-            if not os.path.exists(plain_path):
-                logger.info(f"[Encryption] No encrypted backup found for {os.path.basename(plain_path)} — fresh install.")
-            else:
-                logger.info(f"[Encryption] Plain database exists (no .enc backup): {os.path.basename(plain_path)}")
-                any_success = True
-    _DECRYPTION_SUCCEEDED = any_success
-    return any_success
+    global _DECRYPTION_SUCCEEDED
+    _DECRYPTION_SUCCEEDED = True
+    return True
 
 
 def is_decryption_ok() -> bool:
     """Returns True if decryption succeeded this session (or no encrypted files exist)."""
-    global _DECRYPTION_SUCCEEDED
-    return _DECRYPTION_SUCCEEDED
+    global ACTIVE_KEY
+    return ACTIVE_KEY is not None
 
 
 def get_active_key():

@@ -273,11 +273,11 @@ class TestSMPComponents(unittest.TestCase):
         self.assertGreaterEqual(stats["critical_today"], 1)
 
     def test_07_encryption_manager(self):
-        """Test Master Password encryption, decryption and verification."""
+        """Test Master Password encryption and verification via SQLCipher."""
         from tools.encryption_manager import (
-            has_password_set, verify_password, setup_password,
-            encrypt_databases, decrypt_databases, DB_FILES
+            has_password_set, verify_password, setup_password, get_active_key
         )
+        from tools.db_manager import sqlite3
         import tools.db_manager
         
         # Check has password set
@@ -287,38 +287,34 @@ class TestSMPComponents(unittest.TestCase):
         self.assertTrue(verify_password("TestPassword123@"))
         self.assertFalse(verify_password("wrong_password"))
         
-        # Verify database files encryption lifecycle
-        # Create a mock plain text db file to encrypt
-        plain_db_path = list(DB_FILES.keys())[0]
-        enc_db_path = DB_FILES[plain_db_path]
+        # Verify SQLCipher encryption layer
+        db_path = tools.db_manager.DB_PATH
         
-        # Ensure file exists
-        with open(plain_db_path, "wb") as f:
-            f.write(b"SQLITE_DUMMY_DATABASE_CONTENT")
+        # Ensure DB is created
+        tools.db_manager.init_db()
+        
+        # Test 1: Unkeyed connection should fail
+        unkeyed_conn = sqlite3.connect(db_path, timeout=5.0)
+        try:
+            # SQLCipher will fail with "file is not a database" on first read attempt
+            unkeyed_conn.execute("SELECT name FROM sqlite_master;")
+            self.fail("Expected unkeyed connection to fail!")
+        except sqlite3.DatabaseError:
+            pass  # Expected behavior
+        finally:
+            unkeyed_conn.close()
             
-        # Encrypt databases
-        encrypt_databases()
-        
-        # Plain text should be removed, encrypted version should exist
-        self.assertFalse(os.path.exists(plain_db_path))
-        self.assertTrue(os.path.exists(enc_db_path))
-        
-        # Decrypt databases
-        decrypt_databases()
-        
-        # Plain text should be restored
-        self.assertTrue(os.path.exists(plain_db_path))
-        with open(plain_db_path, "rb") as f:
-            content = f.read()
-        self.assertEqual(content, b"SQLITE_DUMMY_DATABASE_CONTENT")
-        
-        # Re-initialize DB after test database cleanup
-        for p_path, e_path in DB_FILES.items():
-            if os.path.exists(p_path):
-                os.remove(p_path)
-            if os.path.exists(e_path):
-                os.remove(e_path)
-        init_db()
+        # Test 2: Correctly keyed connection should succeed
+        keyed_conn = sqlite3.connect(db_path, timeout=5.0)
+        key = get_active_key()
+        self.assertIsNotNone(key)
+        keyed_conn.execute("PRAGMA key = ?", (key,))
+        try:
+            keyed_conn.execute("SELECT name FROM sqlite_master;")
+        except sqlite3.DatabaseError as e:
+            self.fail(f"Keyed connection failed: {e}")
+        finally:
+            keyed_conn.close()
 
     def test_08_timeout_capping_and_retry(self):
         """Test that timeouts are capped on attempt 1 and scaled/restored on attempt 2."""
