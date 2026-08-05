@@ -3,15 +3,15 @@ from PySide6.QtGui import QFontDatabase
 
 # Theme definitions
 class Theme:
-    # Colors (glassmorphism style) - using semi-transparent whites for light mode and dark for dark mode
-    LIGHT_BG = "rgba(255, 255, 255, 0.6)"
-    DARK_BG = "rgba(30, 30, 30, 0.6)"
-    PRIMARY = "#0066FF"
-    SECONDARY = "#F2F2F7"
-    TEXT_LIGHT = "#1C1C1E"
-    TEXT_DARK = "#E5E5EA"
-    ACCENT = "#007AFF"
-    ACCENT_HOVER = "#0071EB"
+    # Colors (Ollama-style minimalist)
+    LIGHT_BG = "#FFFFFF"
+    DARK_BG = "#000000"
+    PRIMARY = "#FFFFFF"
+    SECONDARY = "#1A1A1A"
+    TEXT_LIGHT = "#000000"
+    TEXT_DARK = "#FFFFFF"
+    ACCENT = "#FFFFFF"
+    ACCENT_HOVER = "#DDDDDD"
 
     @staticmethod
     def load_fonts():
