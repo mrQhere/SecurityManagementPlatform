@@ -2,7 +2,7 @@
 
 ## FATAL: pysqlcipher3 not installed (startup abort)
 
-SMP V7 exits immediately if SQLCipher is unavailable. See `docs/troubleshooting/installation.md`.
+SMP V7 exits immediately if SQLCipher is unavailable. See `installation.md`.
 
 ---
 
