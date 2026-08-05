@@ -1,5 +1,5 @@
 """
-GreyNoise Community Intelligence Feed V7.0.5
+GreyNoise Community Intelligence Feed V7.0.6
 ===========================================
 Classifies IPs discovered during scanning as:
   - "noise"       → known benign/internet scanners (Shodan, search engines)

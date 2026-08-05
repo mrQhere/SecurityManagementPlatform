@@ -1,5 +1,5 @@
 """
-API Authentication Module V7.0.5
+API Authentication Module V7.0.6
 ================================
 JWT token issuance and verification for the SMP API.
 
