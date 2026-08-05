@@ -1,4 +1,4 @@
-# Security Management Platform V7.0.4 — Python Dependencies
+# Security Management Platform V7.0.5 — Python Dependencies
 # =========================================================
 # Core
 APScheduler>=3.10.0
@@ -18,7 +18,7 @@ sslyze>=5.2.0
 python-owasp-zap-v2.4>=0.0.21
 theHarvester
 
-# ── V7.0.4 New Dependencies ──────────────────────────────────────────────────────
+# ── V7.0.5 New Dependencies ──────────────────────────────────────────────────────
 # API (Secured REST API with JWT and rate limiting)
 fastapi>=0.111.0
 uvicorn>=0.30.0
