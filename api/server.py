@@ -1,5 +1,5 @@
 """
-SMP API V7.0 — Secured FastAPI Backend with JWT Authentication
+SMP API V7.0.1 — Secured FastAPI Backend with JWT Authentication
 ==============================================================
 Full REST API with:
   - JWT Bearer token authentication on all endpoints
@@ -44,9 +44,9 @@ from tools.db_manager import (
 app = None
 if _FASTAPI_AVAILABLE:
     app = FastAPI(
-        title="SMP API V7.0",
+        title="SMP API V7.0.1",
         description=(
-            "Security Management Platform V7.0 — Secured REST API\n\n"
+            "Security Management Platform V7.0.1 — Secured REST API\n\n"
             "All endpoints except `/api/v6/health` and `/api/v6/auth/token` "
             "require a valid JWT Bearer token.\n\n"
             "**@mrQhere — Internal Use Only**"
@@ -121,7 +121,7 @@ if _FASTAPI_AVAILABLE:
         """Health check endpoint — no authentication required."""
         return {
             "status": "ok",
-            "version": "V7.0",
+            "version": "V7.0.1",
             "platform": "Security Management Platform",
             "organization": "mrQhere",
             "timestamp": datetime.now().isoformat(),
@@ -138,7 +138,7 @@ if _FASTAPI_AVAILABLE:
                 meta = json.load(f)
             return meta
         except Exception:
-            return {"version": "V7.0", "platform": "SMP"}
+            return {"version": "V7.0.1", "platform": "SMP"}
 
     @app.post("/api/v6/auth/token", tags=["Authentication"])
     def get_token(request: TokenRequest):
@@ -239,7 +239,7 @@ def start_server(host: str = "127.0.0.1", port: int = 8000):
         return
     try:
         import uvicorn
-        logger.info(f"[API] Starting SMP API V7.0 on http://{host}:{port}/api/v6/docs")
+        logger.info(f"[API] Starting SMP API V7.0.1 on http://{host}:{port}/api/v6/docs")
         uvicorn.run(app, host=host, port=port, log_level="warning")
     except ImportError:
         logger.error("[API] uvicorn not installed. Run: pip install uvicorn")
