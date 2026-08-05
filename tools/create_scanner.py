@@ -14,7 +14,7 @@ import sys
 import argparse
 
 TEMPLATE = '''"""
-{name} Scanner — SMP V7.0.3
+{name} Scanner — SMP V7.0.4
 =========================
 Auto-generated scanner plugin.
 """
@@ -25,7 +25,7 @@ import json
 
 logger = logging.getLogger("smp.scan")
 
-# V7.0.3 Zero-Friction Plugin Registration
+# V7.0.4 Zero-Friction Plugin Registration
 PLUGIN_META = {{
     "name": "{name}",
     "binary": "{binary}",
@@ -66,11 +66,17 @@ def scan(target_url: str, scan_id: int, settings: dict) -> dict:
                 #     from tools.db_manager import add_finding
                 #     add_finding(
                 #         scan_id=scan_id,
-                #         scanner="{name}",
+                #         source_tool="{name}",
                 #         severity="{severity}",
                 #         title=title,
                 #         description=desc,
-                #         evidence=raw_output[:1000]
+                #         evidence=raw_output[:1000],
+                #         # Enterprise Fields (Optional but recommended)
+                #         cve_id=item.get("cve_id"),
+                #         cvss_score=item.get("cvss_score"),
+                #         epss_score=item.get("epss_score"),
+                #         epss_percentile=item.get("epss_percentile"),
+                #         affected_component=item.get("affected_component")
                 #     )
                 #     
                 #     findings.append({{"title": title, "severity": "{severity}"}})
