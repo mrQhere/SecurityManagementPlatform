@@ -354,7 +354,7 @@ def _should_run_step(step_name, resume_status):
     """
     Returns True if this step should execute given the selected scan profile.
 
-    Scan Profiles (V7.0.1)
+    Scan Profiles (V7.0.2)
     ────────────────────
     osint    — Purely passive, zero traffic to target. Safe for un-permissioned recon.
                Covers: OSINT APIs, certificate transparency, Whois, Wayback, Shodan.
@@ -654,7 +654,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     url = target["url"]
     settings = load_settings()
 
-    # ── V7.0.1 — Global Proxy Configuration ────────────────────────────────────
+    # ── V7.0.2 — Global Proxy Configuration ────────────────────────────────────
     http_proxy = settings.get("http_proxy", "").strip()
     https_proxy = settings.get("https_proxy", "").strip()
     if http_proxy:
@@ -999,17 +999,41 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 
         registered_scanners = get_registered_scanners()
         for name, meta in registered_scanners.items():
-            # Check MAC Preconditions if required
+            # Check Preconditions if required
             precondition = None
             if name in ["Nikto", "Nuclei", "ZAP"]:
                 precondition = mac_precondition
+            
+            if name in ["Trivy", "Prowler"]:
+                def cloud_precondition():
+                    if not load_settings().get("enable_enterprise_cloud", False):
+                        logger.debug(f"Skipping {name} (Cloud/Container scanning disabled in settings)")
+                        return False
+                    return True
+                precondition = cloud_precondition
+                
+            if name == "ClamAV":
+                def malware_precondition():
+                    if not load_settings().get("enable_enterprise_malware", False):
+                        logger.debug(f"Skipping {name} (Malware scanning disabled in settings)")
+                        return False
+                    return True
+                precondition = malware_precondition
+                
+            if name == "MobSF":
+                def mobsf_precondition():
+                    if not load_settings().get("mobsf_api_key", "").strip():
+                        logger.debug(f"Skipping {name} (No API key provided in settings)")
+                        return False
+                    return True
+                precondition = mobsf_precondition
                 
             def make_process_func(tool_name, confidence):
                 def _unified_processor(res):
                     _save_findings(scan_id, res or [], tool_name, confidence=confidence)
                 return _unified_processor
                 
-            process_fn = processors.get(name) or make_process_func(name, meta["confidence"])
+            process_fn = processors.get(name) or make_process_func(name, meta.get("confidence", 50))
             
             dag_plugins.append(
                 GenericPlugin(

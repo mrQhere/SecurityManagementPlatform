@@ -642,7 +642,7 @@ class DashboardLayoutMixin:
         layout.addStretch()
 
         # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V7.0.1')} • SMP Console")
+        ver = QLabel(f"{getattr(self, 'version', 'V7.0.2')} • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -1174,8 +1174,8 @@ class DashboardLayoutMixin:
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
 
-        # ── V7.0.1 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V7.0.1')}")
+        # ── V7.0.2 — API Keys & Proxies ──
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V7.0.2')}")
         api_layout = api_card.layout()
 
         def make_api_field(label_text, widget):
@@ -1204,7 +1204,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(api_card)
 
         # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V7.0.1')}")
+        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V7.0.2')}")
         profile_layout = profile_card.layout()
         profile_desc = QLabel(
             "Controls which scanner steps run. Fast = passive OSINT only. "
@@ -1238,7 +1238,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(profile_card)
 
         # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V7.0.1')}")
+        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V7.0.2')}")
         auth_layout = auth_card.layout()
         auth_desc = QLabel(
             "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "
@@ -1284,6 +1284,52 @@ class DashboardLayoutMixin:
         auth_layout.addLayout(auth_btn_row)
         scroll_layout.addWidget(auth_card)
 
+        # ── Enterprise Scanners ──
+        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V7.0.2')}")
+        enterprise_layout = enterprise_card.layout()
+        ent_desc = QLabel(
+            "Configure advanced enterprise scanning capabilities. "
+            "Note: Cloud and Container scans can be resource-intensive."
+        )
+        ent_desc.setStyleSheet("color: #666666; font-size: 12px; padding-bottom: 8px;")
+        ent_desc.setWordWrap(True)
+        enterprise_layout.addWidget(ent_desc)
+
+        self.chk_ent_cloud = QCheckBox("Enable Cloud & Container Audit (Trivy, Prowler)")
+        self.chk_ent_cloud.setStyleSheet("color: #FFFFFF; font-size: 13px;")
+        self.chk_ent_cloud.setChecked(load_settings().get("enable_enterprise_cloud", False))
+        enterprise_layout.addWidget(self.chk_ent_cloud)
+
+        self.chk_ent_malware = QCheckBox("Enable Malware & File Analysis (ClamAV)")
+        self.chk_ent_malware.setStyleSheet("color: #FFFFFF; font-size: 13px;")
+        self.chk_ent_malware.setChecked(load_settings().get("enable_enterprise_malware", False))
+        enterprise_layout.addWidget(self.chk_ent_malware)
+
+        ent_api_row = QHBoxLayout()
+        lbl_mobsf = QLabel("MobSF API Key:")
+        lbl_mobsf.setFixedWidth(200)
+        lbl_mobsf.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
+        self.txt_mobsf_api = QLineEdit()
+        self.txt_mobsf_api.setPlaceholderText("Enter API Key to enable Mobile App Security scans")
+        self.txt_mobsf_api.setText(load_settings().get("mobsf_api_key", ""))
+        self.txt_mobsf_api.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
+        ent_api_row.addWidget(lbl_mobsf)
+        ent_api_row.addWidget(self.txt_mobsf_api, 1)
+        enterprise_layout.addLayout(ent_api_row)
+
+        btn_save_ent = QPushButton("Save Enterprise Settings")
+        btn_save_ent.setObjectName("btn_secondary")
+        def _save_ent():
+            s = load_settings()
+            s["enable_enterprise_cloud"] = self.chk_ent_cloud.isChecked()
+            s["enable_enterprise_malware"] = self.chk_ent_malware.isChecked()
+            s["mobsf_api_key"] = self.txt_mobsf_api.text()
+            save_settings(s)
+            QMessageBox.information(self, "Saved", "Enterprise security settings have been updated.")
+        btn_save_ent.clicked.connect(_save_ent)
+        enterprise_layout.addWidget(btn_save_ent)
+        scroll_layout.addWidget(enterprise_card)
+
         # ── Danger Zone ──
         danger_card = self._make_card("Danger Zone")
         danger_layout = danger_card.layout()
@@ -1314,7 +1360,7 @@ class DashboardLayoutMixin:
 
         return page
 
-    # ─── Page: Reports (V7.0.1) ──────────────────────────────────────────────────
+    # ─── Page: Reports (V7.0.2) ──────────────────────────────────────────────────
 
     def _build_reports_page(self):
         """Reports Viewer — lists all generated HTML/PDF reports on disk."""

@@ -40,7 +40,7 @@ except ImportError:
     logger.warning("ReportLab not available. PDF reports will not be generated.")
 
 
-# ── V7.0.1 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
+# ── V7.0.2 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
 # Load visual constants (colors, fonts, sizes, text) from config to allow custom branding
 _REPORT_TEMPLATE_CONFIG_PATH = os.path.join(BASE_DIR, "config", "report_template.json")
 _TEMPLATE_CONFIG = {}
@@ -153,7 +153,7 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.setFont(_get_font("primary", "Helvetica"), 7)
         canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
         
-        # ── V7.0.1 — Dynamic config text footer ──
+        # ── V7.0.2 — Dynamic config text footer ──
         right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
         canvas.drawRightString(W - 18, 10, right_text)
 
@@ -168,7 +168,7 @@ def _styles():
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
-    # ── V7.0.1 — Dynamic Fonts ───────────────────────────────────────────
+    # ── V7.0.2 — Dynamic Fonts ───────────────────────────────────────────
     font_bold = _get_font("primary_bold", "Helvetica-Bold")
     font_reg = _get_font("primary", "Helvetica")
     font_mono = _get_font("mono", "Courier")
@@ -387,9 +387,9 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path)).get("version", "V7.0.1") if os.path.exists(_meta_path) else "V7.0.1"
+        _smp_ver = _json.load(open(_meta_path)).get("version", "V7.0.2") if os.path.exists(_meta_path) else "V7.0.2"
     except Exception:
-        _smp_ver = "V7.0.1"
+        _smp_ver = "V7.0.2"
 
     content_hash = derive_content_hash(
         url            = url,
@@ -582,9 +582,9 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path)).get("version", "V7.0.1") if os.path.exists(_meta_path) else "V7.0.1"
+        _smp_version = _json.load(open(_meta_path)).get("version", "V7.0.2") if os.path.exists(_meta_path) else "V7.0.2"
     except Exception:
-        _smp_version = "V7.0.1"
+        _smp_version = "V7.0.2"
 
     cover_meta = [
         ("Document Title",           "Security Assessment Report"),
@@ -905,12 +905,12 @@ def _generate_vapt_pdf(filepath, ctx):
 
     story.append(Paragraph("Assessment Framework Compliance", st["h3"]))
     framework_rows = [
-        ["OWASP WSTG v7.0.1", "Web Security Testing Guide — primary methodology"],
+        ["OWASP WSTG v7.0.2", "Web Security Testing Guide — primary methodology"],
         ["NIST SP 800-115", "Technical Guide to Information Security Testing"],
         ["PTES",            "Penetration Testing Execution Standard"],
-        ["CVSS v7.0.1",       "Common Vulnerability Scoring System for all severity ratings"],
+        ["CVSS v7.0.2",       "Common Vulnerability Scoring System for all severity ratings"],
         ["CWE",             "Common Weakness Enumeration taxonomy for all findings"],
-        ["PCI-DSS v7.0.1",    "Sections 6.4 and 11.3 — penetration testing compliance"],
+        ["PCI-DSS v7.0.2",    "Sections 6.4 and 11.3 — penetration testing compliance"],
     ]
     story.append(_data_table(
         ["Framework / Standard", "Application Scope"],
@@ -1042,7 +1042,7 @@ def _generate_vapt_pdf(filepath, ctx):
                 ("OWASP Category",  owasp_cat),
                 ("MITRE ATT&CK",    mitre_id),
                 ("CVE Identifier",  cve_val),
-                ("CVSS v7.0.1 Score", cvss_score_str),
+                ("CVSS v7.0.2 Score", cvss_score_str),
                 ("CVSS Vector",     cvss_vec),
                 ("Affected Component", affected),
                 ("Detection Source",  f"{tool} Scanner"),
@@ -1231,7 +1231,7 @@ def _generate_vapt_pdf(filepath, ctx):
         f"<b>{c['scan_time'][:10]}</b> in accordance with the following professional and ethical standards:<br/><br/>"
         f"• The engagement was performed under explicit written authorization from the asset owner.<br/>"
         f"• All testing was conducted within the declared scope boundaries. No out-of-scope assets were accessed.<br/>"
-        f"• Assessment methodologies comply with OWASP WSTG v7.0.1 and NIST SP 800-115.<br/>"
+        f"• Assessment methodologies comply with OWASP WSTG v7.0.2 and NIST SP 800-115.<br/>"
         f"• All test artefacts and injected payloads have been removed from the target environment.<br/>"
         f"• No production data was exfiltrated, stored, or retained by the testing team.<br/>"
         f"• This document contains confidential information and is classified for INTERNAL USE ONLY.<br/><br/>"
@@ -1556,7 +1556,7 @@ def _generate_html_fallback(filepath, ctx):
     h16    = c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
-    smp_ver = c.get("smp_version", "V7.0.1")
+    smp_ver = c.get("smp_version", "V7.0.2")
 
     target  = c.get("target", {})
     company = target.get("company_name") or c["settings"].get("company_name") or "—"
