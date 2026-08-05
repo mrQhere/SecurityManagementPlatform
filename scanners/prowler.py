@@ -1,5 +1,5 @@
 """
-Prowler Scanner — SMP V9.2.2
+Prowler Scanner — SMP V9.2.3
 =========================
 Runs Prowler for Cloud Security Posture Management (CSPM).
 Requires AWS/Azure credentials configured in the environment.
