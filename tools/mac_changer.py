@@ -202,7 +202,7 @@ def _strategy_ip_link_down_up(iface, new_mac, sudo_password=None):
 
 def change_mac_address(sudo_password=None):
     """
-    V9.0.2 — Assign a same-vendor-class random MAC to the primary interface.
+    V9.0.3 — Assign a same-vendor-class random MAC to the primary interface.
     Called at scan start with the sudo_password from thread-local storage.
 
     Returns (success: bool, message: str, new_mac: str).
@@ -254,7 +254,7 @@ def change_mac_address(sudo_password=None):
 
 def _emit_mac_change(iface: str, new_mac: str, message: str):
     """
-    V9.0.2 — Emit the MAC change result to:
+    V9.0.3 — Emit the MAC change result to:
       1. Audit log (DB)
       2. In-process event bus (for dashboard status bar)
     """

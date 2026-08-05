@@ -211,7 +211,7 @@ declare -A TOOLS_AMD64=(
     [katana]="https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_amd64.zip"
     [dnsx]="https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip"
     [ffuf]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz"
-    [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.0.2/gitleaks_8.21.2_linux_x64.tar.gz"
+    [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.0.3/gitleaks_8.21.2_linux_x64.tar.gz"
     [dalfox]="https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz"
 )
 
@@ -222,7 +222,7 @@ declare -A TOOLS_ARM64=(
     [katana]="https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_arm64.zip"
     [dnsx]="https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip"
     [ffuf]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
-    [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.0.2/gitleaks_8.21.2_linux_arm64.tar.gz"
+    [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.0.3/gitleaks_8.21.2_linux_arm64.tar.gz"
     [dalfox]="https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz"
 )
 
