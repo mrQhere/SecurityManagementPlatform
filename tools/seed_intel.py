@@ -91,9 +91,9 @@ def seed_database():
             "owasp_category": "A06:2021-Vulnerable and Outdated Components"
         })
         
-    # 2. Supplementary Data to ensure > 2000 target
-    if len(findings_to_process) < 2200:
-        needed = 2200 - len(findings_to_process)
+    # 2. Supplementary Data to ensure > 10500 target
+    if len(findings_to_process) < 10500:
+        needed = 10500 - len(findings_to_process)
         supp_data = generate_supplementary_cves(needed)
         findings_to_process.extend(supp_data)
         

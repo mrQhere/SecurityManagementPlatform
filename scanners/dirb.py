@@ -1,5 +1,5 @@
 """
-Dirb Scanner — SMP V9.1.5
+Dirb Scanner — SMP V9.2.1
 =========================
 Runs Dirb for classic web content discovery using dictionary-based scanning.
 Provides a third fuzzing engine alongside ffuf and gobuster, using its own
