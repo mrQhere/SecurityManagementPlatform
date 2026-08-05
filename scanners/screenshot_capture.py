@@ -1,5 +1,5 @@
 """
-Screenshot Capture V6.5
+Screenshot Capture V7.0
 ========================
 Captures screenshots of vulnerable endpoints as cryptographic evidence
 for reports. Uses playwright (headless Chromium) as primary method
