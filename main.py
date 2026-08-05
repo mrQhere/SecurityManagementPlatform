@@ -1,5 +1,5 @@
 # =============================================================================
-# Security Management Platform (SMP) V7.0
+# Security Management Platform (SMP) V7.0.1
 # mrQhere — Authorised Personnel Only
 # =============================================================================
 import sys
@@ -83,10 +83,10 @@ def main():
     args, unknown = parser.parse_known_args()
     
     if args.api:
-        print("[*] Starting SMP V7.0 in Headless API Mode...")
+        print("[*] Starting SMP V7.0.1 in Headless API Mode...")
         enforce_single_instance()
         init_directories()
-        # ── V7.0 P0 FIX: Decrypt before DB access ─────────────────────────
+        # ── V7.0.1 P0 FIX: Decrypt before DB access ─────────────────────────
         from tools.encryption_manager import decrypt_databases
         decrypt_databases()
         init_db()
@@ -113,6 +113,9 @@ def main():
 
     # Use Fusion style for consistent cross-platform rendering with the dark QSS theme
     app.setStyle("Fusion")
+
+    from ui.theme import apply_theme
+    apply_theme(app)
 
 
     # Register clean shutdown callback

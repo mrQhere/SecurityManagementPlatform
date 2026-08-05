@@ -205,7 +205,7 @@ cd SecurityManagementPlatform
 | `katana` | projectdiscovery/katana | v1.1.2 |
 | `dnsx` | projectdiscovery/dnsx | v1.2.1 |
 | `ffuf` | ffuf/ffuf | v2.1.0 |
-| `gitleaks` | gitleaks/gitleaks | v7.0 |
+| `gitleaks` | gitleaks/gitleaks | v7.0.1 |
 | `dalfox` | hahwul/dalfox | v2.9.3 |
 
 ---
@@ -587,7 +587,7 @@ Every finding is automatically mapped to control IDs across five frameworks. Thi
 | **CIS Controls v8** | 11 controls | Infrastructure hardening benchmark |
 | **ISO 27001:2022** | Annex A controls | International ISMS certification |
 | **SOC 2 Type II** | CC6.1–CC9.2 | SaaS / cloud audit readiness |
-| **PCI-DSS v7.0** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
+| **PCI-DSS v7.0.1** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
 
 ### 6.3 Using the compliance mapper
 

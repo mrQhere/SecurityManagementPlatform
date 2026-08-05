@@ -25,30 +25,11 @@ def apply_theme(widget, dark_mode: bool = True):
     dark_mode: toggle dark/light palette.
     """
     Theme.load_fonts()
-    bg = Theme.DARK_BG if dark_mode else Theme.LIGHT_BG
-    text = Theme.TEXT_DARK if dark_mode else Theme.TEXT_LIGHT
-    stylesheet = f"""
-        QWidget {{
-            background-color: {bg};
-            color: {text};
-            font-family: 'Inter', sans-serif;
-            border-radius: 12px;
-        }}
-        QPushButton {{
-            background-color: {Theme.PRIMARY};
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-        }}
-        QPushButton:hover {{
-            background-color: {Theme.ACCENT_HOVER};
-        }}
-        QLineEdit {{
-            background-color: rgba(255,255,255,0.4);
-            border: 1.5px solid rgba(255,255,255,0.3);
-            border-radius: 10px;
-            padding: 6px 10px;
-        }}
-    """
-    widget.setStyleSheet(stylesheet)
+    qss_path = os.path.join(os.path.dirname(__file__), "style.qss")
+    if os.path.exists(qss_path):
+        with open(qss_path, "r") as f:
+            stylesheet = f.read()
+        widget.setStyleSheet(stylesheet)
+    else:
+        # Fallback if style.qss is missing
+        pass

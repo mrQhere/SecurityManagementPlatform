@@ -35,4 +35,7 @@ run:
 run-api:
 	./venv/bin/python main.py --api
 
-.PHONY: docker-build docker-run docker-stop docker-logs docker-shell docker-health docker-clean install run run-api
+snapshot:
+	python3 tools/snapshot.py
+
+.PHONY: docker-build docker-run docker-stop docker-logs docker-shell docker-health docker-clean install run run-api snapshot
