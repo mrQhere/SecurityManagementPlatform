@@ -354,7 +354,7 @@ def _should_run_step(step_name, resume_status):
     """
     Returns True if this step should execute given the selected scan profile.
 
-    Scan Profiles (V7.0.4)
+    Scan Profiles (V7.0.5)
     ────────────────────
     osint    — Purely passive, zero traffic to target. Safe for un-permissioned recon.
                Covers: OSINT APIs, certificate transparency, Whois, Wayback, Shodan.
@@ -654,7 +654,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     url = target["url"]
     settings = load_settings()
 
-    # ── V7.0.4 — Global Proxy Configuration ────────────────────────────────────
+    # ── V7.0.5 — Global Proxy Configuration ────────────────────────────────────
     http_proxy = settings.get("http_proxy", "").strip()
     https_proxy = settings.get("https_proxy", "").strip()
     if http_proxy:
@@ -1005,25 +1005,25 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
                 precondition = mac_precondition
             
             if name in ["Trivy", "Prowler"]:
-                def cloud_precondition():
+                def cloud_precondition(n=name):
                     if not load_settings().get("enable_enterprise_cloud", False):
-                        logger.debug(f"Skipping {name} (Cloud/Container scanning disabled in settings)")
+                        logger.debug(f"Skipping {n} (Cloud/Container scanning disabled in settings)")
                         return False
                     return True
                 precondition = cloud_precondition
                 
             if name == "ClamAV":
-                def malware_precondition():
+                def malware_precondition(n=name):
                     if not load_settings().get("enable_enterprise_malware", False):
-                        logger.debug(f"Skipping {name} (Malware scanning disabled in settings)")
+                        logger.debug(f"Skipping {n} (Malware scanning disabled in settings)")
                         return False
                     return True
                 precondition = malware_precondition
                 
             if name == "MobSF":
-                def mobsf_precondition():
+                def mobsf_precondition(n=name):
                     if not load_settings().get("mobsf_api_key", "").strip():
-                        logger.debug(f"Skipping {name} (No API key provided in settings)")
+                        logger.debug(f"Skipping {n} (No API key provided in settings)")
                         return False
                     return True
                 precondition = mobsf_precondition

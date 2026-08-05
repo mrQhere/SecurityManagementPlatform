@@ -1,5 +1,5 @@
 """
-Netcat Probe Scanner — SMP V7.0.4
+Netcat Probe Scanner — SMP V7.0.5
 ================================
 Uses netcat (nc) for raw TCP/UDP port probing and banner grabbing.
 Complements Nmap by providing direct, low-noise service banner collection
