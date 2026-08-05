@@ -37,7 +37,7 @@ def register_scanner(name, step_name, depends_on, binary_name, needs_binary=True
 
 def _load_plugin_meta(modname: str, module) -> bool:
     """
-    V7.0.5 — Zero-Friction Plugin Registration.
+    V7.0.6 — Zero-Friction Plugin Registration.
     
     If a scanner module has a PLUGIN_META dict, auto-register it.
     
@@ -89,7 +89,7 @@ def _load_plugin_meta(modname: str, module) -> bool:
 
 def discover_scanners():
     """Auto-discover and import all python files in the scanners/ directory.
-    V7.0.5: Also checks for PLUGIN_META for zero-config plug-and-play scanners.
+    V7.0.6: Also checks for PLUGIN_META for zero-config plug-and-play scanners.
     """
     import scanners
     package = scanners
@@ -98,7 +98,7 @@ def discover_scanners():
         if not ispkg and modname != "scanners.scan_runner" and not modname.startswith("scanners.core"):
             try:
                 module = importlib.import_module(modname)
-                # V7.0.5: Try PLUGIN_META auto-registration
+                # V7.0.6: Try PLUGIN_META auto-registration
                 _load_plugin_meta(modname, module)
             except Exception as e:
                 logger.error(f"Failed to load scanner module {modname}: {e}")
@@ -106,7 +106,7 @@ def discover_scanners():
 
 def auto_discover_plugins() -> list:
     """
-    V7.0.5 — Explicitly trigger plugin auto-discovery and return list of newly found plugins.
+    V7.0.6 — Explicitly trigger plugin auto-discovery and return list of newly found plugins.
     Called on startup and can be called again if new scanners are dropped in.
     """
     before = set(_REGISTRY.keys())

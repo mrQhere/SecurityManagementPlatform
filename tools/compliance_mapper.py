@@ -6,7 +6,7 @@ Maps SMP finding types and CWE IDs to compliance control references:
   - CIS Controls v8
   - ISO 27001:2022 Annex A
   - SOC 2 Type II (Trust Services Criteria)
-  - PCI-DSS v7.0.5 (Requirements 6, 11)
+  - PCI-DSS v7.0.6 (Requirements 6, 11)
 
 Usage:
     from tools.compliance_mapper import map_finding_to_controls
@@ -178,8 +178,8 @@ _SOC2_TYPE_II = {
     ],
 }
 
-# ── PCI-DSS v7.0.5 ─────────────────────────────────────────────────────────────
-# Source: PCI Security Standards Council PCI DSS v7.0.5 (March 2022)
+# ── PCI-DSS v7.0.6 ─────────────────────────────────────────────────────────────
+# Source: PCI Security Standards Council PCI DSS v7.0.6 (March 2022)
 _PCI_DSS_V4 = {
     "Req 6.2.4 - Software Engineering Techniques (Injection Prevention)": [
         "sql injection", "sqli", "command injection", "xxe", "ldap injection",
@@ -332,7 +332,7 @@ def format_compliance_table(summary: dict) -> str:
         CIS Controls        45%     5/11
         ISO 27001          55%     6/11
         SOC 2 Type II       40%     4/10
-        PCI-DSS v7.0.5        50%     6/12
+        PCI-DSS v7.0.6        50%     6/12
     """
     lines = [
         "Framework          Coverage   Controls Matched",
@@ -345,7 +345,7 @@ def format_compliance_table(summary: dict) -> str:
         f"{len(summary['iso_categories_hit'])}/{len(_ISO_27001_2022)}",
         f"SOC 2 Type II       {summary['soc2_coverage']:>3}%     "
         f"{len(summary['soc2_controls_hit'])}/{len(_SOC2_TYPE_II)}",
-        f"PCI-DSS v7.0.5        {summary['pci_dss_coverage']:>3}%     "
+        f"PCI-DSS v7.0.6        {summary['pci_dss_coverage']:>3}%     "
         f"{len(summary['pci_dss_controls_hit'])}/{len(_PCI_DSS_V4)}",
     ]
     return "\n".join(lines)

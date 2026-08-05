@@ -32,7 +32,7 @@ venv/
 *.swp
 *.swo
 
-# SMP Specific - V6.0
+# SMP Specific - V7.0
 config/auth.json
 config/license.key
 config/settings.json
@@ -47,8 +47,17 @@ reports/sbom/*.spdx
 reports/sbom/*.csv
 reports/evidence/screenshots/*.png
 reports/evidence/screenshots/*.html
-cache/port_baselines/*.json
+cache/
 database/raw_outputs/
+
+# Root DBs
+*.db
+*.db.enc
+*.db-wal
+*.db-shm
+
+# Agent/AI temp
+.gemini/
 
 # Logs
 logs/
