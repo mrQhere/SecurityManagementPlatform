@@ -40,7 +40,7 @@ except ImportError:
     logger.warning("ReportLab not available. PDF reports will not be generated.")
 
 
-# ── V7.0.7 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
+# ── V7.0.8 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
 # Load visual constants (colors, fonts, sizes, text) from config to allow custom branding
 _REPORT_TEMPLATE_CONFIG_PATH = os.path.join(BASE_DIR, "config", "report_template.json")
 _TEMPLATE_CONFIG = {}
@@ -153,7 +153,7 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.setFont(_get_font("primary", "Helvetica"), 7)
         canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
         
-        # ── V7.0.7 — Dynamic config text footer ──
+        # ── V7.0.8 — Dynamic config text footer ──
         right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
         canvas.drawRightString(W - 18, 10, right_text)
 
@@ -168,7 +168,7 @@ def _styles():
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
-    # ── V7.0.7 — Dynamic Fonts ───────────────────────────────────────────
+    # ── V7.0.8 — Dynamic Fonts ───────────────────────────────────────────
     font_bold = _get_font("primary_bold", "Helvetica-Bold")
     font_reg = _get_font("primary", "Helvetica")
     font_mono = _get_font("mono", "Courier")
@@ -379,6 +379,16 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     ctx = _build_context(scan_id, target, current_findings, previous_scan,
                          scanned_by, technologies, risk_data, trend_deltas)
 
+    # ── V9 Artificial Intelligence Correlation ─────────────────────────
+    try:
+        from intelligence.brain import process_findings_for_global_intel, generate_ai_insights
+        process_findings_for_global_intel(current_findings)
+        ctx["ai_insights"] = generate_ai_insights(current_findings)
+    except Exception as e:
+        logger.error(f"Brain integration failed: {e}")
+        ctx["ai_insights"] = None
+
+
     # ── Derive content hash from deterministic facts (NOT from PDF binary) ─────
     # This hash can be recomputed from the data printed on the cover page alone,
     # even after the database is deleted, making reports self-verifying.
@@ -387,9 +397,9 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path)).get("version", "V7.0.7") if os.path.exists(_meta_path) else "V7.0.7"
+        _smp_ver = _json.load(open(_meta_path)).get("version", "V7.0.8") if os.path.exists(_meta_path) else "V7.0.8"
     except Exception:
-        _smp_ver = "V7.0.7"
+        _smp_ver = "V7.0.8"
 
     content_hash = derive_content_hash(
         url            = url,
@@ -582,9 +592,9 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path)).get("version", "V7.0.7") if os.path.exists(_meta_path) else "V7.0.7"
+        _smp_version = _json.load(open(_meta_path)).get("version", "V7.0.8") if os.path.exists(_meta_path) else "V7.0.8"
     except Exception:
-        _smp_version = "V7.0.7"
+        _smp_version = "V7.0.8"
 
     cover_meta = [
         ("Document Title",           "Security Assessment Report"),
@@ -669,6 +679,17 @@ def _generate_vapt_pdf(filepath, ctx):
             st["toc_entry"]))
     story.append(_spacer(14))
     story.append(_hr())
+
+    # ── V9 AI Insights ────────────────────────────────────────────────────────
+    if c.get("ai_insights"):
+        story.append(_spacer(6))
+        story.append(Paragraph("<b><font color='#00aaff'>Neural Correlation Engine (Brain)</font></b>", st["h3"]))
+        story.append(_spacer(4))
+        # Convert simple markdown to reportlab paragraph
+        insights_html = c["ai_insights"].replace('\n', '<br/>').replace('**', '<b>').replace('`', '<i>')
+        story.append(Paragraph(insights_html, st["body_left"]))
+        story.append(_spacer(10))
+        story.append(_hr())
 
     # ── Modular Situational Executive Summary ────────────────────────────────
     # Each paragraph is chosen based on what the scan actually found.
@@ -905,12 +926,12 @@ def _generate_vapt_pdf(filepath, ctx):
 
     story.append(Paragraph("Assessment Framework Compliance", st["h3"]))
     framework_rows = [
-        ["OWASP WSTG v7.0.7", "Web Security Testing Guide — primary methodology"],
+        ["OWASP WSTG v7.0.8", "Web Security Testing Guide — primary methodology"],
         ["NIST SP 800-115", "Technical Guide to Information Security Testing"],
         ["PTES",            "Penetration Testing Execution Standard"],
-        ["CVSS v7.0.7",       "Common Vulnerability Scoring System for all severity ratings"],
+        ["CVSS v7.0.8",       "Common Vulnerability Scoring System for all severity ratings"],
         ["CWE",             "Common Weakness Enumeration taxonomy for all findings"],
-        ["PCI-DSS v7.0.7",    "Sections 6.4 and 11.3 — penetration testing compliance"],
+        ["PCI-DSS v7.0.8",    "Sections 6.4 and 11.3 — penetration testing compliance"],
     ]
     story.append(_data_table(
         ["Framework / Standard", "Application Scope"],
@@ -1045,7 +1066,7 @@ def _generate_vapt_pdf(filepath, ctx):
                 ("OWASP Category",  owasp_cat),
                 ("MITRE ATT&CK",    mitre_id),
                 ("CVE Identifier",  cve_val),
-                ("CVSS v7.0.7 Score", cvss_score_str),
+                ("CVSS v7.0.8 Score", cvss_score_str),
                 ("CVSS Vector",     cvss_vec)
             ]
             
@@ -1245,7 +1266,7 @@ def _generate_vapt_pdf(filepath, ctx):
         f"<b>{c['scan_time'][:10]}</b> in accordance with the following professional and ethical standards:<br/><br/>"
         f"• The engagement was performed under explicit written authorization from the asset owner.<br/>"
         f"• All testing was conducted within the declared scope boundaries. No out-of-scope assets were accessed.<br/>"
-        f"• Assessment methodologies comply with OWASP WSTG v7.0.7 and NIST SP 800-115.<br/>"
+        f"• Assessment methodologies comply with OWASP WSTG v7.0.8 and NIST SP 800-115.<br/>"
         f"• All test artefacts and injected payloads have been removed from the target environment.<br/>"
         f"• No production data was exfiltrated, stored, or retained by the testing team.<br/>"
         f"• This document contains confidential information and is classified for INTERNAL USE ONLY.<br/><br/>"
@@ -1570,7 +1591,7 @@ def _generate_html_fallback(filepath, ctx):
     h16    = c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
-    smp_ver = c.get("smp_version", "V7.0.7")
+    smp_ver = c.get("smp_version", "V7.0.8")
 
     target  = c.get("target", {})
     company = target.get("company_name") or c["settings"].get("company_name") or "—"

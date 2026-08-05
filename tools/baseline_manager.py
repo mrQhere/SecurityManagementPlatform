@@ -1,5 +1,5 @@
 """
-Port Baseline Manager V7.0.7
+Port Baseline Manager V7.0.8
 ============================
 Stores and compares per-target port profiles across scans.
 After the first scan, a "baseline" is saved. All subsequent scans
