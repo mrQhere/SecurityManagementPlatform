@@ -1,5 +1,5 @@
 """
-ClamAV Scanner — SMP V7.0.8
+ClamAV Scanner — SMP V9.0.1
 =========================
 Runs ClamAV (clamscan) for malware and YARA static file analysis.
 """

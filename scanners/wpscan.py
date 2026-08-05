@@ -67,7 +67,7 @@ def run_wpscan_scan(url):
 
     logger.info(f"WPScan: WordPress detected at {url}. Starting deep scan.")
 
-    # ── V7.0.8 — WPScan Docker Fallback ─────────────────────────────────────────
+    # ── V9.0.1 — WPScan Docker Fallback ─────────────────────────────────────────
     import shutil
     has_native = shutil.which(bin_path) is not None
     

@@ -1,5 +1,5 @@
 """
-SBOM Generator V7.0.8
+SBOM Generator V9.0.1
 ====================
 Generates a CycloneDX JSON Software Bill of Materials from technology
 fingerprinting data collected during a scan.
@@ -54,12 +54,12 @@ def _generate_cyclonedx(scan_id: int, target_url: str, technologies: list, outpu
                 "tools": [{
                     "vendor": "mrQhere",
                     "name": "Security Management Platform",
-                    "version": "V7.0.8"
+                    "version": "V9.0.1"
                 }],
                 "component": {
                     "type": "application",
                     "name": target_url,
-                    "description": f"Target scanned by SMP V7.0.8 on {datetime.now().strftime('%Y-%m-%d')}"
+                    "description": f"Target scanned by SMP V9.0.1 on {datetime.now().strftime('%Y-%m-%d')}"
                 }
             },
             "components": components
