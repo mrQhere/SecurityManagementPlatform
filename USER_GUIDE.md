@@ -205,7 +205,7 @@ cd SecurityManagementPlatform
 | `katana` | projectdiscovery/katana | v1.1.2 |
 | `dnsx` | projectdiscovery/dnsx | v1.2.1 |
 | `ffuf` | ffuf/ffuf | v2.1.0 |
-| `gitleaks` | gitleaks/gitleaks | v7.0.7 |
+| `gitleaks` | gitleaks/gitleaks | v7.0.8 |
 | `dalfox` | hahwul/dalfox | v2.9.3 |
 
 ---
@@ -481,7 +481,7 @@ Phase 1 — Recon (parallel)
 | **GraphQL Scanner** | Introspection abuse, batch attacks |
 | **CRLF Scanner** | Header injection |
 
-#### 🏢 Enterprise & Cloud Tools (V7.0.7)
+#### 🏢 Enterprise & Cloud Tools (V7.0.8)
 
 | Tool | What it tests | Trigger condition |
 |------|---------------|-------------------|
@@ -501,7 +501,7 @@ Any scanner that times out or fails in Phase 1 is added to a deferred retry queu
 
 ### 4.5 Adding Custom Scanners in 60 Seconds
 
-Thanks to the **V7.0.7 Zero-Friction Plugin Registry**, adding your own custom security tools to the SMP pipeline is fully automated. You no longer need to wire up databases, UI toggles, or orchestration logic.
+Thanks to the **V7.0.8 Zero-Friction Plugin Registry**, adding your own custom security tools to the SMP pipeline is fully automated. You no longer need to wire up databases, UI toggles, or orchestration logic.
 
 Simply use the built-in generator:
 
@@ -616,7 +616,7 @@ Every finding is automatically mapped to control IDs across five frameworks. Thi
 | **CIS Controls v8** | 11 controls | Infrastructure hardening benchmark |
 | **ISO 27001:2022** | Annex A controls | International ISMS certification |
 | **SOC 2 Type II** | CC6.1–CC9.2 | SaaS / cloud audit readiness |
-| **PCI-DSS v7.0.7** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
+| **PCI-DSS v7.0.8** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
 
 ### 6.3 Using the compliance mapper
 
@@ -1374,9 +1374,11 @@ SecurityManagementPlatform
 │   ├── responsibility.json
 │   └── settings.example.json
 ├── database
-│   └── backup
+│   ├── backup
+│   └── global_intel.db
 ├── docker-compose.yml
 ├── intelligence
+│   ├── brain.py
 │   ├── cisa.py
 │   ├── cve_correlator.py
 │   ├── epss.py

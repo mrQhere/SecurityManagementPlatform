@@ -55,6 +55,7 @@ database/raw_outputs/
 *.db.enc
 *.db-wal
 *.db-shm
+!database/global_intel.db
 
 # Agent/AI temp
 .gemini/

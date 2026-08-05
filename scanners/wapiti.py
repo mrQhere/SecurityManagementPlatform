@@ -41,7 +41,7 @@ def run_wapiti_scan(url):
             # Wapiti uses -H for custom headers
             cmd.extend(["-H", f"{hname}={hval}"])
         
-        # ── V7.0.7 — Adaptive Wapiti Timeout ───────────────────────────────────────
+        # ── V7.0.8 — Adaptive Wapiti Timeout ───────────────────────────────────────
         profile = settings.get("scan_profile", "standard")
         if profile == "fast":
             adaptive_timeout = 300
