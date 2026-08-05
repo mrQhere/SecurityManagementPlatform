@@ -205,7 +205,7 @@ cd SecurityManagementPlatform
 | `katana` | projectdiscovery/katana | v1.1.2 |
 | `dnsx` | projectdiscovery/dnsx | v1.2.1 |
 | `ffuf` | ffuf/ffuf | v2.1.0 |
-| `gitleaks` | gitleaks/gitleaks | v7.0.2 |
+| `gitleaks` | gitleaks/gitleaks | v7.0.3 |
 | `dalfox` | hahwul/dalfox | v2.9.3 |
 
 ---
@@ -481,7 +481,7 @@ Phase 1 — Recon (parallel)
 | **GraphQL Scanner** | Introspection abuse, batch attacks |
 | **CRLF Scanner** | Header injection |
 
-#### 🏢 Enterprise & Cloud Tools (V7.0.2)
+#### 🏢 Enterprise & Cloud Tools (V7.0.3)
 
 | Tool | What it tests | Trigger condition |
 |------|---------------|-------------------|
@@ -498,6 +498,25 @@ ffuf on React/Vue/Angular SPAs returns 200 for every path (catch-all routing). S
 ### 4.4 Deferred retry queue
 
 Any scanner that times out or fails in Phase 1 is added to a deferred retry queue. After the main pipeline completes, failed steps are re-attempted with 1.5× timeout. This prevents a slow network from permanently skipping steps.
+
+### 4.5 Adding Custom Scanners in 60 Seconds
+
+Thanks to the **V7.0.3 Zero-Friction Plugin Registry**, adding your own custom security tools to the SMP pipeline is fully automated. You no longer need to wire up databases, UI toggles, or orchestration logic.
+
+Simply use the built-in generator:
+
+```bash
+python3 tools/create_scanner.py --name "MyTool" --binary "mytool" --severity High
+```
+
+This will automatically scaffold a new python file in the `scanners/` directory (e.g., `scanners/mytool.py`). 
+
+**All you have to do is:**
+1. Open the newly generated `scanners/mytool.py`.
+2. Update the `cmd` variable to pass your specific CLI arguments.
+3. Update the parser logic (Step 3 in the generated file) to map your tool's output to SMP's findings database.
+
+The next time you run SMP, it will **auto-discover** your tool, run it during the scan pipeline, save its output to the database, and automatically inject its findings into the final PDF report.
 
 ---
 
@@ -597,7 +616,7 @@ Every finding is automatically mapped to control IDs across five frameworks. Thi
 | **CIS Controls v8** | 11 controls | Infrastructure hardening benchmark |
 | **ISO 27001:2022** | Annex A controls | International ISMS certification |
 | **SOC 2 Type II** | CC6.1–CC9.2 | SaaS / cloud audit readiness |
-| **PCI-DSS v7.0.2** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
+| **PCI-DSS v7.0.3** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
 
 ### 6.3 Using the compliance mapper
 
@@ -1440,6 +1459,7 @@ SecurityManagementPlatform
 │   ├── bump_version.py
 │   ├── compliance_mapper.py
 │   ├── config_manager.py
+│   ├── create_scanner.py
 │   ├── db_manager.py
 │   ├── dynamic_pipeline.py
 │   ├── egress_auditor.py
