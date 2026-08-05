@@ -1,8 +1,0 @@
-{
-    "cisa_catalog_version": "2026.07.16",
-    "cisa_last_sync": "2021-11-03",
-    "github_next_url": "https://api.github.com/advisories?per_page=100&type=reviewed&after=Y3Vyc29yOnYyOpK0MjAyNi0wMy0zMVQyMjozNTowOFrOAAVIMA%3D%3D",
-    "github_last_sync_time": "2026-07-19 22:26:32",
-    "github_pages_synced": 22,
-    "nvd_next_start_index": 34000
-}
