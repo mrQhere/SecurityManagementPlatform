@@ -48,6 +48,9 @@ class TestSMPComponents(unittest.TestCase):
         
         # Save original states
         cls.orig_db_path = tools.db_manager.DB_PATH
+        cls.orig_analytics_db_path = tools.db_manager.ANALYTICS_DB_PATH
+        cls.orig_cve_db_path = tools.db_manager.CVE_DB_PATH
+        cls.orig_redundancy_db_path = tools.db_manager.REDUNDANCY_DB_PATH
         cls.orig_backup_dir = tools.db_manager.BACKUP_DIR
         cls.orig_auth_file = tools.encryption_manager.AUTH_FILE
         cls.orig_db_files = tools.encryption_manager.DB_FILES
@@ -76,11 +79,17 @@ class TestSMPComponents(unittest.TestCase):
 
         # Override modules properties for isolation
         tools.db_manager.DB_PATH = os.path.join(test_db_dir, "security.db")
+        tools.db_manager.ANALYTICS_DB_PATH = os.path.join(test_db_dir, "analytics.db")
+        tools.db_manager.CVE_DB_PATH = os.path.join(test_db_dir, "cve.db")
+        tools.db_manager.REDUNDANCY_DB_PATH = os.path.join(test_db_dir, "redundancy.db")
         tools.db_manager.BACKUP_DIR = test_backup_dir
         
         tools.encryption_manager.AUTH_FILE = os.path.join(test_config_dir, "auth.json")
         tools.encryption_manager.DB_FILES = {
             os.path.join(test_db_dir, "security.db"): os.path.join(test_db_dir, "security.db.enc"),
+            os.path.join(test_db_dir, "analytics.db"): os.path.join(test_db_dir, "analytics.db.enc"),
+            os.path.join(test_db_dir, "cve.db"): os.path.join(test_db_dir, "cve.db.enc"),
+            os.path.join(test_db_dir, "redundancy.db"): os.path.join(test_db_dir, "redundancy.db.enc"),
             os.path.join(test_backup_dir, "active_scans.db"): os.path.join(test_backup_dir, "active_scans.db.enc"),
             os.path.join(test_backup_dir, "cve_secondary.db"): os.path.join(test_backup_dir, "cve_secondary.db.enc"),
         }
@@ -115,6 +124,9 @@ class TestSMPComponents(unittest.TestCase):
         
         # Restore original paths
         tools.db_manager.DB_PATH = cls.orig_db_path
+        tools.db_manager.ANALYTICS_DB_PATH = cls.orig_analytics_db_path
+        tools.db_manager.CVE_DB_PATH = cls.orig_cve_db_path
+        tools.db_manager.REDUNDANCY_DB_PATH = cls.orig_redundancy_db_path
         tools.db_manager.BACKUP_DIR = cls.orig_backup_dir
         tools.encryption_manager.AUTH_FILE = cls.orig_auth_file
         tools.encryption_manager.DB_FILES = cls.orig_db_files
