@@ -1,5 +1,5 @@
 # =============================================================================
-# Security Management Platform (SMP) V9.2.1
+# Security Management Platform (SMP) V9.2.2
 # mrQhere — Authorised Personnel Only
 # =============================================================================
 import sys
@@ -83,10 +83,10 @@ def main():
     args, unknown = parser.parse_known_args()
     
     if args.api:
-        print("[*] Starting SMP V9.2.1 in Headless API Mode...")
+        print("[*] Starting SMP V9.2.2 in Headless API Mode...")
         enforce_single_instance()
         init_directories()
-        # ── V9.2.1 P0 FIX: Decrypt before DB access ─────────────────────────
+        # ── V9.2.2 P0 FIX: Decrypt before DB access ─────────────────────────
         from tools.encryption_manager import decrypt_databases
         decrypt_databases()
         init_db()
