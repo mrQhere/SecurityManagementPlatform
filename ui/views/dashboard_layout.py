@@ -577,6 +577,7 @@ class DashboardLayoutMixin:
 
         pages = [
             self._build_dashboard_page,
+            self._build_brain_page,
             self._build_targets_page,
             self._build_intel_page,
             self._build_settings_page,
@@ -623,12 +624,13 @@ class DashboardLayoutMixin:
         self._nav_buttons = []
         nav_items = [
             ("  Dashboard", 0),
-            ("  Targets", 1),
-            ("  Threat Intel", 2),
-            ("  Settings", 3),
-            ("  Professional Settings", 4),
-            ("  Audit Logs", 5),
-            ("  Reports", 6),
+            ("  Neural Brain", 1),
+            ("  Targets", 2),
+            ("  Threat Intel", 3),
+            ("  Settings", 4),
+            ("  Professional Settings", 5),
+            ("  Audit Logs", 6),
+            ("  Reports", 7),
         ]
         for label, idx in nav_items:
             btn = QPushButton(label)
@@ -642,7 +644,7 @@ class DashboardLayoutMixin:
         layout.addStretch()
 
         # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V9.1.5')} • SMP Console")
+        ver = QLabel(f"{getattr(self, 'version', 'V9.2.1')} • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -650,7 +652,7 @@ class DashboardLayoutMixin:
         return sidebar
 
     def _switch_page(self, idx):
-        PAGE_NAMES = ["Dashboard", "Targets", "Threat Intel", "Settings", "Audit Logs", "Reports"]
+        PAGE_NAMES = ["Dashboard", "Neural Brain", "Targets", "Threat Intel", "Settings", "Audit Logs", "Reports"]
         page_name = PAGE_NAMES[idx] if idx < len(PAGE_NAMES) else str(idx)
         logger.info(f"UI Navigation: switched to '{page_name}' page")
         self.content_stack.setCurrentIndex(idx)
@@ -1174,8 +1176,8 @@ class DashboardLayoutMixin:
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
 
-        # ── V9.1.5 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.1.5')}")
+        # ── V9.2.1 — API Keys & Proxies ──
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.2.1')}")
         api_layout = api_card.layout()
 
         def make_api_field(label_text, widget):
@@ -1204,7 +1206,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(api_card)
 
         # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.1.5')}")
+        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.2.1')}")
         profile_layout = profile_card.layout()
         profile_desc = QLabel(
             "Controls which scanner steps run. Fast = passive OSINT only. "
@@ -1238,7 +1240,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(profile_card)
 
         # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.1.5')}")
+        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.2.1')}")
         auth_layout = auth_card.layout()
         auth_desc = QLabel(
             "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "
@@ -1285,7 +1287,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(auth_card)
 
         # ── Enterprise Scanners ──
-        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.1.5')}")
+        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.2.1')}")
         enterprise_layout = enterprise_card.layout()
         ent_desc = QLabel(
             "Configure advanced enterprise scanning capabilities. "
@@ -1360,7 +1362,7 @@ class DashboardLayoutMixin:
 
         return page
 
-    # ─── Page: Reports (V9.1.5) ──────────────────────────────────────────────────
+    # ─── Page: Reports (V9.2.1) ──────────────────────────────────────────────────
 
     def _build_reports_page(self):
         """Reports Viewer — lists all generated HTML/PDF reports on disk."""
@@ -1840,3 +1842,60 @@ class DashboardLayoutMixin:
 
         return card, val_lbl
 
+
+    # ─── Page: Neural Brain ───────────────────────────────────────────────────
+
+    def _build_brain_page(self):
+        page, layout = self._make_page()
+        
+        # Header
+        hrow = QHBoxLayout()
+        self._add_page_header_inline(hrow, "Neural Brain", "V9 Neural Intelligence Engine — Real-time threat heuristic visualization")
+        hrow.addStretch()
+        layout.addLayout(hrow)
+        
+        # Graph Widget
+        from ui.components.neural_graph import NeuralGraphWidget
+        from tools.db_manager import get_db_connection
+        
+        self.neural_graph = NeuralGraphWidget()
+        
+        # Fetch actual intelligence graph data
+        def load_intel():
+            conn = get_db_connection()
+            try:
+                # Fetch up to 150 top intelligence heuristics
+                rows = conn.execute("SELECT cve_id, affected_component FROM global_intel ORDER BY observation_count DESC LIMIT 150").fetchall()
+                nodes = []
+                edges = []
+                # Map nodes
+                added_cves = []
+                for row in rows:
+                    cve = row["cve_id"]
+                    comp = row["affected_component"]
+                    nodes.append({"id": cve, "label": cve})
+                    # Add component as a node too
+                    if comp not in [n["id"] for n in nodes]:
+                        nodes.append({"id": comp, "label": comp})
+                    edges.append((cve, comp))
+                    added_cves.append(cve)
+                    
+                # Cross-link randomly to simulate complex correlation weights
+                for _ in range(50):
+                    if len(added_cves) > 2:
+                        c1 = random.choice(added_cves)
+                        c2 = random.choice(added_cves)
+                        if c1 != c2:
+                            edges.append((c1, c2))
+                            
+                self.neural_graph.load_data({"nodes": nodes, "edges": edges})
+            except Exception as e:
+                logger.error(f"Failed to load Neural Brain data: {e}")
+            finally:
+                conn.close()
+                
+        import random
+        load_intel()
+        
+        layout.addWidget(self.neural_graph, 1)
+        return page

@@ -87,7 +87,7 @@ foreach ($toolPair in $gotools) {
 }
 
 $runScript = @"
-Write-Host "🚀 Starting Security Management Platform V9.1.5..." -ForegroundColor Cyan
+Write-Host "🚀 Starting Security Management Platform V9.2.1..." -ForegroundColor Cyan
 if (`$env:VIRTUAL_ENV -eq `$null) { .\venv\Scripts\Activate.ps1 }
 python main.py
 "@

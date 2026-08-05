@@ -81,6 +81,7 @@ def get_latest_scan_operator_for_target(target_id):
 
 from ui.views.dashboard_layout import DashboardLayoutMixin
 from ui.controllers.dashboard_logic import DashboardLogicMixin
+from ui.theme import apply_theme
 
 class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
     # ─── Init ──────────────────────────────────────────────────────────────────
@@ -89,12 +90,12 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         super().__init__()
         import json
         import os
-        version = "V9.1.5"
+        version = "V9.2.1"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V9.1.5")
+                version = metadata.get("version", "V9.2.1")
         except Exception:
             pass
         self.setWindowTitle(f"Security Management Platform • {version}")
@@ -114,9 +115,10 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         self._cache_scan_log_mtime = None
         self._cache_error_log_mtime = None
 
+        apply_theme(self)
         self._setup_ui()
         
-        # ── V9.1.5 — Restore Splitter States ──
+        # ── V9.2.1 — Restore Splitter States ──
         try:
             from tools.config_manager import load_settings
             import base64
@@ -203,7 +205,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         except Exception:
             pass
 
-        # ── V9.1.5 — Save Splitter States ──
+        # ── V9.2.1 — Save Splitter States ──
         try:
             from tools.config_manager import load_settings, save_settings
             import base64
