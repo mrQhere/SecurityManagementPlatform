@@ -1,7 +1,7 @@
 """
-Risk Scoring Engine V9.1.1 — calibrated against real CVE data.
+Risk Scoring Engine V9.1.3 — calibrated against real CVE data.
 
-V9.1.1 Improvements:
+V9.1.3 Improvements:
 - Reads cvss_score column directly from the findings table (no regex parsing needed)
 - CISA KEV confirmed-exploited CVEs receive 2× score multiplier
 - CVE match tier (A/B/C from correlator) respected in contribution weight
@@ -89,7 +89,7 @@ def calculate_and_store_risk_score(scan_id, findings):
     """
     Calculates a calibrated risk score from *findings*, persists it, and returns the score dict.
 
-    V9.1.1: Reads cvss_score and epss_score columns directly — no regex parsing.
+    V9.1.3: Reads cvss_score and epss_score columns directly — no regex parsing.
     CISA KEV confirmed findings receive a 2× multiplier.
 
     Returns:
@@ -127,7 +127,7 @@ def calculate_and_store_risk_score(scan_id, findings):
         title = f.get("title", "") or ""
         desc  = f.get("description", "") or ""
 
-        # V9.1.1: Read CVSS/EPSS directly from the findings row columns
+        # V9.1.3: Read CVSS/EPSS directly from the findings row columns
         cvss  = f.get("cvss_score")     # stored as float by add_finding()
         epss  = f.get("epss_score")     # stored as float by add_finding()
 
@@ -155,7 +155,7 @@ def calculate_and_store_risk_score(scan_id, findings):
 
         # ── Tool-specific scoring ──────────────────────────────────────────────
         if tool == "CVE Correlation":
-            # V9.1.1: Use CVSS column directly (no regex needed)
+            # V9.1.3: Use CVSS column directly (no regex needed)
             # Tier A/B matches have version confirmed — higher weight
             # Tier C matches (description only) — lower weight
             tier_a_or_b = "Tier A" in desc or "Tier B" in desc or "CPE" in desc or "Version" in desc
@@ -256,7 +256,7 @@ def calculate_and_store_risk_score(scan_id, findings):
         logger.error(f"Failed to store risk score: {e}")
 
     logger.info(
-        f"Risk Score V9.1.1: {score}/100 ({rating}) — "
+        f"Risk Score V9.1.3: {score}/100 ({rating}) — "
         f"CVE confirmed: {breakdown['cve_confirmed_count']}, "
         f"CISA KEV: {breakdown['cisa_kev_count']}, "
         f"skipped low-conf: {breakdown['low_confidence_skipped']}"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 SMP Version Bumper — updates version everywhere it matters.
-Usage: python3 tools/bump_version.py V9.1.1
+Usage: python3 tools/bump_version.py V9.1.3
 """
 import sys, json, os, re
 
@@ -13,7 +13,7 @@ def _err(msg):  print(f"  {RED}[✗]{RST} {msg}")
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 bump_version.py <NEW_VERSION>")
-        print("Example: python3 bump_version.py V9.1.1")
+        print("Example: python3 bump_version.py V9.1.3")
         sys.exit(1)
 
     new_version = sys.argv[1].strip()
