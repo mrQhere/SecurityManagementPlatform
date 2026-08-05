@@ -962,7 +962,7 @@ curl http://localhost:8000/api/v7/scan/1/status \
 ---
 ## 9 · Troubleshooting
 
-> 📁 Extended troubleshooting guides are in [`docs/troubleshooting/`](docs/troubleshooting/)
+> 📁 Extended troubleshooting guides are in [`troubleshooting/`](troubleshooting/)
 
 ### 9.1 Installation failures
 
