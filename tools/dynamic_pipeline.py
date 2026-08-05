@@ -1,5 +1,5 @@
 """
-Dynamic Pipeline — SMP V7.0.6
+Dynamic Pipeline — SMP V7.0.7
 ==============================
 Stage-feeding scan pipeline inspired by the PentestGPT multi-stage approach.
 

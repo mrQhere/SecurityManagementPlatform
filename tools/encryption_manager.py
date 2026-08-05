@@ -22,7 +22,7 @@ AUTH_FILE = os.path.join(BASE_DIR, "config", "auth.json")
 # app open/close (240k+ rows) with zero security benefit.
 DB_FILES = {
     os.path.join(BASE_DIR, "database", "security.db"): os.path.join(BASE_DIR, "database", "security.db.enc"),
-    os.path.join(BASE_DIR, "backup", "active_scans.db"): os.path.join(BASE_DIR, "backup", "active_scans.db.enc"),
+    os.path.join(BASE_DIR, "database", "backup", "active_scans.db"): os.path.join(BASE_DIR, "database", "backup", "active_scans.db.enc"),
 }
 
 ACTIVE_KEY = None  # Stored in memory while running
@@ -30,13 +30,13 @@ ACTIVE_KEY = None  # Stored in memory while running
 # Track whether decryption succeeded so the rest of the app can check
 _DECRYPTION_SUCCEEDED = False
 
-# V7.0.6: NIST 2024 recommendation — 600,000 iterations for PBKDF2-SHA256
+# V7.0.7: NIST 2024 recommendation — 600,000 iterations for PBKDF2-SHA256
 _PBKDF2_ITERATIONS = 600_000
 
 
 def validate_password_complexity(password: str) -> tuple:
     """
-    V7.0.6 — Enforce password complexity policy.
+    V7.0.7 — Enforce password complexity policy.
     
     Requirements:
       - Minimum 12 characters
@@ -81,7 +81,7 @@ def has_password_set() -> bool:
     return os.path.exists(AUTH_FILE)
 
 def setup_password(password: str):
-    """V7.0.6 — Establish master password with complexity check and generate encryption keys."""
+    """V7.0.7 — Establish master password with complexity check and generate encryption keys."""
     # Complexity check on first setup
     is_valid, error_msg = validate_password_complexity(password)
     if not is_valid:
@@ -96,7 +96,7 @@ def setup_password(password: str):
             "salt": salt.hex(),
             "hash": pw_hash,
             "pbkdf2_iterations": _PBKDF2_ITERATIONS,
-            "version": "V7.0.6"
+            "version": "V7.0.7"
         }, f, indent=4)
         
     global ACTIVE_KEY
