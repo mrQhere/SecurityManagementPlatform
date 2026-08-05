@@ -14,7 +14,7 @@ from tools.db_manager import (
 from scanners.watchdog import run_watchdog
 
 def trigger_soft_delete_gc_job():
-    """V5.3 - Garbage Collector: Hard deletes soft-deleted targets older than 30 days."""
+    """V7.0 - Garbage Collector: Hard deletes soft-deleted targets older than 30 days."""
     logger.info("Scheduler Triggered: Target soft-delete Garbage Collector.")
     from tools.db_manager import get_db_connection
     try:
@@ -82,7 +82,7 @@ def trigger_scan_job():
 
 def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
     """
-    V6.5 P0 Fix — Wait for the DB to be decrypted and accessible.
+    V7.0 P0 Fix — Wait for the DB to be decrypted and accessible.
     Returns True when DB is ready, False if all retries exhausted.
     This ensures CVE sync never starts before the DB is available,
     which was the root cause of all-data-lost-on-reopen bugs.
@@ -109,11 +109,11 @@ def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
 
 
 def trigger_intel_job():
-    """Hourly threat intelligence feed update job — V6.5: waits for DB to be ready."""
+    """Hourly threat intelligence feed update job — V7.0: waits for DB to be ready."""
     logger.info("Scheduler Triggered: Threat intelligence update starting.")
     add_log_entry("INFO", "Scheduler Triggered: Threat intelligence update starting.")
 
-    # ── V6.5 P0 FIX: Ensure DB is decrypted before syncing ──────────────────
+    # ── V7.0 P0 FIX: Ensure DB is decrypted before syncing ──────────────────
     if not _wait_for_db_ready(max_retries=3, wait_seconds=5):
         add_log_entry("WARNING", "Intel sync skipped: DB not ready (still encrypting/decrypting).")
         return
@@ -239,7 +239,7 @@ def start_scheduler():
         replace_existing=True
     )
 
-    # ── V5.3 — Schedule Weekly Nuclei Templates Update Job ──────────────
+    # ── V7.0 — Schedule Weekly Nuclei Templates Update Job ──────────────
     nuclei_update_trigger = IntervalTrigger(hours=168)
     _scheduler.add_job(
         trigger_nuclei_update_job,
@@ -248,7 +248,7 @@ def start_scheduler():
         replace_existing=True
     )
 
-    # ── V5.3 — Schedule Daily GC for Soft-Deleted Targets ──────────────
+    # ── V7.0 — Schedule Daily GC for Soft-Deleted Targets ──────────────
     gc_trigger = IntervalTrigger(hours=24)
     _scheduler.add_job(
         trigger_soft_delete_gc_job,
