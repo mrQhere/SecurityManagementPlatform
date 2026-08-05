@@ -32,15 +32,15 @@ venv/
 *.swp
 *.swo
 
-# SMP Specific - V7.0
+# SMP Specific - V9.0
 config/auth.json
 config/license.key
 config/settings.json
 database/*.db
 database/*.db.enc
-backup/*.db
-backup/*.db.enc
-backup/*.zip
+database/backup/*.db
+database/backup/*.db.enc
+database/backup/*.zip
 reports/pdf/*.pdf
 reports/sbom/*.json
 reports/sbom/*.spdx
