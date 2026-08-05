@@ -27,6 +27,7 @@ class TestSMPComponents(unittest.TestCase):
     orig_get_settings_path = None
     orig_base_dir_report_gen = None
     orig_base_dir_config_mgr = None
+    orig_global_intel_db = None
 
     @classmethod
     def setUpClass(cls):
@@ -57,6 +58,8 @@ class TestSMPComponents(unittest.TestCase):
         cls.orig_get_settings_path = tools.config_manager.get_settings_path
         cls.orig_base_dir_report_gen = tools.report_generator.BASE_DIR
         cls.orig_base_dir_config_mgr = tools.config_manager.BASE_DIR
+        import intelligence.brain
+        cls.orig_global_intel_db = intelligence.brain.GLOBAL_INTEL_DB
 
         # Define temporary paths
         test_db_dir = os.path.join(cls.temp_dir.name, "database")
@@ -97,6 +100,7 @@ class TestSMPComponents(unittest.TestCase):
         tools.config_manager.get_settings_path = lambda: os.path.join(test_config_dir, "settings.json")
         tools.report_generator.BASE_DIR = cls.temp_dir.name
         tools.config_manager.BASE_DIR = cls.temp_dir.name
+        intelligence.brain.GLOBAL_INTEL_DB = os.path.join(test_db_dir, "global_intel.db")
 
         # Setup test password to initialize encryption key and allow DB access
         from tools.encryption_manager import setup_password
@@ -133,6 +137,8 @@ class TestSMPComponents(unittest.TestCase):
         tools.config_manager.get_settings_path = cls.orig_get_settings_path
         tools.report_generator.BASE_DIR = cls.orig_base_dir_report_gen
         tools.config_manager.BASE_DIR = cls.orig_base_dir_config_mgr
+        import intelligence.brain
+        intelligence.brain.GLOBAL_INTEL_DB = cls.orig_global_intel_db
         
         # Clean up temp directory
         if cls.temp_dir:

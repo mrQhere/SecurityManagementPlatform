@@ -642,7 +642,7 @@ class DashboardLayoutMixin:
         layout.addStretch()
 
         # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V7.0.8')} • SMP Console")
+        ver = QLabel(f"{getattr(self, 'version', 'V9.0.1')} • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -1174,8 +1174,8 @@ class DashboardLayoutMixin:
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
 
-        # ── V7.0.8 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V7.0.8')}")
+        # ── V9.0.1 — API Keys & Proxies ──
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.0.1')}")
         api_layout = api_card.layout()
 
         def make_api_field(label_text, widget):
@@ -1204,7 +1204,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(api_card)
 
         # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V7.0.8')}")
+        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.0.1')}")
         profile_layout = profile_card.layout()
         profile_desc = QLabel(
             "Controls which scanner steps run. Fast = passive OSINT only. "
@@ -1238,7 +1238,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(profile_card)
 
         # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V7.0.8')}")
+        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.0.1')}")
         auth_layout = auth_card.layout()
         auth_desc = QLabel(
             "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "
@@ -1285,7 +1285,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(auth_card)
 
         # ── Enterprise Scanners ──
-        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V7.0.8')}")
+        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.0.1')}")
         enterprise_layout = enterprise_card.layout()
         ent_desc = QLabel(
             "Configure advanced enterprise scanning capabilities. "
@@ -1360,7 +1360,7 @@ class DashboardLayoutMixin:
 
         return page
 
-    # ─── Page: Reports (V7.0.8) ──────────────────────────────────────────────────
+    # ─── Page: Reports (V9.0.1) ──────────────────────────────────────────────────
 
     def _build_reports_page(self):
         """Reports Viewer — lists all generated HTML/PDF reports on disk."""

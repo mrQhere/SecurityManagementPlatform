@@ -1,4 +1,4 @@
-# Security Policy for SMP V7.0.8
+# Security Policy for SMP V9.0.1
 
 ## Supported Versions
 
@@ -8,11 +8,11 @@ Only the current major release receives security updates.
 | ------- | --------- |
 | V6.x    | Yes       |
 | V5.x    | No        |
-| < V7.0.8  | No        |
+| < V9.0.1  | No        |
 
 ## Security Architecture
 
-SMP is designed to handle highly sensitive vulnerability data. The V7.0.8 architecture enforces the following controls:
+SMP is designed to handle highly sensitive vulnerability data. The V9.0.1 architecture enforces the following controls:
 
 * **Database Encryption**: All databases are encrypted at rest using AES-128-CBC (Fernet) and HMAC-SHA256.
 * **Key Derivation**: The encryption key is derived using PBKDF2 with HMAC-SHA256 and 600,000 iterations (NIST 2024 compliance).

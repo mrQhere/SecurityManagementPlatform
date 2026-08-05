@@ -115,7 +115,7 @@ for %%I in (1 2 3 4) do (
 )
 
 echo @echo off > run.bat
-echo echo 🚀 Starting Security Management Platform V7.0.8... >> run.bat
+echo echo 🚀 Starting Security Management Platform V9.0.1... >> run.bat
 echo call venv\Scripts\activate.bat >> run.bat
 echo python main.py %%* >> run.bat
 

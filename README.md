@@ -1,4 +1,5 @@
-# Security Management Platform (SMP) V7
+# Security Management Platform (SMP) V9
+
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 
@@ -12,6 +13,8 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 
 SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
 
+**The V9.0.1 Awakening**: SMP now features a built-in Neural Correlation Engine (The Brain) which builds a deterministic, crowdsourced global intelligence graph locally without telemetry.
+
 **The core pitch is not tool count.** It is:
 
 1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS (exploitation probability), GreyNoise (active wild scanning), and CISA KEV (known exploited vulnerabilities) to produce a multi-source risk score. See: [`intelligence/`](intelligence/) and [`tools/risk_scorer.py`](tools/risk_scorer.py).
@@ -20,7 +23,7 @@ SMP is a penetration testing orchestration platform that runs ~30 open-source sc
 
 3. **Two deliverables per scan** — each completed scan produces a pentest report (HTML + PDF) and a CycloneDX SBOM automatically. See: [`tools/sbom_generator.py`](tools/sbom_generator.py), wired into [`tools/report_generator.py`](tools/report_generator.py).
 
-4. **Compliance gap analysis** — findings are mapped to OWASP Top 10, CIS Controls v8, ISO 27001:2022, SOC 2 Type II, and PCI-DSS v7.0.8 control IDs. The output distinguishes between "here are 40 vulnerabilities" and "here is what is blocking your SOC 2 audit." See: [`tools/compliance_mapper.py`](tools/compliance_mapper.py).
+4. **Compliance gap analysis** — findings are mapped to OWASP Top 10, CIS Controls v8, ISO 27001:2022, SOC 2 Type II, and PCI-DSS v9.0.1 control IDs. The output distinguishes between "here are 40 vulnerabilities" and "here is what is blocking your SOC 2 audit." See: [`tools/compliance_mapper.py`](tools/compliance_mapper.py).
 
 5. **SQLCipher encryption, not optional** — SMP will not start if `pysqlcipher3` is missing. "Encrypted at rest" is unconditionally enforced, not a fallback. See: [`tools/db_manager.py`](tools/db_manager.py).
 
@@ -72,7 +75,7 @@ Every finding is mapped to control IDs across five frameworks:
 - CIS Controls v8
 - ISO 27001:2022 Annex A
 - SOC 2 Type II (Trust Services Criteria CC6–CC9)
-- PCI-DSS v7.0.8 (Requirements 6, 7, 8, 11, 12)
+- PCI-DSS v9.0.1 (Requirements 6, 7, 8, 11, 12)
 
 The summary output includes `audit_blocking_findings` — the specific Critical/High findings that directly violate SOC 2 or PCI-DSS controls. Code: [`tools/compliance_mapper.py`](tools/compliance_mapper.py).
 
