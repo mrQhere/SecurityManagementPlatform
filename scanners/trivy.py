@@ -1,8 +1,8 @@
 """
-Trivy Scanner — SMP V7.0.3
+Trivy Scanner — SMP V7.0.4
 =========================
 Runs Trivy to scan container images and filesystems for CVEs and misconfigurations.
-Uses the V7.0.3 Zero-Friction Plugin Registration.
+Uses the V7.0.4 Zero-Friction Plugin Registration.
 """
 
 import logging

@@ -146,7 +146,7 @@ ALL_ACTIVE_STATUSES = [
     "Running Open Redirect", "Running Tech Fingerprint",
     "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
-    # V7.0.3 New Scanners
+    # V7.0.4 New Scanners
     "Running Dalfox", "Running Arjun", "Running DNSx", "Running Katana",
     "Running Commix", "Running JWT Scanner", "Running WPScan",
     "Running Masscan", "Running ParamSpider", "Running Cloud Enum",
@@ -474,14 +474,14 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
 
-    # V7.0.3 seamless upgrade: Add company_name and submitted_to to targets
+    # V7.0.4 seamless upgrade: Add company_name and submitted_to to targets
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
-    # V7.0.3 seamless upgrade: Soft delete
+    # V7.0.4 seamless upgrade: Soft delete
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
@@ -494,7 +494,7 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         pass
 
-    # Enterprise V7.0.3 — enriched findings columns (idempotent migrations)
+    # Enterprise V7.0.4 — enriched findings columns (idempotent migrations)
     _enterprise_columns = [
         ("url",                 "TEXT"),
         ("evidence",            "TEXT"),
@@ -507,6 +507,8 @@ def _initialize_db_schema(conn):
         ("reproduction_steps",  "TEXT"),
         ("references_json",     "TEXT"),
         ("remediation_code",    "TEXT"),
+        ("epss_score",          "REAL"),
+        ("epss_percentile",     "REAL"),
     ]
     for _col_name, _col_type in _enterprise_columns:
         try:
@@ -1304,12 +1306,13 @@ def get_scans_for_target(target_id, limit=10):
 
 def add_finding(scan_id, severity, title, description, source_tool,
                 confidence=50, mitre_id="Unknown",
-                # Enterprise V7.0.3 enriched fields
+                # Enterprise V7.0.4 enriched fields
                 url=None, evidence=None, recommendation=None,
                 cvss_score=None, cve_id=None,
                 affected_component=None, owasp_category=None,
                 business_impact=None, reproduction_steps=None,
-                references_json=None, remediation_code=None):
+                references_json=None, remediation_code=None,
+                epss_score=None, epss_percentile=None):
     """
     Insert a scan finding with full enterprise-grade metadata.
     Prevents duplicates for the same scan, title and source_tool.
@@ -1327,7 +1330,8 @@ def add_finding(scan_id, severity, title, description, source_tool,
     vals = (scan_id, severity, title, description, source_tool, confidence,
             mitre_id, url, evidence, recommendation, cvss_score, cve_id,
             affected_component, owasp_category, business_impact,
-            reproduction_steps, references_json, remediation_code)
+            reproduction_steps, references_json, remediation_code,
+            epss_score, epss_percentile)
 
     try:
         existing = conn.execute(
@@ -1342,8 +1346,8 @@ def add_finding(scan_id, severity, title, description, source_tool,
             "(scan_id, severity, title, description, source_tool, confidence, mitre_id,"
             " url, evidence, recommendation, cvss_score, cve_id,"
             " affected_component, owasp_category, business_impact,"
-            " reproduction_steps, references_json, remediation_code)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " reproduction_steps, references_json, remediation_code, epss_score, epss_percentile)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             vals
         )
         conn.commit()
@@ -1362,8 +1366,8 @@ def add_finding(scan_id, severity, title, description, source_tool,
                         "(scan_id, severity, title, description, source_tool, confidence, mitre_id,"
                         " url, evidence, recommendation, cvss_score, cve_id,"
                         " affected_component, owasp_category, business_impact,"
-                        " reproduction_steps, references_json, remediation_code)"
-                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        " reproduction_steps, references_json, remediation_code, epss_score, epss_percentile)"
+                        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         vals
                     )
                     rconn.commit()
