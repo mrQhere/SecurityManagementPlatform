@@ -37,25 +37,25 @@ psutil>=5.9.0
 
 # ── Missing Third Party Dependencies ───────────────────────────────────────────
 PySide6>=6.0.0
-python-dateutil
-colorama
-netaddr
-aiomultiprocess
-pysqlcipher3
-shodan
-aiohttp-socks
-pycryptodomex
-certifi
-ujson
-dnspython
-aiohttp
-aiodns
-uvloop; sys_platform != 'win32'
-PyYAML
-beautifulsoup4
-termcolor
-pytest
-ratelimit
-aiosqlite
-requests-futures
-httpx
+python-dateutil>=2.8.2
+colorama>=0.4.6
+netaddr>=1.3.0
+aiomultiprocess>=0.9.0
+pysqlcipher3>=1.2.0
+shodan>=1.31.0
+aiohttp-socks>=0.8.4
+pycryptodomex>=3.19.0
+certifi>=2023.11.17
+ujson>=5.9.0
+dnspython>=2.5.0
+aiohttp>=3.9.1
+aiodns>=3.1.1
+uvloop>=0.19.0; sys_platform != 'win32'
+PyYAML>=6.0.1
+beautifulsoup4>=4.12.2
+termcolor>=2.4.0
+pytest>=8.0.0
+ratelimit>=2.2.1
+aiosqlite>=0.19.0
+requests-futures>=1.0.1
+httpx>=0.26.0
