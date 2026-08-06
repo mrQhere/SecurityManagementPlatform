@@ -14,7 +14,7 @@ import sys
 import argparse
 
 TEMPLATE = '''"""
-{name} Scanner — SMP V9.2.3
+{name} Scanner — SMP V9.2.4
 =========================
 Auto-generated scanner plugin.
 """
@@ -25,7 +25,7 @@ import json
 
 logger = logging.getLogger("smp.scan")
 
-# V9.2.3 Zero-Friction Plugin Registration
+# V9.2.4 Zero-Friction Plugin Registration
 PLUGIN_META = {{
     "name": "{name}",
     "binary": "{binary}",
@@ -132,7 +132,7 @@ def main():
         f.write(content)
         
     # Make script executable
-    os.chmod(os.path.abspath(__file__), 0o755)
+    os.chmod(filepath, 0o755)
         
     print(f"\n[✓] Scaffolded custom scanner: {filepath}")
     print(f"    1. Open {filepath}")

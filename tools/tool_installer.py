@@ -72,11 +72,11 @@ TOOLS = [
     ("jwt_tool",      "jwt_tool",      "binary", ""),
     ("WPScan",        "wpscan",        "binary", ""),
 
-    # New V9.2.3 Enterprise pip packages
+    # New V9.2.4 Enterprise pip packages
     ("semgrep",           "semgrep",     "pip",    "semgrep"),
     ("SpiderFoot OSINT",  "sf",          "manual", "Download from https://github.com/smicallef/spiderfoot"),
 
-    # New V9.2.3 Enterprise binaries
+    # New V9.2.4 Enterprise binaries
     ("Amass",             "amass",       "binary", ""),
     ("Feroxbuster",       "feroxbuster", "binary", ""),
     ("TruffleHog",        "trufflehog",  "binary", ""),
@@ -444,7 +444,7 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.2.3/gitleaks_8.18.2_linux_x64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.2.4/gitleaks_8.18.2_linux_x64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_amd64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz",
@@ -456,8 +456,8 @@ def _download_missing_tools_locally(missing):
         "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/heads/master.zip",
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
 
-        # New V9.2.3 Enterprise binaries
-        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.2.3/amass_linux_amd64.zip",
+        # New V9.2.4 Enterprise binaries
+        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.2.4/amass_linux_amd64.zip",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/x86_64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-64bit.tar.gz",
@@ -468,7 +468,7 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.2.3/gitleaks_8.18.2_linux_arm64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.2.4/gitleaks_8.18.2_linux_arm64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_arm64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz",
@@ -479,15 +479,15 @@ def _download_missing_tools_locally(missing):
         "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/heads/master.zip",
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
 
-        # New V9.2.3 Enterprise binaries
-        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.2.3/amass_linux_arm64.zip",
+        # New V9.2.4 Enterprise binaries
+        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.2.4/amass_linux_arm64.zip",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/aarch64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_arm64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.53.0/trivy_0.53.0_Linux-ARM64.tar.gz",
     }
     urls = urls_arm64 if is_arm64 else urls_amd64
 
-    # ── V9.2.3 — Security: Download SHA256 Checksums ────────────────────────────
+    # ── V9.2.4 — Security: Download SHA256 Checksums ────────────────────────────
     # Add checksums to verify integrity before extraction
     checksums = {
         "Nuclei": "235f264d32e47e1ccf58d534e2eb4d0d4eeb47f1cae1ebb30a584b8b52565202",
@@ -515,7 +515,7 @@ def _download_missing_tools_locally(missing):
                 for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     
-            # ── V9.2.3 — Security Check: SHA256 ────────────────────────────
+            # ── V9.2.4 — Security Check: SHA256 ────────────────────────────
             if name in checksums:
                 import hashlib
                 h = hashlib.sha256()

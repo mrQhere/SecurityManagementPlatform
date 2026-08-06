@@ -1,4 +1,4 @@
-# Security Management Platform (SMP) V9.2.3
+# Security Management Platform (SMP) V9.2.4
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 
@@ -12,14 +12,14 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 
 SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
 
-**The V9.2.3 Awakening**: SMP now features a built-in Neural Correlation Engine (The Brain) which builds a deterministic, crowdsourced global intelligence graph locally without telemetry. It leverages an Obsidian-style physics engine (Force-Directed Graph) built in pure PySide6 to visually correlate over 10,500 real-world threat heuristics in real-time.
+**The V9.2.4 Awakening**: SMP now features a built-in Neural Correlation Engine (The Brain) which builds a deterministic, crowdsourced global intelligence graph locally without telemetry. It leverages an Obsidian-style physics engine (Force-Directed Graph) built in pure PySide6 to visually correlate over 10,500 real-world threat heuristics in real-time.
 
 **The core pitch is not tool count.** It is:
 
 1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS, GreyNoise, CISA KEV, and the new 10,000+ node Neural Brain.
 2. **Provable local-only operation** — outbound intelligence logs every network call to `logs/egress_audit.log`. Set `SMP_LOCAL_ONLY=1` to mathematically isolate the engine.
 3. **Beautiful Minimalist UX** — An Obsidian/Ollama-inspired dark aesthetic prioritizing raw information density.
-4. **Compliance gap analysis** — maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v9.2.3.
+4. **Compliance gap analysis** — maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v9.2.4.
 5. **SQLCipher encryption, not optional** — "Encrypted at rest" is unconditionally enforced on all sensitive pentest data. Public CVE models are deliberately unencrypted for maximum I/O performance.
 
 ---
@@ -48,7 +48,7 @@ SecurityManagementPlatform/
 
 ## Future Plan (Roadmap)
 
-### Near-term (V9.2.3.x)
+### Near-term (V9.2.4.x)
 - **Neural Graph Filtering**: Allow click-and-drag filtering of the Intelligence Brain based on real-time CVE correlation weights.
 - **Custom Payload Injection**: Allow users to define custom Nuclei/SQLMap payloads directly from the Desktop UI.
 - **Offline Intelligence Updates**: Enable importing a completely air-gapped `global_intel.db` via USB for classified network scanning.
