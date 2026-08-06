@@ -1,4 +1,4 @@
-# 🔌 API Errors — SMP V7
+# 🔌 API Errors — SMP V9.3.3
 
 ## 401 Unauthorized
 
@@ -6,15 +6,15 @@ JWT token expired (default lifetime: 30 minutes).
 
 ```bash
 # Re-authenticate
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v7/auth/token \
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v9.3.3/auth/token \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"yourpassword"}' | jq -r .access_token)
 echo $TOKEN
 ```
 
 To extend token lifetime, set in `config/settings.json`:
-```json
-{ "jwt_expire_minutes": 480 }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['jwt_expire_minutes']=480; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -27,7 +27,7 @@ Your token is valid but lacks permission for this endpoint. Ensure you're using 
 
 ## 422 Unprocessable Entity
 
-Request body is malformed. Check the schema at `http://localhost:8000/api/v7/docs`.
+Request body is malformed. Check the schema at `http://localhost:8000/api/v9.3.3/docs`.
 
 Common mistake — target URL must include protocol:
 ```bash
@@ -44,8 +44,8 @@ Common mistake — target URL must include protocol:
 
 Built-in rate limiter. Default: 60 requests/minute per IP.
 
-```json
-{ "api_rate_limit": 300 }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['api_rate_limit']=300; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -58,7 +58,7 @@ lsof -i :8000
 kill -9 <PID>
 
 # Or change port
-echo '{ "api_port": 8001 }' >> config/settings.json
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['api_port']=8001; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -76,11 +76,11 @@ sudo apt install libsqlcipher-dev && pip install pysqlcipher3
 
 ---
 
-## /api/v7/docs returns 404
+## /api/v9.3.3/docs returns 404
 
 The API version in the URL must match the running server version. Check running version:
 ```bash
-curl http://localhost:8000/api/v7/version
+curl http://localhost:8000/api/v9.3.3/version
 # or try /api/v6/version if on an older install
 ```
 
@@ -89,8 +89,8 @@ curl http://localhost:8000/api/v7/version
 ## CORS error from browser
 
 Add your frontend origin to allowed origins in `config/settings.json`:
-```json
-{ "cors_origins": ["http://localhost:3000", "https://yourdomain.com"] }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['cors_origins']=['http://localhost:3000', 'https://yourdomain.com']; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -99,9 +99,7 @@ Add your frontend origin to allowed origins in `config/settings.json`:
 
 On first run, SMP generates a random JWT secret. If you need to rotate it:
 ```bash
-python3 -c "import secrets; print(secrets.token_hex(32))"
-# Add output to config/settings.json:
-# { "jwt_secret": "generated_value_here" }
+python3 -c "import secrets, json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['jwt_secret']=secrets.token_hex(32); json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -110,7 +108,7 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 
 A scan is already running for this target. Check:
 ```bash
-curl http://localhost:8000/api/v7/scan/1/status \
+curl http://localhost:8000/api/v9.3.3/scan/1/status \
   -H "Authorization: Bearer $TOKEN"
 ```
 

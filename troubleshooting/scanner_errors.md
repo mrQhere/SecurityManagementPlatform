@@ -1,4 +1,4 @@
-# 🔬 Scanner Errors — SMP V7
+# 🔬 Scanner Errors — SMP V9.3.3
 
 ## Nmap: requires root / permission denied
 
@@ -103,8 +103,8 @@ SQLMap uses heuristics to detect injectable parameters. If no injection points f
 WPScan's vulnerability database requires a free API token for full CVE data:
 1. Register at `https://wpscan.com/` (free tier: 25 requests/day)
 2. Add to `config/settings.json`:
-```json
-{ "wpscan_api_token": "your_token_here" }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['wpscan_api_token']='your_token_here'; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 Without a token, WPScan still runs but returns fewer vulnerability details.
@@ -125,8 +125,8 @@ docker pull wpscanteam/wpscan
 Community API allows ~50 requests/minute. SMP caches results per-session, so each IP is only looked up once. If hitting rate limits:
 - Check if the same IP appears in many findings (normal — it's cached)
 - Register a free GreyNoise API key and add to `config/settings.json`:
-```json
-{ "greynoise_api_key": "your_key" }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['greynoise_api_key']='your_key_here'; json.dump(d, open(p,'w'), indent=4)"
 ```
 
 ---
@@ -171,6 +171,6 @@ sudo visudo
 ```
 
 To disable MAC changing entirely:
-```json
-{ "mac_changer_enabled": false }
+```bash
+python3 -c "import json, os; p='config/settings.json'; d=json.load(open(p)) if os.path.exists(p) else {}; d['mac_changer_enabled']=False; json.dump(d, open(p,'w'), indent=4)"
 ```
