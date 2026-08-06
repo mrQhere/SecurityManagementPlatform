@@ -17,7 +17,7 @@ PLUGIN_META = {
     "confidence": 99,
 }
 
-def scan(target_url: str, scan_id: int, settings: dict) -> dict:
+def scan(target_url: str, scan_id: int, settings: dict):
     from tools.narrative_logger import emit_scanner_start, emit_finding
     emit_scanner_start(scan_id, "clamav")
 

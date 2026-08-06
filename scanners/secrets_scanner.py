@@ -205,10 +205,10 @@ def run_secrets_scan(url: str) -> list:
         logger.warning(f"[SecretsScanner] Network scan failed: {e}. Scanning cached outputs.")
         # Fallback: scan any cached raw outputs
         try:
+            import os
             from tools.config_manager import BASE_DIR
             raw_dir = os.path.join(BASE_DIR, "database", "raw_outputs")
             if os.path.exists(raw_dir):
-                import os
                 import gzip
                 for fname in os.listdir(raw_dir)[:10]:  # limit to recent 10
                     fpath = os.path.join(raw_dir, fname)

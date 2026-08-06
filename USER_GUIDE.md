@@ -195,9 +195,11 @@ SMP runs all scanners as a **Directed Acyclic Graph (DAG)** — parallel within 
 | Commix | full only | 5 | Arjun | OS command injection |
 | ZAP Active | full only | 5 | HTTPx | Full active OWASP ZAP scan |
 
-> ⚠️ **full** profile scanners send attack payloads. Use only with written authorisation.
+> [!WARNING]
+> **full** profile scanners send attack payloads. Use only with written authorisation.
 
-**SPA false-positive filter:** ffuf on React/Vue/Angular apps sometimes returns HTTP 200 for every path. SMP auto-detects when ≥80% of results share the same content length and suppresses them.
+> [!NOTE]
+> **SPA false-positive filter:** ffuf on React/Vue/Angular apps sometimes returns HTTP 200 for every path. SMP auto-detects when ≥80% of results share the same content length and suppresses them.
 
 ---
 
