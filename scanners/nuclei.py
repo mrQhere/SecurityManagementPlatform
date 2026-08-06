@@ -9,7 +9,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nuclei to run before forcefully killing it
-NUCLEI_TIMEOUT = 1800  # 30 min cap — prevents hanging on large targets
+NUCLEI_TIMEOUT = 7200  # 2h — nuclei on complex targets needs full time
 
 @register_scanner(name="Nuclei", step_name="Running Nuclei", depends_on=['Nikto'], binary_name="nuclei", needs_binary=True, confidence=95)
 def run_nuclei_scan(url):

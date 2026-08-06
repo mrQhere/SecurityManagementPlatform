@@ -117,31 +117,71 @@ API available at `http://localhost:8000/api/v7/docs`.
 
 ---
 
-## 3 · Scanner Pipeline
+## 3 · Scanner Reference
 
-SMP runs scanners as a **Directed Acyclic Graph** — up to 6 in parallel, with conditional branches that only activate when evidence warrants it.
+SMP runs all scanners as a **Directed Acyclic Graph (DAG)** — parallel within each phase, conditional between phases. Every scanner's full timeout is preserved for maximum coverage.
 
-```
-Phase 1 — Recon (parallel)
-  HTTPx, WhatWeb, Subfinder, CRT.sh, Whois, Wayback, theHarvester, Traceroute
+| Scanner | Profile | Phase | Depends on | What it finds |
+|---------|---------|-------|-----------|---------------|
+| Traceroute | osint+ | 0 | — | Network path, hops, latency |
+| HTTPx | osint+ | 1 | Traceroute | HTTP/S alive, status codes, titles, tech |
+| WhatWeb | osint+ | 1 | Traceroute | CMS, frameworks, server software |
+| Subfinder | osint+ | 1 | Traceroute | Subdomains via passive DNS |
+| CRT.sh | osint+ | 1 | Traceroute | Certificate transparency subdomains |
+| Whois | osint+ | 1 | Traceroute | Domain registration, nameservers |
+| Wayback | osint+ | 1 | Traceroute | Historical URLs, exposed paths |
+| theHarvester | osint+ | 1 | Traceroute | Emails, names, IPs, virtual hosts |
+| HackerTarget | osint+ | 1 | Traceroute | Passive recon via HackerTarget API |
+| Nmap | standard+ | 2 | HTTPx | Open ports, service versions, OS |
+| SSL Scanner | standard+ | 2 | Nmap | TLS versions, weak ciphers, cert expiry |
+| Security Headers | standard+ | 2 | SSL | CSP, HSTS, X-Frame-Options gaps |
+| CORS Scanner | standard+ | 2 | HTTPx | CORS misconfigurations |
+| Robots Scanner | standard+ | 2 | HTTPx | Disallowed paths, sitemap |
+| Tech Fingerprint | standard+ | 2 | HTTPx | JS libraries, version detection |
+| Nikto | standard+ | 2 | Nmap | Web server misconfigs, CVEs |
+| CMS Scanner | standard+ | 2 | WhatWeb | WordPress/Joomla/Drupal vulns |
+| Nuclei | standard+ | 3 | Nikto | CVE templates, misconfigs, secrets (2h cap) |
+| ffuf | standard+ | 3 | HTTPx | Directory/file brute-force (2h cap) |
+| SQLMap | standard+ | 3 | HTTPx | SQL injection (forms and params) |
+| Wapiti | standard+ | 3 | HTTPx | XSS, SQLi, SSRF, path traversal |
+| Gitleaks | standard+ | 3 | HTTPx | Secrets in Git repos |
+| Shodan IDB | standard+ | 3 | Nmap | CVEs for open ports from Shodan IntelDB |
+| Retire.js | standard+ | 3 | Tech Fingerprint | Outdated JS library CVEs |
+| Screenshot | standard+ | 3 | HTTPx | Visual evidence (Playwright) |
+| Secrets Scanner | standard+ | 3 | HTTPx | API keys, tokens in source |
+| GraphQL Scanner | standard+ | 3 | HTTPx | Introspection, batching, injection |
+| API Fuzzer | standard+ | 3 | HTTPx | REST API endpoint fuzzing |
+| Katana | standard+ | 4 | HTTPx | JS-aware crawler for deep link discovery |
+| DNSx | standard+ | 4 | Subfinder | DNS record enrichment, takeover check |
+| ParamSpider | standard+ | 4 | Wayback | URL parameter extraction |
+| Arjun | standard+ | 4 | HTTPx | Hidden parameter discovery |
+| JWT Scanner | standard+ | 4 | HTTPx | Weak/none alg, key confusion |
+| SSRF Scanner | standard+ | 4 | Arjun | Server-side request forgery |
+| Path Traversal | standard+ | 4 | Arjun | Directory traversal |
+| CRLF Scanner | standard+ | 4 | HTTPx | Header injection |
+| Open Redirect | standard+ | 4 | HTTPx | Open redirect chains |
+| XXE Scanner | standard+ | 4 | HTTPx | XML external entity injection |
+| Cloud Enum | standard+ | 4 | Subfinder | S3/GCS/Azure blob exposure |
+| CrackMapExec | standard+ | 4 | Nmap | SMB/WinRM enumeration |
+| WPScan | standard+ | 4 | CMS Scanner | WordPress plugins/themes vulns |
+| Dalfox | standard+ | 4 | Wapiti | XSS exploitation validation |
+| Amass | standard+ | 4 | Subfinder | Deep passive subdomain enumeration |
+| DirB | standard+ | 4 | HTTPx | Directory brute-force |
+| Feroxbuster | standard+ | 4 | HTTPx | Recursive directory brute-force |
+| Gobuster | standard+ | 4 | HTTPx | Directory/DNS/vhost brute-force |
+| MobSF | standard+ | 4 | HTTPx | Mobile app API endpoint analysis |
+| Netcat Probe | standard+ | 4 | Nmap | Raw service banner grabbing |
+| Masscan | standard+ | 4 | Traceroute | High-speed port scanning |
+| Smuggler | standard+ | 4 | HTTPx | HTTP request smuggling |
+| Trivy | standard+ | 4 | Tech Fingerprint | Container/OS vulnerability scan |
+| Prowler | standard+ | 4 | Cloud Enum | AWS/GCP/Azure security posture |
+| Hydra | full only | 5 | Auth surface | Credential brute-force |
+| Commix | full only | 5 | Arjun | OS command injection |
+| ZAP Active | full only | 5 | HTTPx | Full active OWASP ZAP scan |
 
-Phase 2 — Active (parallel, after recon)
-  Nmap, SSL Scanner, Security Headers, CORS, Robots.txt, Nikto, Nuclei,
-  ffuf, Shodan IDB, Gitleaks, Wapiti, SQLMap, CMS Scanner, Tech Fingerprint
+> ⚠️ **full** profile scanners send attack payloads. Use only with written authorisation.
 
-Phase 3 — Conditional (triggered by Phase 1/2 evidence)
-  WPScan        → WordPress detected
-  Dalfox        → XSS surface found
-  Arjun         → Web app detected
-  DNSx          → Subdomains found
-  Katana        → Web app alive
-  ParamSpider   → URL parameters found
-  JWT Scanner   → JWT tokens in responses
-  Cloud Enum    → Cloud assets referenced
-  Commix/ZAP/Hydra → full profile only
-```
-
-**SPA false-positive filter:** ffuf on React/Vue/Angular SPAs returns 200 for every path. SMP auto-detects when ≥80% of results share the same content length and removes them.
+**SPA false-positive filter:** ffuf on React/Vue/Angular apps sometimes returns HTTP 200 for every path. SMP auto-detects when ≥80% of results share the same content length and suppresses them.
 
 ---
 
@@ -240,27 +280,60 @@ Interactive docs: `http://localhost:8000/api/v7/docs`
 
 ## 8 · Adding Custom Scanners
 
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the full guide. Quick reference:
+
 ```bash
-# Generate scaffolding
+# 1. Generate scaffold
 python3 tools/create_scanner.py --name "MyTool" --binary "mytool" --severity High
 ```
 
-This creates `scanners/mytool.py`. Edit two things:
-1. The `cmd` list — your tool's CLI arguments
-2. The parser — map tool output to SMP's finding dict
-
-Then register in `scanners/core/registry.py`:
 ```python
-register_scanner(
+# 2. Implement — scanners/mytool.py
+from scanners.core.registry import register_scanner
+import subprocess, logging
+from tools.db_manager import add_log_entry
+
+MYTOOL_TIMEOUT = 300  # set realistic max — do not reduce
+
+@register_scanner(
     name="MyTool",
-    scan_func=run_mytool,
-    binary_name="mytool",
-    depends_on=["HTTPx"],   # DAG dependency
-    confidence=85,
+    step_name="Running MyTool",
+    depends_on=["HTTPx"],   # DAG phase — see scanner table above
+    binary_name="mytool",   # checked in PATH and bin/
+    needs_binary=True,
+    confidence=85,          # 0–100 — how reliable are your findings?
 )
+def run_mytool(url: str) -> list | None:
+    add_log_entry("INFO", f"MyTool Started: {url}")
+    try:
+        r = subprocess.run(["mytool", url], capture_output=True,
+                           text=True, timeout=MYTOOL_TIMEOUT)
+    except FileNotFoundError:
+        return None   # binary not installed — skip gracefully
+    except subprocess.TimeoutExpired:
+        return []     # timed out — return empty, not None
+
+    findings = []
+    for line in r.stdout.splitlines():
+        findings.append({
+            "severity":    "High",       # Critical|High|Medium|Low|Info
+            "title":       "Issue title",
+            "description": "Detail …",
+            "confidence":  85,
+            "template_id": "mytool-001", # for deduplication
+        })
+    add_log_entry("INFO", f"MyTool: {len(findings)} findings")
+    return findings
 ```
 
-SMP auto-discovers it on next run — no further wiring needed.
+**Profile guard** — restrict to `full` profile only:
+```python
+from tools.config_manager import load_settings
+if load_settings().get("scan_profile", "standard") != "full":
+    return []
+```
+
+SMP auto-discovers the scanner on next run — no further registration needed.
 
 ---
 
@@ -274,7 +347,7 @@ Findings are automatically mapped to:
 | CIS Controls v8 | Infrastructure hardening |
 | ISO 27001:2022 | ISMS certification |
 | SOC 2 Type II | SaaS/cloud audit readiness |
-| PCI-DSS v9.3.0 | Payment card compliance |
+| PCI-DSS v9.3.1 | Payment card compliance |
 
 ```python
 from tools.compliance_mapper import map_finding_to_controls
@@ -305,7 +378,7 @@ CFLAGS="-I/usr/include/sqlcipher" LDFLAGS="-lsqlcipher" pip install pysqlcipher3
 ls bin/                          # check if it's there
 export PATH=$PATH:$(pwd)/bin     # add to PATH
 # Re-download a specific tool:
-curl -fsSL https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz \
+curl -fsSL https://github.com/hahwul/dalfox/releases/download/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz \
   | tar -xz -C bin/ dalfox && chmod +x bin/dalfox
 ```
 
@@ -374,11 +447,13 @@ SecurityManagementPlatform/
 
 ## 12 · Roadmap
 
-**V9.3.0.x (current)**
-- SHA-256 verified binary downloads in setup.sh
-- Semantic badge colours in UI
-- QProgressBar and QTabWidget styles
-- PDF footer copyright
+**V9.3.1 (current)**
+- Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
+- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.3.1, dalfox v2.10.0
+- --skip-tools flag for Avast-restricted environments
+- Semantic badge colours + QProgressBar/QTabWidget in UI
+- PDF footer © mrQhere, body_left crash fix
+- GitHub issue templates, PR template, CONTRIBUTING.md
 
 **V10.0**
 - Distributed scan agents over mTLS

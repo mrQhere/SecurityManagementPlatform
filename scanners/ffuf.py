@@ -9,7 +9,7 @@ from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
 
-FFUF_TIMEOUT = 1200   # 20 min cap — wordlist brute-force should complete well within this
+FFUF_TIMEOUT = 7200   # 2h — large wordlists on slow targets
 
 # Small built-in wordlist used when no system wordlist is found
 _BUILTIN_WORDLIST = [

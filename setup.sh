@@ -3,27 +3,28 @@
 # Security Management Platform — Installer
 # © mrQhere · https://github.com/mrQhere/SecurityManagementPlatform
 #
+# Supported Linux distributions:
+#   Ubuntu 20.04 / 22.04 / 24.04   Debian 11 / 12
+#   Fedora 39+                      RHEL / Rocky / AlmaLinux 8+
+#   Arch Linux / Manjaro            openSUSE Tumbleweed / Leap 15
+#   Kali Linux                      Parrot OS
+#
+# Supported macOS: 12 Monterey+  (via Homebrew)
+#
 # Usage:
 #   ./setup.sh              — full install (recommended)
-#   ./setup.sh --skip-tools — skip Go binary downloads (install tools manually)
-#   ./setup.sh --no-venv    — skip Python venv (use system Python)
+#   ./setup.sh --skip-tools — skip Go binary downloads (AV-restricted envs)
+#   ./setup.sh --no-venv    — use system Python instead of venv
 #
-# What this script downloads and why:
-#   • apt packages      — system libraries required by SMP (nmap, sqlcipher, etc.)
-#   • Python packages   — installed via pip inside an isolated venv
-#   • Go tools (6)      — prebuilt binaries from official GitHub Releases pages:
-#       nuclei      https://github.com/projectdiscovery/nuclei/releases
-#       subfinder   https://github.com/projectdiscovery/subfinder/releases
-#       httpx       https://github.com/projectdiscovery/httpx/releases
-#       katana      https://github.com/projectdiscovery/katana/releases
-#       dnsx        https://github.com/projectdiscovery/dnsx/releases
-#       ffuf        https://github.com/ffuf/ffuf/releases
-#       gitleaks    https://github.com/gitleaks/gitleaks/releases
-#       dalfox      https://github.com/hahwul/dalfox/releases
-#
-# Every binary is verified with a SHA-256 checksum before installation.
-# If your antivirus blocks Go binary downloads, run with --skip-tools and
-# install each tool manually from the URLs above.
+# Go tool versions pinned (from official GitHub Releases):
+#   nuclei    v3.3.9    projectdiscovery/nuclei
+#   subfinder v2.7.0    projectdiscovery/subfinder
+#   httpx     v1.7.0    projectdiscovery/httpx
+#   katana    v1.1.2    projectdiscovery/katana
+#   dnsx      v1.2.1    projectdiscovery/dnsx
+#   ffuf      v2.1.0    ffuf/ffuf
+#   gitleaks  v9.3.1   gitleaks/gitleaks
+#   dalfox    v2.10.0   hahwul/dalfox
 # =============================================================================
 set -euo pipefail
 
@@ -33,371 +34,409 @@ BIN_DIR="$SCRIPT_DIR/bin"
 LOG_FILE="$SCRIPT_DIR/setup.log"
 mkdir -p "$BIN_DIR"
 
-# ── Parse flags ───────────────────────────────────────────────────────────────
+# ── Flags ──────────────────────────────────────────────────────────────────────
 SKIP_TOOLS=false
 SKIP_VENV=false
 for arg in "$@"; do
     case "$arg" in
         --skip-tools) SKIP_TOOLS=true ;;
         --no-venv)    SKIP_VENV=true  ;;
-        -h|--help)
-            grep '^#' "$0" | head -25 | sed 's/^# \?//'
-            exit 0
-            ;;
+        -h|--help)    grep '^#' "$0" | head -30 | sed 's/^# \?//'; exit 0 ;;
     esac
 done
 
 > "$LOG_FILE"
 
-# ── Colours & UI ─────────────────────────────────────────────────────────────
+# ── UI ─────────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-
 ok()   { printf "\r\033[K${GREEN}✔${RESET} %s\n" "$*"; }
 warn() { printf "\r\033[K${YELLOW}⚠${RESET} %s\n" "$*"; }
-fail() { printf "\r\033[K${RED}✘${RESET} %s\n" "$*"; }
+fail() { printf "\r\033[K${RED}✘${RESET} %s\n" "$*"; exit 1; }
 info() { printf "\r\033[K${CYAN}ℹ${RESET} %s\n" "$*"; }
 
 spin() {
     local msg="$1"; shift
-    local pid
-    "$@" >> "$LOG_FILE" 2>&1 &
-    pid=$!
-    local spinner=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
-    local i=0
+    local pid; "$@" >> "$LOG_FILE" 2>&1 & pid=$!
+    local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") i=0
     while kill -0 $pid 2>/dev/null; do
-        printf "\r\033[K${CYAN}%s${RESET} %s" "${spinner[$((i % ${#spinner[@]}))]}" "$msg"
-        i=$((i+1)); sleep 0.1
+        printf "\r\033[K${CYAN}%s${RESET} %s" "${sp[$((i%10))]}" "$msg"
+        ((i++)); sleep 0.1
     done
-    wait $pid; local ec=$?
-    if [[ $ec -eq 0 ]]; then ok "$msg"; else
-        fail "$msg — see setup.log for details"; return $ec
-    fi
+    wait $pid && { ok "$msg"; return 0; } || { warn "$msg — see setup.log"; return 1; }
 }
 
 ARCH="$(uname -m)"
-is_arm64() { [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; }
+OS="$(uname -s)"
+is_arm() { [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; }
+have()   { command -v "$1" &>/dev/null || [[ -x "$BIN_DIR/$1" ]]; }
 
-# ── Binary downloader with SHA-256 verification ───────────────────────────────
-# Usage: download_binary <name> <url_amd64> <sha256_amd64> <url_arm64> <sha256_arm64>
-download_binary() {
-    local name="$1" url_amd64="$2" sha_amd64="$3" url_arm64="$4" sha_arm64="$5"
-    local url sha
-    if is_arm64; then url="$url_arm64"; sha="$sha_arm64"; else url="$url_amd64"; sha="$sha_amd64"; fi
+# ── Distro detection ──────────────────────────────────────────────────────────
+DISTRO=""
+PKG_MGR=""
+if [[ "$OS" == "Darwin" ]]; then
+    DISTRO="macos"
+    PKG_MGR="brew"
+elif [[ -f /etc/os-release ]]; then
+    source /etc/os-release
+    ID_LOWER="${ID,,}"
+    case "$ID_LOWER" in
+        ubuntu|debian|kali|parrot|linuxmint|pop)
+            DISTRO="debian"; PKG_MGR="apt" ;;
+        fedora)
+            DISTRO="fedora"; PKG_MGR="dnf" ;;
+        rhel|centos|rocky|alma|ol)
+            DISTRO="rhel"; PKG_MGR="dnf" ;;
+        arch|manjaro|endeavouros|garuda)
+            DISTRO="arch"; PKG_MGR="pacman" ;;
+        opensuse*|suse*)
+            DISTRO="opensuse"; PKG_MGR="zypper" ;;
+        *)
+            warn "Unknown distro '$ID' — attempting apt fallback"
+            DISTRO="debian"; PKG_MGR="apt" ;;
+    esac
+else
+    warn "Cannot detect distro — assuming Debian/Ubuntu"
+    DISTRO="debian"; PKG_MGR="apt"
+fi
 
-    info "Downloading $name from: $url"
-    local tmp; tmp="$(mktemp -d)"
-    local archive="$tmp/archive"
+echo -e "\n${BOLD}Security Management Platform — Installer${RESET}"
+echo -e "  © mrQhere · https://github.com/mrQhere/SecurityManagementPlatform"
+echo -e "  Detected: ${BOLD}$OS / $DISTRO${RESET} (arch: $ARCH, pkg: $PKG_MGR)\n"
+$SKIP_TOOLS && warn "--skip-tools: Go binary downloads will be skipped"
 
-    if ! curl -fL --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
-        rm -rf "$tmp"; warn "$name: download failed (network error)"; return 1
-    fi
-
-    # ── Checksum verification ─────────────────────────────────────────────────
-    if [[ -n "$sha" ]]; then
-        local actual
-        actual=$(sha256sum "$archive" 2>/dev/null | awk '{print $1}' || shasum -a 256 "$archive" | awk '{print $1}')
-        if [[ "$actual" != "$sha" ]]; then
-            rm -rf "$tmp"
-            fail "$name: SHA-256 mismatch — expected $sha, got $actual"
-            fail "This may indicate a corrupted download or version change. Re-run setup.sh."
-            return 1
-        fi
-        ok "$name: checksum verified ✔"
-    fi
-
-    if [[ "$url" == *.zip ]]; then
-        unzip -q "$archive" -d "$tmp" >> "$LOG_FILE" 2>&1 || { rm -rf "$tmp"; return 1; }
-    else
-        tar -xzf "$archive" -C "$tmp" >> "$LOG_FILE" 2>&1 || { rm -rf "$tmp"; return 1; }
-    fi
-
-    local binary_path
-    binary_path=$(find "$tmp" -type f -name "${name,,}" | head -1)
-    [[ -z "$binary_path" ]] && binary_path=$(find "$tmp" -type f -iname "$name" | head -1)
-
-    if [[ -n "$binary_path" ]]; then
-        install -m 0755 "$binary_path" "$BIN_DIR/$name"
-        rm -rf "$tmp"; return 0
-    else
-        rm -rf "$tmp"; warn "$name: binary not found in archive"; return 1
-    fi
+# ── Package manager helpers ───────────────────────────────────────────────────
+pkg_update() {
+    case "$PKG_MGR" in
+        apt)    sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq ;;
+        dnf)    sudo dnf makecache -q ;;
+        pacman) sudo pacman -Sy --noconfirm ;;
+        zypper) sudo zypper refresh -q ;;
+        brew)   brew update -q ;;
+    esac
 }
 
-have() { command -v "$1" &>/dev/null || [[ -x "$BIN_DIR/$1" ]]; }
+pkg_install() {
+    case "$PKG_MGR" in
+        apt)    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" ;;
+        dnf)    sudo dnf install -y -q "$@" ;;
+        pacman) sudo pacman -S --noconfirm --needed "$@" ;;
+        zypper) sudo zypper install -y -q "$@" ;;
+        brew)   brew install -q "$@" ;;
+    esac
+}
 
-# =============================================================================
-echo -e "\n${BOLD}Security Management Platform — Installer${RESET}"
-echo -e "  © mrQhere · https://github.com/mrQhere/SecurityManagementPlatform\n"
+# Map package names per distro
+get_pkg() {
+    # get_pkg <canonical> → prints distro-specific package name
+    local pkg="$1"
+    case "$pkg" in
+        python3)
+            case "$DISTRO" in arch) echo "python";; *) echo "python3";; esac ;;
+        python3-pip)
+            case "$DISTRO" in
+                arch) echo "python-pip";;
+                rhel|fedora) echo "python3-pip";;
+                *) echo "python3-pip";;
+            esac ;;
+        python3-venv)
+            case "$DISTRO" in
+                arch|rhel|fedora) echo "";;  # included in python package
+                *) echo "python3-venv";;
+            esac ;;
+        python3-dev)
+            case "$DISTRO" in
+                debian) echo "python3-dev";;
+                rhel|fedora) echo "python3-devel";;
+                arch) echo "";;  # included
+                opensuse) echo "python3-devel";;
+            esac ;;
+        libsqlcipher-dev)
+            case "$DISTRO" in
+                debian) echo "libsqlcipher-dev";;
+                rhel|fedora) echo "sqlcipher-devel";;
+                arch) echo "sqlcipher";;
+                opensuse) echo "sqlcipher-devel";;
+                macos) echo "sqlcipher";;
+            esac ;;
+        libsqlcipher0)
+            case "$DISTRO" in
+                debian)
+                    # Ubuntu 24.04+ uses t64 suffix
+                    if apt-cache show libsqlcipher0t64 &>/dev/null; then
+                        echo "libsqlcipher0t64"
+                    else
+                        echo "libsqlcipher0"
+                    fi ;;
+                rhel|fedora) echo "sqlcipher";;
+                arch) echo "";;  # covered by sqlcipher above
+                opensuse) echo "libsqlcipher0";;
+            esac ;;
+        build-essential)
+            case "$DISTRO" in
+                debian) echo "build-essential";;
+                rhel|fedora) echo "@development-tools";;
+                arch) echo "base-devel";;
+                opensuse) echo "gcc make";;
+            esac ;;
+        nmap) echo "nmap" ;;
+        nikto)
+            case "$DISTRO" in
+                arch) echo "nikto";;
+                rhel) echo "";;  # manual install on RHEL
+                *) echo "nikto";;
+            esac ;;
+        ruby)
+            case "$DISTRO" in
+                rhel|fedora) echo "ruby ruby-devel";;
+                arch) echo "ruby";;
+                *) echo "ruby ruby-dev";;
+            esac ;;
+        whatweb)
+            case "$DISTRO" in
+                debian) echo "whatweb";;
+                *) echo "";;  # install via gem below
+            esac ;;
+        perl) echo "perl" ;;
+        git)  echo "git"  ;;
+        *) echo "$pkg" ;;
+    esac
+}
 
-if $SKIP_TOOLS; then
-    warn "Running with --skip-tools: Go binary downloads will be skipped."
-    info "Install tools manually from GitHub Releases (see script header for URLs)."
-    echo ""
+# ── sudo keepalive ─────────────────────────────────────────────────────────────
+if [[ "$OS" != "Darwin" ]]; then
+    sudo -v
+    while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
 fi
 
-sudo -v
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+# ── System packages ────────────────────────────────────────────────────────────
+spin "Updating package index" pkg_update
 
-# ── Python ──
-if have python3; then
-    ok "Python 3 installed ($(python3 --version 2>&1))"
-else
-    spin "Installing Python 3" sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3 python3-pip python3-venv python3-dev
-fi
+CANONICAL_PKGS=(python3 python3-pip python3-venv python3-dev
+                libsqlcipher-dev libsqlcipher0 build-essential
+                nmap nikto ruby perl git)
 
-# ── Go ──
-if have go; then
-    ok "Go installed ($(go version 2>&1 | awk '{print $3}'))"
-elif ! $SKIP_TOOLS; then
-    if ! spin "Installing Go via apt" sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq golang-go; then
-        warn "apt go failed — downloading Go 1.22.5 tarball"
-        GO_VER="1.22.5"
-        GOARCH="amd64"; is_arm64 && GOARCH="arm64"
-        info "Downloading: https://go.dev/dl/go${GO_VER}.linux-${GOARCH}.tar.gz"
-        curl -fsSL "https://go.dev/dl/go${GO_VER}.linux-${GOARCH}.tar.gz" | sudo tar -C /usr/local -xz >> "$LOG_FILE" 2>&1
-        export PATH="$PATH:/usr/local/go/bin"
-        echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-        ok "Go installed via tarball"
-    fi
-fi
-
-# ── OS Packages (apt) ──
-spin "Refreshing apt package index" sudo apt-get update -qq
-
-SQLCIPHER_RT=""
-SQLCIPHER_BUILD_FROM_SOURCE=false
-if apt-cache show libsqlcipher0t64 >> "$LOG_FILE" 2>&1; then
-    SQLCIPHER_RT="libsqlcipher0t64"          # Ubuntu 24.04+
-elif apt-cache show libsqlcipher0 >> "$LOG_FILE" 2>&1; then
-    SQLCIPHER_RT="libsqlcipher0"             # Ubuntu 22.04 / Debian
-else
-    warn "libsqlcipher0 not found in apt — will build SQLCipher from source."
-    SQLCIPHER_BUILD_FROM_SOURCE=true
-fi
-
-OS_TOOLS=(nmap nikto whatweb traceroute masscan ruby ruby-dev build-essential
-          perl git libsqlcipher-dev openssl libssl-dev
-          libxcb-cursor0 libxcb-cursor-dev pipx clamav clamav-daemon)
-[[ -n "$SQLCIPHER_RT" ]] && OS_TOOLS+=("$SQLCIPHER_RT")
-
-MISSING_APT=()
-for t in "${OS_TOOLS[@]}"; do
-    dpkg -s "$t" >> "$LOG_FILE" 2>&1 || MISSING_APT+=("$t")
+PKGS_TO_INSTALL=()
+for cpkg in "${CANONICAL_PKGS[@]}"; do
+    dpkg_name="$(get_pkg "$cpkg")"
+    [[ -z "$dpkg_name" ]] && continue
+    # Check each word in multi-word package specs
+    for name in $dpkg_name; do
+        [[ "$name" == @* ]] && { PKGS_TO_INSTALL+=("$name"); continue; }
+        case "$PKG_MGR" in
+            apt)    dpkg -s "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+            dnf)    rpm -q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+            pacman) pacman -Q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+            zypper) rpm -q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+            brew)   brew list "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+        esac
+    done
 done
 
-if [[ ${#MISSING_APT[@]} -eq 0 ]]; then
-    ok "OS packages already installed"
+if [[ ${#PKGS_TO_INSTALL[@]} -gt 0 ]]; then
+    spin "Installing system packages" pkg_install "${PKGS_TO_INSTALL[@]}"
 else
-    if ! spin "Installing missing OS packages" sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${MISSING_APT[@]}"; then
-        warn "Some packages failed. Retrying with --fix-missing…"
-        spin "Installing OS packages (retry)" bash -c \
-            "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing ${MISSING_APT[*]} || true"
-        warn "Proceeding despite some missing packages (mirror network issue)."
+    ok "System packages already installed"
+fi
+
+# ── Kali / Parrot extra tools (already ship many tools) ───────────────────────
+if [[ "${ID_LOWER:-}" == "kali" || "${ID_LOWER:-}" == "parrot" ]]; then
+    info "Kali/Parrot detected — many tools pre-installed, skipping duplicates"
+fi
+
+# ── SQLCipher source build fallback ───────────────────────────────────────────
+if ! python3 -c "import ctypes; ctypes.cdll.LoadLibrary('libsqlcipher.so.0')" &>/dev/null && \
+   ! ldconfig -p 2>/dev/null | grep -q 'libsqlcipher'; then
+    if [[ "$DISTRO" == "arch" ]]; then
+        spin "Installing sqlcipher via pacman" sudo pacman -S --noconfirm --needed sqlcipher
+    else
+        _sc_tmp=$(mktemp -d)
+        if spin "Building SQLCipher from source" bash -c "
+            git clone --depth=1 https://github.com/sqlcipher/sqlcipher.git '$_sc_tmp' &&
+            cd '$_sc_tmp' &&
+            ./configure CFLAGS='-DSQLITE_HAS_CODEC' LDFLAGS='-lcrypto' --prefix=/usr/local &&
+            make -j\$(nproc) && sudo make install && sudo ldconfig"; then
+            ok "SQLCipher built from source"
+        else
+            warn "SQLCipher source build failed — pysqlcipher3 may not install"
+        fi
+        rm -rf "$_sc_tmp"
     fi
 fi
 
-# ── SQLCipher Source Build ──
-if $SQLCIPHER_BUILD_FROM_SOURCE; then
-    if ldconfig -p 2>/dev/null | grep -q 'libsqlcipher'; then
-        ok "SQLCipher already present via ldconfig"
+# ── Go ─────────────────────────────────────────────────────────────────────────
+if ! $SKIP_TOOLS; then
+    if have go; then
+        ok "Go installed ($(go version 2>&1 | awk '{print $3}'))"
     else
-        _SC_TMP=$(mktemp -d)
-        if spin "Cloning SQLCipher" git clone --depth=1 https://github.com/sqlcipher/sqlcipher.git "$_SC_TMP"; then
-            pushd "$_SC_TMP" > /dev/null
-            spin "Configuring SQLCipher" ./configure CFLAGS="-DSQLITE_HAS_CODEC" LDFLAGS="-lcrypto" --prefix=/usr/local
-            spin "Compiling SQLCipher" make -j"$(nproc)"
-            spin "Installing SQLCipher" sudo make install
-            sudo ldconfig
-            popd > /dev/null
-            rm -rf "$_SC_TMP"
-        else
-            rm -rf "$_SC_TMP"
-            warn "SQLCipher source build failed. pysqlcipher3 may not install."
+        GO_VER="1.22.6"
+        GOARCH="amd64"; is_arm && GOARCH="arm64"
+        case "$DISTRO" in
+            debian|rhel|fedora|opensuse)
+                spin "Installing Go via package manager" pkg_install golang || true ;;
+        esac
+        if ! have go; then
+            info "Downloading Go $GO_VER from go.dev"
+            curl -fsSL "https://go.dev/dl/go${GO_VER}.linux-${GOARCH}.tar.gz" \
+                | sudo tar -C /usr/local -xz >> "$LOG_FILE" 2>&1
+            export PATH="$PATH:/usr/local/go/bin"
+            grep -q '/usr/local/go/bin' ~/.bashrc 2>/dev/null || \
+                echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+            ok "Go $GO_VER installed"
         fi
     fi
 fi
 
-# ── Python venv & dependencies ──
-if $SKIP_VENV; then
-    info "Skipping venv creation (--no-venv)"
-elif [[ ! -d "$SCRIPT_DIR/venv" ]]; then
-    spin "Creating Python virtual environment" python3 -m venv "$SCRIPT_DIR/venv"
-else
-    ok "Virtual environment exists"
-fi
-
+# ── Python venv & dependencies ─────────────────────────────────────────────────
 if ! $SKIP_VENV; then
+    if [[ ! -d "$SCRIPT_DIR/venv" ]]; then
+        spin "Creating Python virtual environment" python3 -m venv "$SCRIPT_DIR/venv"
+    else
+        ok "Virtual environment exists"
+    fi
+
     source "$SCRIPT_DIR/venv/bin/activate"
     spin "Upgrading pip" pip install --upgrade pip
-    total_pkgs=$(grep -c '.' "$SCRIPT_DIR/requirements.txt")
-    spin "Installing Python dependencies ($total_pkgs packages)" pip install -r "$SCRIPT_DIR/requirements.txt"
 
-    if ! python3 -c "from pysqlcipher3 import dbapi2" >> "$LOG_FILE" 2>&1; then
-        if ! spin "Installing pysqlcipher3" pip install pysqlcipher3; then
-            info "Retrying pysqlcipher3 with explicit flags…"
-            CFLAGS="-I/usr/include/sqlcipher" LDFLAGS="-lsqlcipher" \
-                pip install pysqlcipher3 >> "$LOG_FILE" 2>&1 && \
-                ok "pysqlcipher3 installed (with explicit flags)" || \
-                { fail "pysqlcipher3 installation failed. See setup.log."; exit 1; }
-        fi
+    # pysqlcipher3 before the rest so other deps don't pull in a broken version
+    if ! python3 -c "from pysqlcipher3 import dbapi2" &>/dev/null; then
+        spin "Installing pysqlcipher3" pip install pysqlcipher3 || \
+        spin "pysqlcipher3 (with explicit flags)" bash -c \
+            "CFLAGS='-I/usr/include/sqlcipher' LDFLAGS='-lsqlcipher' pip install pysqlcipher3" || \
+        fail "pysqlcipher3 failed — see setup.log. SMP cannot start without SQLCipher."
     else
         ok "pysqlcipher3 installed"
     fi
+
+    spin "Installing Python dependencies" \
+        pip install -r "$SCRIPT_DIR/requirements.txt"
 fi
 
-# ── Go Security Tools ─────────────────────────────────────────────────────────
+# ── Go Security Tools ──────────────────────────────────────────────────────────
 if $SKIP_TOOLS; then
     warn "Skipping Go tool downloads (--skip-tools). Install manually:"
-    echo "  nuclei:    https://github.com/projectdiscovery/nuclei/releases"
-    echo "  subfinder: https://github.com/projectdiscovery/subfinder/releases"
-    echo "  httpx:     https://github.com/projectdiscovery/httpx/releases"
-    echo "  katana:    https://github.com/projectdiscovery/katana/releases"
-    echo "  dnsx:      https://github.com/projectdiscovery/dnsx/releases"
-    echo "  ffuf:      https://github.com/ffuf/ffuf/releases"
-    echo "  gitleaks:  https://github.com/gitleaks/gitleaks/releases"
-    echo "  dalfox:    https://github.com/hahwul/dalfox/releases"
-    echo "  Place binaries in: $BIN_DIR/"
+    cat <<'EOF'
+  nuclei:    https://github.com/projectdiscovery/nuclei/releases/tag/v3.3.9
+  subfinder: https://github.com/projectdiscovery/subfinder/releases/tag/v2.7.0
+  httpx:     https://github.com/projectdiscovery/httpx/releases/tag/v1.7.0
+  katana:    https://github.com/projectdiscovery/katana/releases/tag/v1.1.2
+  dnsx:      https://github.com/projectdiscovery/dnsx/releases/tag/v1.2.1
+  ffuf:      https://github.com/ffuf/ffuf/releases/tag/v2.1.0
+  gitleaks:  https://github.com/gitleaks/gitleaks/releases/tag/v9.3.1
+  dalfox:    https://github.com/hahwul/dalfox/releases/tag/v2.10.0
+  Place binaries in: bin/
+EOF
 else
     export PATH="$PATH:$(go env GOPATH 2>/dev/null || echo "$HOME/go")/bin:$BIN_DIR"
-    grep -q 'GOPATH.*bin' ~/.bashrc 2>/dev/null || \
-        echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
 
-    # ── Pinned versions with SHA-256 checksums ───────────────────────────────
-    # Checksums are for Linux amd64/arm64 archives from official GitHub Releases.
-    # To update: download the archive and run: sha256sum <file>
-    declare -A URL_AMD64=(
-        [nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.7/nuclei_3.3.7_linux_amd64.zip"
-        [subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.7/subfinder_2.6.7_linux_amd64.zip"
-        [httpx]="https://github.com/projectdiscovery/httpx/releases/download/v1.6.9/httpx_1.6.9_linux_amd64.zip"
-        [katana]="https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_amd64.zip"
-        [dnsx]="https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip"
-        [ffuf]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz"
-        [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.3.0/gitleaks_8.21.2_linux_x64.tar.gz"
-        [dalfox]="https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz"
-    )
-    declare -A SHA_AMD64=(
-        [nuclei]=""
-        [subfinder]=""
-        [httpx]=""
-        [katana]=""
-        [dnsx]=""
-        [ffuf]=""
-        [gitleaks]=""
-        [dalfox]=""
-    )
-    declare -A URL_ARM64=(
-        [nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.7/nuclei_3.3.7_linux_arm64.zip"
-        [subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.7/subfinder_2.6.7_linux_arm64.zip"
-        [httpx]="https://github.com/projectdiscovery/httpx/releases/download/v1.6.9/httpx_1.6.9_linux_arm64.zip"
-        [katana]="https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_arm64.zip"
-        [dnsx]="https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip"
-        [ffuf]="https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
-        [gitleaks]="https://github.com/gitleaks/gitleaks/releases/download/v9.3.0/gitleaks_8.21.2_linux_arm64.tar.gz"
-        [dalfox]="https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz"
-    )
-    declare -A SHA_ARM64=(
-        [nuclei]=""
-        [subfinder]=""
-        [httpx]=""
-        [katana]=""
-        [dnsx]=""
-        [ffuf]=""
-        [gitleaks]=""
-        [dalfox]=""
-    )
-
-    GO_FALLBACKS=(
-        "nuclei    github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7"
-        "subfinder github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.7"
-        "httpx     github.com/projectdiscovery/httpx/cmd/httpx@v1.6.9"
-        "katana    github.com/projectdiscovery/katana/cmd/katana@v1.1.2"
-        "dnsx      github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1"
-        "ffuf      github.com/ffuf/ffuf/v2@v2.1.0"
-        "gitleaks  github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v9.3.0"
-        "dalfox    github.com/hahwul/dalfox/v2@v2.9.3"
-    )
-
-    tool_names=("nuclei" "subfinder" "httpx" "katana" "dnsx" "ffuf" "gitleaks" "dalfox")
-
-    for name in "${tool_names[@]}"; do
-        if have "$name"; then ok "$name installed"; continue; fi
-
-        if is_arm64; then
-            url="${URL_ARM64[$name]:-}"
-            sha="${SHA_ARM64[$name]:-}"
-        else
-            url="${URL_AMD64[$name]:-}"
-            sha="${SHA_AMD64[$name]:-}"
+    # ── download_binary <name> <url_amd64> <url_arm64> ──────────────────────
+    download_binary() {
+        local name="$1" url_amd="$2" url_arm="$3"
+        local url; is_arm && url="$url_arm" || url="$url_amd"
+        info "Downloading $name from: $url"
+        local tmp; tmp="$(mktemp -d)"
+        local archive="$tmp/archive"
+        if ! curl -fL --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
+            rm -rf "$tmp"; warn "$name: download failed"; return 1
         fi
+        [[ "$url" == *.zip ]] && \
+            unzip -q "$archive" -d "$tmp" >> "$LOG_FILE" 2>&1 || \
+            tar -xzf "$archive" -C "$tmp" >> "$LOG_FILE" 2>&1
+        local bin; bin=$(find "$tmp" -type f -name "${name,,}" 2>/dev/null | head -1)
+        [[ -z "$bin" ]] && bin=$(find "$tmp" -type f -iname "$name" 2>/dev/null | head -1)
+        if [[ -n "$bin" ]]; then
+            install -m 0755 "$bin" "$BIN_DIR/$name"
+            rm -rf "$tmp"; return 0
+        fi
+        rm -rf "$tmp"; warn "$name: binary not found in archive"; return 1
+    }
 
-        if [[ -n "$url" ]] && \
-           spin "Downloading $name" download_binary "$name" \
-               "${URL_AMD64[$name]}" "${SHA_AMD64[$name]}" \
-               "${URL_ARM64[$name]}" "${SHA_ARM64[$name]}"; then
+    # ── Pinned versions (update these when new releases ship) ────────────────
+    # Format: name | url_amd64 | url_arm64
+    declare -A T_AMD T_ARM T_GO
+    BASE_PD="https://github.com/projectdiscovery"
+    BASE_FF="https://github.com/ffuf/ffuf/releases/download"
+    BASE_GL="https://github.com/gitleaks/gitleaks/releases/download"
+    BASE_DX="https://github.com/hahwul/dalfox/releases/download"
+
+    T_AMD[nuclei]="$BASE_PD/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip"
+    T_ARM[nuclei]="$BASE_PD/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_arm64.zip"
+    T_GO[nuclei]="github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.9"
+
+    T_AMD[subfinder]="$BASE_PD/subfinder/releases/download/v2.7.0/subfinder_2.7.0_linux_amd64.zip"
+    T_ARM[subfinder]="$BASE_PD/subfinder/releases/download/v2.7.0/subfinder_2.7.0_linux_arm64.zip"
+    T_GO[subfinder]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.7.0"
+
+    T_AMD[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_amd64.zip"
+    T_ARM[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_arm64.zip"
+    T_GO[httpx]="github.com/projectdiscovery/httpx/cmd/httpx@v1.7.0"
+
+    T_AMD[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_linux_amd64.zip"
+    T_ARM[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_linux_arm64.zip"
+    T_GO[katana]="github.com/projectdiscovery/katana/cmd/katana@v1.1.2"
+
+    T_AMD[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip"
+    T_ARM[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip"
+    T_GO[dnsx]="github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1"
+
+    T_AMD[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz"
+    T_ARM[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
+    T_GO[ffuf]="github.com/ffuf/ffuf/v2@v2.1.0"
+
+    T_AMD[gitleaks]="$BASE_GL/v9.3.1/gitleaks_8.24.0_linux_x64.tar.gz"
+    T_ARM[gitleaks]="$BASE_GL/v9.3.1/gitleaks_8.24.0_linux_arm64.tar.gz"
+    T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v9.3.1"
+
+    T_AMD[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz"
+    T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"
+    T_GO[dalfox]="github.com/hahwul/dalfox/v2@v2.10.0"
+
+    for name in nuclei subfinder httpx katana dnsx ffuf gitleaks dalfox; do
+        if have "$name"; then ok "$name installed"; continue; fi
+        if spin "Downloading $name" \
+           download_binary "$name" "${T_AMD[$name]}" "${T_ARM[$name]}"; then
             continue
         fi
-
-        # Fallback: go install from source (pinned version)
-        built=false
-        for entry in "${GO_FALLBACKS[@]}"; do
-            n="${entry%% *}"; pkg="${entry#* }"
-            if [[ "$n" == "$name" ]] && have go; then
-                if spin "Building $name from source (pinned)" go install -v "$pkg"; then
-                    built=true; break
-                fi
-            fi
-        done
-        $built || warn "$name: download and source build both failed"
+        # Fallback: go install (pinned)
+        if have go && spin "Building $name from source" \
+           go install -v "${T_GO[$name]}" >> "$LOG_FILE" 2>&1; then
+            continue
+        fi
+        warn "$name: download and source build failed — scan will be skipped"
     done
+
+    # ── Optional enterprise tools ─────────────────────────────────────────────
+    have trivy || \
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+        | sh -s -- -b "$BIN_DIR" v0.55.0 >> "$LOG_FILE" 2>&1 && ok "Trivy installed" || true
+
+    have prowler    || pip install prowler    -q >> "$LOG_FILE" 2>&1 && ok "Prowler installed"    || true
+    have cme 2>/dev/null || pip install crackmapexec -q >> "$LOG_FILE" 2>&1 || true
 fi
 
-# ── Enterprise tools (optional — gracefully skipped if unavailable) ───────────
-if ! $SKIP_TOOLS; then
-    spin "Installing CrackMapExec" pipx install crackmapexec >> "$LOG_FILE" 2>&1 || true
-    spin "Installing Prowler"      pipx install prowler      >> "$LOG_FILE" 2>&1 || true
-
-    if have trivy; then
-        ok "Trivy installed"
+# ── WPScan ─────────────────────────────────────────────────────────────────────
+if ! have wpscan; then
+    if gem install wpscan --no-user-install >> "$LOG_FILE" 2>&1 && have wpscan; then
+        ok "wpscan installed via gem"
+    elif have docker; then
+        printf '#!/usr/bin/env bash\nexec docker run --rm --network=host wpscanteam/wpscan "$@"\n' \
+            > "$BIN_DIR/wpscan" && chmod +x "$BIN_DIR/wpscan"
+        ok "wpscan Docker wrapper created"
     else
-        if spin "Downloading Trivy" \
-            curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b "$BIN_DIR" v0.49.1 >> "$LOG_FILE" 2>&1; then :
-        else warn "Trivy install failed (non-fatal)"; fi
+        printf '#!/usr/bin/env bash\necho "WPScan not installed. Run: sudo gem install wpscan"\nexit 1\n' \
+            > "$BIN_DIR/wpscan" && chmod +x "$BIN_DIR/wpscan"
+        warn "WPScan stub created. WordPress scans disabled."
     fi
-fi
-
-# ── WPScan ───────────────────────────────────────────────────────────────────
-if have wpscan; then
-    ok "wpscan installed"
-elif gem install wpscan --no-user-install >> "$LOG_FILE" 2>&1 && have wpscan; then
-    ok "wpscan installed via gem"
-elif pip install wpscanpy >> "$LOG_FILE" 2>&1 && python3 -c "import wpscanpy" >> "$LOG_FILE" 2>&1; then
-    printf '#!/usr/bin/env bash\nexec python3 -m wpscanpy "$@"\n' > "$BIN_DIR/wpscan"
-    chmod +x "$BIN_DIR/wpscan"
-    ok "wpscan installed via pip"
-elif have docker; then
-    printf '#!/usr/bin/env bash\nexec docker run --rm --network=host wpscanteam/wpscan "$@"\n' > "$BIN_DIR/wpscan"
-    chmod +x "$BIN_DIR/wpscan"
-    ok "wpscan Docker wrapper created"
 else
-    cat > "$BIN_DIR/wpscan" << 'WPSCAN_STUB'
-#!/usr/bin/env bash
-echo "  ⚠  WPScan is not installed. WordPress scans will be skipped."
-echo "  Install: sudo gem install wpscan"
-exit 1
-WPSCAN_STUB
-    chmod +x "$BIN_DIR/wpscan"
-    warn "WPScan not installed. WordPress scans disabled."
+    ok "wpscan installed"
 fi
 
-# ── Finalise ─────────────────────────────────────────────────────────────────
+# ── Finalise ───────────────────────────────────────────────────────────────────
 chmod +x "$SCRIPT_DIR/run.sh"
 find "$BIN_DIR" -type f -exec chmod +x {} \; 2>/dev/null || true
 
 now=$(date +%s)
-echo -e "\n${GREEN}✔ Setup complete in $((now - SCRIPT_START))s${RESET}"
-if $SKIP_TOOLS; then
-    echo -e "  ${YELLOW}⚠  Go tools were skipped. Add binaries to: $BIN_DIR/${RESET}"
-fi
-echo -e "  ▶ Launch: ${BOLD}./run.sh${RESET}\n"
+echo -e "\n${GREEN}${BOLD}✔ Setup complete in $((now - SCRIPT_START))s${RESET}"
+$SKIP_TOOLS && warn "Go tools were skipped. Add binaries to: $BIN_DIR/"
+echo -e "  ▶ Launch GUI:  ${BOLD}./run.sh${RESET}"
+echo -e "  ▶ Launch API:  ${BOLD}python main.py --api${RESET}\n"

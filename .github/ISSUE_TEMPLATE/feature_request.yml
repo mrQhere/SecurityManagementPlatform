@@ -1,0 +1,40 @@
+name: Feature / Scanner Request
+description: Suggest a new scanner, integration, or platform feature
+labels: ["enhancement"]
+assignees: ["mrQhere"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request type
+      options:
+        - New scanner module
+        - New intelligence source
+        - UI improvement
+        - API endpoint
+        - Report / compliance mapping
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the security gap or workflow friction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: If requesting a new scanner, include the tool name, install method, and what findings it produces.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What do you do today instead?

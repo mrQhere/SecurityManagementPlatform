@@ -65,7 +65,7 @@ class DAGOrchestrator:
                     q.put((plugin.name, None, False, "Cancelled"))
                     return
                 
-                # ── V9.3.0 — Inter-Request Delay (Rate Limiting) ────────────────
+                # ── V9.3.1 — Inter-Request Delay (Rate Limiting) ────────────────
                 # Stagger concurrent tool launches to avoid hammering the target.
                 import time
                 import random

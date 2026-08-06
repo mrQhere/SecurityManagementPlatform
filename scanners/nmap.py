@@ -10,7 +10,7 @@ from tools.db_manager import add_log_entry
 logger = logging.getLogger("smp.scan")
 
 # Maximum seconds to allow nmap to run before forcefully killing it
-NMAP_TIMEOUT = 1800   # 30 min cap — SV intensity 9 on standard hosts
+NMAP_TIMEOUT = 14400  # 4h — version-intensity 9 on large port ranges
 
 def extract_host_from_url(url):
     """Extract host name or IP address from a URL to pass to Nmap."""

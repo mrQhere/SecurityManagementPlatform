@@ -1,0 +1,70 @@
+name: Bug Report
+description: Something is broken or behaving incorrectly
+labels: ["bug", "needs-triage"]
+assignees: ["mrQhere"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before filing:** Check [Troubleshooting](../../USER_GUIDE.md#10--troubleshooting) first.
+        Security vulnerabilities → use [GitHub Security Advisories](../../security/advisories), not this form.
+
+  - type: input
+    id: smp_version
+    attributes:
+      label: SMP Version
+      placeholder: "V9.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS / Distro
+      options:
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Debian 12
+        - Fedora 40+
+        - Arch Linux
+        - macOS (Docker)
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Run mode
+      options:
+        - GUI (./run.sh)
+        - Headless API (python main.py --api)
+        - Docker
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: Include the exact error message, scanner that failed, and scan profile used.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add target https://example.com
+        2. Start scan — profile: standard
+        3. Nuclei crashes at ~40% with error …
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste from `logs/smp.log` or `setup.log`
+      render: text
