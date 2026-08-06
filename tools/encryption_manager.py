@@ -30,13 +30,13 @@ ACTIVE_KEY = None  # Stored in memory while running
 # Track whether decryption succeeded so the rest of the app can check
 _DECRYPTION_SUCCEEDED = False
 
-# V9.2.4: NIST 2024 recommendation — 600,000 iterations for PBKDF2-SHA256
+# V9.3.0: NIST 2024 recommendation — 600,000 iterations for PBKDF2-SHA256
 _PBKDF2_ITERATIONS = 600_000
 
 
 def validate_password_complexity(password: str) -> tuple:
     """
-    V9.2.4 — Enforce password complexity policy.
+    V9.3.0 — Enforce password complexity policy.
     
     Requirements:
       - Minimum 12 characters
@@ -81,7 +81,7 @@ def has_password_set() -> bool:
     return os.path.exists(AUTH_FILE)
 
 def setup_password(password: str):
-    """V9.2.4 — Establish master password with complexity check and generate encryption keys."""
+    """V9.3.0 — Establish master password with complexity check and generate encryption keys."""
     # Complexity check on first setup
     is_valid, error_msg = validate_password_complexity(password)
     if not is_valid:
@@ -96,7 +96,7 @@ def setup_password(password: str):
             "salt": salt.hex(),
             "hash": pw_hash,
             "pbkdf2_iterations": _PBKDF2_ITERATIONS,
-            "version": "V9.2.4"
+            "version": "V9.3.0"
         }, f, indent=4)
         
     global ACTIVE_KEY

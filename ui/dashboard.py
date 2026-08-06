@@ -90,12 +90,12 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         super().__init__()
         import json
         import os
-        version = "V9.2.4"
+        version = "V9.3.0"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V9.2.4")
+                version = metadata.get("version", "V9.3.0")
         except Exception:
             pass
         self.setWindowTitle(f"Security Management Platform • {version}")
@@ -118,7 +118,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         apply_theme(self)
         self._setup_ui()
         
-        # ── V9.2.4 — Restore Splitter States ──
+        # ── V9.3.0 — Restore Splitter States ──
         try:
             from tools.config_manager import load_settings
             import base64
@@ -205,7 +205,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         except Exception:
             pass
 
-        # ── V9.2.4 — Save Splitter States ──
+        # ── V9.3.0 — Save Splitter States ──
         try:
             from tools.config_manager import load_settings, save_settings
             import base64

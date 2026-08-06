@@ -46,7 +46,7 @@ def run_cors_scan(url):
         url = "https://" + url
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SecurityManagementPlatform/2.0 (Security Audit)"
+    session.headers["User-Agent"] = "SecurityManagementPlatform/9.3.0 (Security Audit)"
 
     try:
         for test_origin in _TEST_ORIGINS:
