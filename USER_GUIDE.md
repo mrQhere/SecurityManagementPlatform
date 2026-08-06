@@ -531,6 +531,113 @@ SMP features a headless FastAPI server. To integrate SMP into a CI/CD pipeline o
 ./run.sh --api-only --port 8000
 ```
 
+### Dynamic DAG Pipeline Manipulation
+The `scanners/core/dag.py` engine calculates the execution graph via topological sorting. By default, it runs dependencies sequentially. You can override timeout constraints or inject side-car payloads by monkey-patching the `DAGManager` before execution:
+```python
+from scanners.core.dag import DAGManager
+def custom_execution_hook(node):
+    print(f"Intercepted DAG node: {node.name}")
+    node.timeout = 900 # Force 15m timeout for complex subnets
+    
+DAGManager.pre_execute_hook = custom_execution_hook
+```
+
+### Intelligence Brain Extensibility
+The Neural Correlation Engine (`intelligence/brain.py`) processes raw scanner output through heuristics. You can write custom decay models to depreciate CVSS scores over time:
+```python
+# In intelligence/brain.py:
+def apply_time_decay(cvss_score: float, discovery_date: str) -> float:
+    from datetime import datetime
+    delta = (datetime.now() - datetime.fromisoformat(discovery_date)).days
+    decay_factor = 1.0 - min(0.5, delta * 0.01) # Decay up to 50%
+    return round(cvss_score * decay_factor, 1)
+```
+
+### Advanced REST API Interactions
+The headless FastApi server is robust enough for custom SIEM integrations. To submit scans programmatically via python `requests` and subscribe to Server-Sent Events (SSE):
+```python
+import requests
+import json
+import sseclient # pip install sseclient-py
+
+headers = {"Authorization": "Bearer YOUR_JWT"}
+payload = {"target": "10.0.0.0/24", "profile": "full", "stealth": True}
+
+# Trigger scan
+resp = requests.post("http://127.0.0.1:8000/api/v1/scans", json=payload, headers=headers)
+scan_id = resp.json()["scan_id"]
+
+# Stream real-time events
+response = requests.get(f"http://127.0.0.1:8000/api/v1/scans/{scan_id}/stream", headers=headers, stream=True)
+client = sseclient.SSEClient(response)
+for event in client.events():
+    print(f"Live Finding: {json.loads(event.data)}")
+```
+
+### Extracting Raw JSON for SIEM Ingest (Splunk / ELK)
+By default, SMP generates human-readable PDF reports using PyMuPDF. To bypass the PDF renderer and tap directly into the JSON data model for Splunk or ELK ingestion, modify `tools/report_generator.py`:
+```python
+def export_raw_json(scan_results: dict, filepath: str):
+    import json
+    # Flatten DAG results for SIEM compatibility
+    flat_findings = []
+    for tool, output in scan_results.get("findings", {}).items():
+        flat_findings.extend(output)
+    
+    with open(filepath, "w") as f:
+        json.dump({"scan_meta": scan_results["meta"], "events": flat_findings}, f)
+```
+
+### Offline Forensics & Decryption CLI Tooling
+For incident response, booting the entire platform may be undesirable. You can create an automated bash alias to dump the SQLCipher SQLite databases into a plaintext memory-mapped file for rapid `grep` forensics:
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias smp-dump="sqlite3 /path/to/database/security.db \"PRAGMA key='$(cat /path/to/.smp_keystore)'; .mode json; SELECT * FROM findings;\""
+```
+
+### Bypassing the UI Sandbox (PySide6 Hooks)
+If you require custom context menus within the force-directed graph (e.g., right-clicking a vulnerable host to immediately pass its IP to Metasploit), hook the PySide6 signals in `ui/components/neural_graph.py`:
+```python
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
+
+def contextMenuEvent(self, event):
+    node = self.get_node_at(event.pos())
+    if node and node.type == "VULNERABLE_HOST":
+        menu = QMenu(self)
+        exploit_action = QAction("Send to MSFConsole", self)
+        exploit_action.triggered.connect(lambda: self.launch_msf(node.ip))
+        menu.addAction(exploit_action)
+        menu.exec_(event.globalPos())
+```
+
+### Customising Egress Audit Logs for Compliance
+Highly secure environments often require off-site audit logging. You can tap into `tools/egress_auditor.py` to pipe outbound platform metrics (such as NVD API calls) directly to an external Graylog server:
+```python
+import socket
+import json
+
+def ship_to_graylog(audit_event: dict):
+    # Sends GELF formatted UDP packet to Graylog
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    payload = json.dumps({"version": "1.1", "host": "smp-agent", "short_message": audit_event["action"]})
+    sock.sendto(payload.encode(), ("graylog.internal.lan", 12201))
+```
+
+### Multi-Threading Optimisation for Masscan
+When scanning massive target surfaces (like `/8` subnets), the default `scan_runner` limits concurrent connections to avoid crashing local state. You can override the packet filters and rate limits in `scanners/masscan.py`:
+```python
+# Force BPF packet filtering and aggressive rate limits
+def build_masscan_cmd(target: str) -> list:
+    return [
+        "masscan", target,
+        "-p0-65535",
+        "--max-rate", "100000",
+        "--wait", "0",
+        "--bpf", "tcp and not port 80 and not port 443" # Exclude heavy web ports
+    ]
+```
+
 ---
 
 <div align="center">
