@@ -14,7 +14,7 @@ import sys
 import argparse
 
 TEMPLATE = '''"""
-{name} Scanner — SMP V9.3.0
+{name} Scanner — SMP V9.3.1
 =========================
 Auto-generated scanner plugin.
 """
@@ -25,7 +25,7 @@ import json
 
 logger = logging.getLogger("smp.scan")
 
-# V9.3.0 Zero-Friction Plugin Registration
+# V9.3.1 Zero-Friction Plugin Registration
 PLUGIN_META = {{
     "name": "{name}",
     "binary": "{binary}",
