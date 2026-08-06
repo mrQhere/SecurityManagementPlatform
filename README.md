@@ -7,7 +7,9 @@
 Maintained by [@mrQhere](https://github.com/mrQhere).
 
 ---
-<img width="1024" height="1024" alt="smp_social_preview_1786038228676" src="https://github.com/user-attachments/assets/5dac82c5-acf5-46fe-ae87-76c2cc085e4c" />
+
+<img width="914" height="457" alt="smp_social_preview_1786038228676" src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" />
+
 
 
 ## What it is
