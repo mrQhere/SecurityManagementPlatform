@@ -1,7 +1,7 @@
 from scanners.core.registry import register_scanner
 """
 CORS Misconfiguration Scanner.
-Tests for insecure CORS policies that allow arbitrary origins.
+Tests for insecure CORS policies that allow arbitrary origins via OPTIONS and GET.
 """
 import logging
 import urllib.parse
@@ -14,25 +14,23 @@ from tools.db_manager import add_log_entry
 from tools.config_manager import load_settings
 verify_tls = not load_settings().get('insecure_scans', False)
 
-
 logger = logging.getLogger("smp.scan")
 
 CORS_TIMEOUT = 20
 
-# Test origins — if any are reflected, CORS is misconfigured
-_TEST_ORIGINS = [
+_BASE_ORIGINS = [
     "https://evil.com",
     "https://attacker.example.com",
     "null",
+    "https://target.evil.com",       # trust anchor mismatch
+    "http://localhost",              # localhost reflection
+    "https://notevil.com.evil.com",  # endsWith bypass
 ]
 
 
 @register_scanner(name="CORS", step_name="Running CORS", depends_on=['Robots.txt'], binary_name="", needs_binary=False, confidence=95)
 def run_cors_scan(url):
-    """
-    Test CORS policy for dangerous misconfigurations.
-    Returns list of findings or None on hard failure.
-    """
+    """Test CORS policy for dangerous misconfigurations. Returns list of findings or None."""
     if not requests:
         logger.error("CORS Scanner: 'requests' library not available.")
         return None
@@ -48,8 +46,15 @@ def run_cors_scan(url):
     session = requests.Session()
     session.headers["User-Agent"] = "SMP/9.3.2 (Security Audit)"
 
+    # Build origin list, including target-specific subdomain injection
+    parsed = urllib.parse.urlparse(url)
+    target_domain = parsed.hostname or ""
+    test_origins = list(_BASE_ORIGINS)
+    if target_domain:
+        test_origins.append(f"https://evil.{target_domain}")  # subdomain injection
+
     try:
-        for test_origin in _TEST_ORIGINS:
+        for test_origin in test_origins:
             try:
                 resp = session.options(
                     url,
@@ -66,7 +71,6 @@ def run_cors_scan(url):
                 acao = resp.headers.get("Access-Control-Allow-Origin", "")
                 acac = resp.headers.get("Access-Control-Allow-Credentials", "").lower()
 
-                # Critical: wildcard + credentials is impossible in spec but check anyway
                 if acao == "*" and acac == "true":
                     findings.append({
                         "severity": "Critical",
@@ -75,75 +79,71 @@ def run_cors_scan(url):
                             f"URL: {url}\n"
                             f"Access-Control-Allow-Origin: {acao}\n"
                             f"Access-Control-Allow-Credentials: {acac}\n\n"
-                            f"Issue: Wildcard CORS with credentials allows any origin to make "
+                            f"Wildcard CORS with credentials allows any origin to make "
                             f"credentialed requests — complete authentication bypass.\n\n"
-                            f"Recommendation: Specify exact trusted origins and avoid wildcard."
+                            f"Fix: Specify exact trusted origins, never use wildcard with credentials."
                         ),
-                        "confidence": 95,
+                        "template_id": "CORS-WILDCARD-CREDS",
                     })
                 elif acao == test_origin:
-                    # Origin is reflected exactly
                     severity = "High" if acac == "true" else "Medium"
                     findings.append({
                         "severity": severity,
-                        "title": f"CORS: Arbitrary Origin Reflected — {test_origin}",
+                        "title": f"CORS: Arbitrary Origin Reflected [{test_origin}]",
                         "description": (
                             f"URL: {url}\n"
-                            f"Test Origin Sent: {test_origin}\n"
-                            f"Access-Control-Allow-Origin: {acao}\n"
-                            f"Access-Control-Allow-Credentials: {acac}\n\n"
-                            f"Issue: The server reflects any submitted Origin header. "
-                            f"{'With credentials enabled, this allows cross-origin session theft.' if acac == 'true' else 'This allows cross-origin data access.'}\n\n"
-                            f"Recommendation: Maintain a whitelist of trusted origins. "
-                            f"Do not use request Origin header as response ACAO value."
+                            f"Origin Sent: {test_origin}\n"
+                            f"ACAO: {acao} | Credentials: {acac}\n\n"
+                            f"The server reflects any submitted Origin. "
+                            f"{'With credentials=true, this enables cross-origin session theft.' if acac == 'true' else 'Allows cross-origin data access.'}\n\n"
+                            f"Fix: Maintain a server-side whitelist of trusted origins."
                         ),
-                        "confidence": 90,
+                        "template_id": "CORS-ORIGIN-REFLECTED",
                     })
                 elif acao == "*":
                     findings.append({
                         "severity": "Low",
                         "title": "CORS: Wildcard Origin (*) Configured",
                         "description": (
-                            f"URL: {url}\n"
-                            f"Access-Control-Allow-Origin: *\n\n"
-                            f"Issue: Wildcard CORS allows any domain to make requests. "
-                            f"If the endpoint serves sensitive data, this is a risk.\n\n"
-                            f"Recommendation: Restrict CORS to specific trusted origins."
+                            f"URL: {url}\nAccess-Control-Allow-Origin: *\n\n"
+                            f"Wildcard CORS allows any domain to make requests. "
+                            f"Sensitive endpoints must restrict CORS.\n\n"
+                            f"Fix: Restrict to specific trusted origins."
                         ),
-                        "confidence": 80,
+                        "template_id": "CORS-WILDCARD",
                     })
-                    break  # Only report once for wildcard
+                    break  # Only report once
 
             except requests.exceptions.ConnectionError:
                 break
             except Exception as e:
-                logger.debug(f"CORS test for {test_origin} failed: {e}")
+                logger.debug(f"CORS origin {test_origin}: {e}")
                 continue
 
-        # Also check GET request CORS response
+        # GET fallback — for servers that don't respond to OPTIONS
         try:
-            resp_get = session.get(
+            get_resp = session.get(
                 url,
                 headers={"Origin": "https://evil.com"},
                 timeout=CORS_TIMEOUT,
                 verify=verify_tls,
                 allow_redirects=True,
             )
-            acao_get = resp_get.headers.get("Access-Control-Allow-Origin", "")
+            acao_get = get_resp.headers.get("Access-Control-Allow-Origin", "")
             if acao_get == "https://evil.com" and not any(
-                "CORS" in f["title"] and "Arbitrary" in f["title"] for f in findings
+                "Arbitrary" in f.get("title", "") for f in findings
             ):
                 findings.append({
                     "severity": "High",
-                    "title": "CORS: GET Request Origin Reflected",
+                    "title": "CORS: GET Origin Reflected (OPTIONS bypass)",
                     "description": (
-                        f"URL: {url}\n"
-                        f"Test Origin: https://evil.com\n"
-                        f"Reflected ACAO: {acao_get}\n\n"
-                        f"Issue: Server reflects Origin on GET requests — allows cross-origin data theft.\n\n"
-                        f"Recommendation: Validate and whitelist allowed origins server-side."
+                        f"URL: {url}\nTest Origin: https://evil.com\n"
+                        f"ACAO on GET: {acao_get}\n\n"
+                        f"Server reflects Origin on GET even when OPTIONS is restricted. "
+                        f"Cross-origin data theft is possible.\n\n"
+                        f"Fix: Validate Origin on all HTTP methods server-side."
                     ),
-                    "confidence": 88,
+                    "template_id": "CORS-GET-REFLECTED",
                 })
         except Exception:
             pass
@@ -153,6 +153,6 @@ def run_cors_scan(url):
         add_log_entry("ERROR", f"CORS Scan Failed: {e}")
         return None
 
-    logger.info(f"CORS Scan Completed: {len(findings)} issues for {url}")
-    add_log_entry("INFO", f"CORS Scan Completed: {len(findings)} issues.")
+    logger.info(f"CORS Scan Completed: {len(findings)} issues")
+    add_log_entry("INFO", f"CORS: {len(findings)} issues found")
     return findings

@@ -60,6 +60,41 @@ _PATTERNS = [
     # GitHub
     ("GitHub Token",          r"ghp_[A-Za-z0-9]{36}",                            "High",     False),
     ("GitHub OAuth",          r"gho_[A-Za-z0-9]{36}",                            "High",     False),
+    ("GitHub App",            r"ghs_[A-Za-z0-9]{36}",                            "High",     False),
+
+    # Slack
+    ("Slack Bot Token",       r"xoxb-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}", "Critical", False),
+    ("Slack User Token",      r"xoxp-[0-9]+-[0-9]+-[0-9]+-[a-f0-9]{32}",        "Critical", False),
+    ("Slack Webhook",         r"https://hooks\.slack\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+", "High", False),
+
+    # OpenAI
+    ("OpenAI API Key",        r"sk-[A-Za-z0-9]{48}",                             "Critical", False),
+    ("OpenAI Org Key",        r"sk-proj-[A-Za-z0-9_-]{48}",                      "Critical", False),
+
+    # Anthropic
+    ("Anthropic API Key",     r"sk-ant-[A-Za-z0-9_-]{93}",                       "Critical", False),
+
+    # HuggingFace
+    ("HuggingFace Token",     r"hf_[A-Za-z0-9]{34}",                             "High",     False),
+
+    # Cloudflare
+    ("Cloudflare API Key",    r"(?i)cloudflare.{0,20}['\"][0-9a-f]{37}['\"]",     "Critical", False),
+
+    # Shopify
+    ("Shopify Token",         r"shpat_[A-Za-z0-9]{32}",                          "Critical", False),
+    ("Shopify Secret",        r"shpss_[A-Za-z0-9]{32}",                          "Critical", False),
+
+    # Square
+    ("Square Access Token",   r"EAAA[A-Za-z0-9]{60}",                            "Critical", False),
+
+    # Mailgun
+    ("Mailgun API Key",       r"key-[0-9a-zA-Z]{32}",                            "High",     False),
+
+    # HashiCorp Vault
+    ("Vault Token",           r"hvs\.[A-Za-z0-9_-]{90,}",                        "Critical", False),
+
+    # NPM
+    ("NPM Token",             r"npm_[A-Za-z0-9]{36}",                            "High",     False),
 
     # Database URLs
     ("DB Connection String",  r"(?i)(mysql|postgres|mongodb|redis)://[^\s\"'<>]+", "High",    False),
@@ -147,7 +182,14 @@ def run_secrets_scan(url: str) -> list:
         findings += _scan_text(resp.text, url)
 
         # Also scan common JS paths
-        js_paths = ["/static/main.js", "/js/app.js", "/assets/bundle.js", "/js/config.js"]
+        js_paths = [
+            "/static/main.js", "/js/app.js", "/assets/bundle.js", "/js/config.js",
+            "/js/main.js", "/app.js", "/dist/bundle.js", "/dist/main.js",
+            "/assets/main.js", "/assets/index.js", "/js/vendor.js",
+            "/js/env.js", "/config.js", "/settings.js",
+            # Source maps (often contain original un-minified code)
+            "/static/main.js.map", "/dist/bundle.js.map",
+        ]
         for path in js_paths:
             try:
                 js_url = url.rstrip("/") + path

@@ -47,18 +47,18 @@ def run_theharvester_scan(url):
     if os.path.exists(output_json):
         os.remove(output_json)
 
-    # Command: run with google, duckduckgo, bing
+    # All passive OSINT sources (no API key required for most)
     cmd = [
         harvester_bin,
         "-d", domain,
-        "-l", "50",
-        "-b", "google,duckduckgo,bing",
+        "-l", "500",          # 500 results per source (was 50)
+        "-b", "google,duckduckgo,bing,crtsh,hackertarget,urlscan,virustotal,rapiddns,otx,threatminer",
         "-f", output_base
     ]
 
     try:
         # Run process
-        process = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        process = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         
         emails = []
         hosts = []
@@ -128,7 +128,7 @@ def run_theharvester_scan(url):
             add_log_entry("INFO", "theHarvester: Completed. No public emails or subdomains exposed.")
 
     except subprocess.TimeoutExpired:
-        logger.warning("theHarvester timed out after 120 seconds.")
+        logger.warning("theHarvester timed out after 600 seconds.")
         add_log_entry("WARNING", "theHarvester scan timed out.")
     except Exception as e:
         logger.error(f"theHarvester Failed: {e}")
