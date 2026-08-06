@@ -130,7 +130,7 @@ sudo apt-get install libxcb-cursor0 libxcb-cursor-dev
 **No sudo / headless server?** Run SMP in API-only mode — no Qt required:
 ```bash
 ./run.sh --api
-# Dashboard at http://localhost:8000/api/v7/docs
+# Dashboard at http://localhost:8000/api/v9.3.3/docs
 ```
 
 `./run.sh` also auto-detects headless environments (no `$DISPLAY` / `$WAYLAND_DISPLAY`) and switches to API mode automatically.
