@@ -1,6 +1,12 @@
 # Security Management Platform (SMP) V9.3.3
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
+![License](https://img.shields.io/badge/license-Proprietary-red)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Docker-blue)
+![Security](https://img.shields.io/badge/security-AES--256-critical)
+![Scanners](https://img.shields.io/badge/scanners-30%2B_Integrated-blueviolet)
+![Architecture](https://img.shields.io/badge/architecture-Local_First-success)
 
 **Local-first VAPT platform. Zero cloud. Encrypted at rest.**
 
