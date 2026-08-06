@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """
-Seed Intelligence (V9 Awakening)
-================================
-Populates the global_intel.db with high-fidelity vulnerabilities.
-Pulls directly from the CISA Known Exploited Vulnerabilities (KEV) catalog
-to build an intelligence graph.
+Seed Intelligence
+=================
+Populates global_intel.db with the CISA Known Exploited Vulnerabilities (KEV)
+catalog as a baseline intelligence graph.
+
+CVSS and EPSS scores are intentionally left at 0.0 here — they are populated
+with real values by the live NVD (intelligence/nvd.py) and EPSS
+(intelligence/epss.py) modules during scan enrichment. Seeding fake scores
+would corrupt the risk-scoring pipeline.
 """
 import os
 import sys
 import json
 import urllib.request
-import random
 import logging
 
 # Add project root to path
@@ -43,13 +46,15 @@ def seed_database():
         cve_id = item.get("cveID")
         vendor = item.get("vendorProject", "Unknown")
         product = item.get("product", "Unknown")
-        
+
+        # CVSS and EPSS are left at 0.0 — real values are fetched by the live
+        # NVD and EPSS intelligence modules during scan enrichment.
         findings_to_process.append({
             "cve_id": cve_id,
             "affected_component": f"{vendor} {product}",
-            "severity": "Critical",  # CISA KEV are inherently critical due to active exploitation
-            "cvss_score": round(random.uniform(7.0, 10.0), 1), # Simulated for KEV
-            "epss_score": round(random.uniform(0.85, 0.99), 3), # KEV implies high EPSS
+            "severity": "Critical",  # CISA KEV entries are confirmed actively exploited
+            "cvss_score": 0.0,
+            "epss_score": 0.0,
             "owasp_category": "A06:2021-Vulnerable and Outdated Components"
         })
         

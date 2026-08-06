@@ -16,9 +16,9 @@
 *Made by [@mrQhere](https://github.com/mrQhere)*
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
-![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Docker-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-orange)
+![License](https://img.shields.io/badge/license-Proprietary-red)
 
 </div>
 
@@ -72,12 +72,13 @@ cd SecurityManagementPlatform
 # Step 2 — Install everything automatically (takes ~2 minutes)
 bash setup.sh
 
-# Step 3 — Start SMP
+# Step 3 — Start the GUI
 ./run.sh
-
-# Step 4 — Open your browser and go to:
-# http://localhost:8000/api/v7/docs
 ```
+
+`./run.sh` opens the **PySide6 desktop GUI**. If you are on a headless server
+or prefer the REST API, run `python main.py --api` instead and open
+`http://localhost:8000/api/v7/docs` in your browser.
 
 The installer handles Python, Go, all security tools, and the encrypted database automatically. You do not need to install anything manually.
 
@@ -109,15 +110,16 @@ SMP is also **local-first by design**. Every byte of client pentest data stays o
 
 ### What it is not
 
-- ❌ Not an AI agent. There is no LLM. Deferred to V9.
-- ❌ Not competing on tool count (HexStrike has 150+, that is not the angle).
+- ❌ Not an LLM agent. `intelligence/brain.py` generates rule-based correlation
+  summaries from real scan data — no language model is involved.
+- ❌ Not competing on tool count — correlation depth is the differentiator.
 - ❌ Not cloud-dependent. No registration, no telemetry, no SaaS.
 
 ### Architecture overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  SMP V7 Architecture                                        │
+│  SMP V9.2.4 Architecture                                    │
 ├──────────────┬──────────────────────────┬───────────────────┤
 │  Interface   │  Orchestration           │  Storage          │
 │              │                          │                   │
@@ -125,7 +127,7 @@ SMP is also **local-first by design**. Every byte of client pentest data stays o
 │  FastAPI REST│  → DAG Orchestrator      │  security.db      │
 │  HTML/PDF    │  → 30+ scanner modules   │  cve.db           │
 │  Reports     │  → egress_auditor        │  redundancy.db    │
-│              │  → compliance_mapper     │  (all encrypted)  │
+│              │  → compliance_mapper     │  (encrypted)      │
 ├──────────────┴──────────────────────────┴───────────────────┤
 │  Intelligence Layer                                          │
 │  NVD · EPSS · GreyNoise · CISA KEV · MITRE ATT&CK           │
@@ -211,28 +213,21 @@ cd SecurityManagementPlatform
 
 ---
 
-### 2.3 Windows — Automated Setup
+### 2.3 Windows — Use Docker
 
-Two Windows scripts are provided — choose one:
+Native Windows installation of SMP's hard dependencies (PySide6 + SQLCipher + Go security tools) is complex. **Docker is the recommended and supported Windows path.**
 
-**Option A — PowerShell (recommended):**
 ```powershell
-# Open PowerShell as Administrator
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\setup.ps1
-python main.py
+# Install Docker Desktop first: https://docs.docker.com/desktop/install/windows-install/
+docker compose up -d
+
+# API docs
+start http://localhost:8000/api/v7/docs
 ```
 
-**Option B — Command Prompt / Batch:**
-```cmd
-:: Run as Administrator
-setup.bat
-python main.py
-```
+See [Section 2.4](#24-docker--all-platforms) for full Docker commands.
 
-Both scripts use `winget` with direct-download fallbacks for Python, Go, and all security tools. SQLCipher on Windows: the scripts install the required Windows SQLCipher bindings automatically.
-
-> Some scanners (Nmap raw SYN scan, Masscan, MAC changer) require Administrator privileges on Windows. Run `setup.bat` / `setup.ps1` as Administrator for full functionality.
+> **Note:** The GUI (PySide6 desktop window) is Linux/macOS only. On Windows, use the REST API or the HTML reports.
 
 ---
 
@@ -617,7 +612,7 @@ Every finding is automatically mapped to control IDs across five frameworks. Thi
 | **CIS Controls v8** | 11 controls | Infrastructure hardening benchmark |
 | **ISO 27001:2022** | Annex A controls | International ISMS certification |
 | **SOC 2 Type II** | CC6.1–CC9.2 | SaaS / cloud audit readiness |
-| **PCI-DSS v9.2.4** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
+| **PCI-DSS v4.0** | Req 4, 6, 7, 8, 11, 12 | Payment card industry compliance |
 
 ### 6.3 Using the compliance mapper
 
@@ -1288,13 +1283,17 @@ Or check `config/settings.json`:
 
 ## 10 · The Neural Brain UI
 
-In V9.2.4.x, SMP shifted from a static dashboard to an interactive **Neural Intelligence Engine**.
+The **Neural Brain** tab loads a force-directed graph (`ui/components/neural_graph.py`) that visualises CVE relationships from local scan data and the CISA KEV catalog.
 
-### The Obsidian-Style Interface
-When you click on the **Neural Brain** tab on the left sidebar, SMP loads a real-time Force-Directed Physics Engine. 
-- You will see vulnerabilities (CVEs) and affected software components visually linked together via springs.
-- The interface is fully interactive. You can drag nodes to explore the 10,000+ heuristics dynamically generated by the local Intelligence Engine.
-- **Why this matters**: Security is about context. Viewing a raw list of CVEs is less useful than physically seeing how heavily targeted a specific software component is in the global ecosystem.
+### What it shows
+- CVE nodes are drawn from real scan findings and the CISA Known Exploited Vulnerabilities list.
+- Edges link CVEs to the affected software components SMP detected on your targets.
+- Node weights (size/colour) reflect the live risk score: CVSS × EPSS × KEV multiplier — not hardcoded values.
+- The graph is draggable and zoomable. Click a node to see its CVE ID, CVSS, and EPSS score.
+
+### What it is not
+- The node count grows as you run real scans — it is not pre-populated with a fixed "10,000+" dataset.
+- No language model is involved; correlation is deterministic and based on the risk formula in `tools/risk_scorer.py`.
 
 ---
 
