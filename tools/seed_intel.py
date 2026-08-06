@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Seed Intelligence (V9 Awakening - 2000+ Dataset)
-================================================
-Populates the global_intel.db with >2000 high-fidelity real-world vulnerabilities.
-Pulls directly from the CISA Known Exploited Vulnerabilities (KEV) catalog and
-supplements with historical Critical/High CVE heuristics to build a massive,
-crowdsourced intelligence graph.
+Seed Intelligence (V9 Awakening)
+================================
+Populates the global_intel.db with high-fidelity vulnerabilities.
+Pulls directly from the CISA Known Exploited Vulnerabilities (KEV) catalog
+to build an intelligence graph.
 """
 import os
 import sys
@@ -31,49 +30,12 @@ def download_cisa_kev():
         print(f"Failed to download CISA KEV: {e}")
         return []
 
-def generate_supplementary_cves(count=1000):
-    """Generates realistic historical vulnerabilities for common technologies to hit the 2000+ threshold."""
-    print(f"Generating {count} supplementary historical threat heuristics...")
-    techs = ["WordPress", "Nginx", "Apache Tomcat", "Windows Server", "Linux Kernel", "PHP", "OpenSSH", "Docker", "Kubernetes", "Redis", "MySQL", "PostgreSQL", "Jira", "Confluence", "Jenkins", "GitLab"]
-    vuln_types = ["Buffer Overflow", "RCE", "SQLi", "XSS", "Authentication Bypass", "Privilege Escalation", "Path Traversal", "SSRF"]
-    owasp_cats = [
-        "A01:2021-Broken Access Control",
-        "A02:2021-Cryptographic Failures",
-        "A03:2021-Injection",
-        "A04:2021-Insecure Design",
-        "A05:2021-Security Misconfiguration",
-        "A06:2021-Vulnerable and Outdated Components",
-        "A07:2021-Identification and Authentication Failures"
-    ]
-    
-    supp_cves = []
-    for i in range(count):
-        year = random.randint(2010, 2023)
-        seq = random.randint(1000, 99999)
-        cve_id = f"CVE-{year}-{seq}"
-        
-        tech = random.choice(techs)
-        
-        cvss = round(random.uniform(5.0, 10.0), 1)
-        severity = "Critical" if cvss >= 9.0 else ("High" if cvss >= 7.0 else "Medium")
-        epss = round(random.uniform(0.01, 0.99), 3)
-        
-        supp_cves.append({
-            "cve_id": cve_id,
-            "affected_component": tech,
-            "severity": severity,
-            "cvss_score": cvss,
-            "epss_score": epss,
-            "owasp_category": random.choice(owasp_cats)
-        })
-    return supp_cves
-
 def seed_database():
-    print("V9 Awakening: Massive Data Ingestion Started...")
+    print("V9 Awakening: Data Ingestion Started...")
     
     findings_to_process = []
     
-    # 1. Real World Data: CISA KEV (~1,100+ CVEs)
+    # CISA KEV Data
     cisa_data = download_cisa_kev()
     print(f"Extracted {len(cisa_data)} vulnerabilities from CISA.")
     
@@ -91,24 +53,16 @@ def seed_database():
             "owasp_category": "A06:2021-Vulnerable and Outdated Components"
         })
         
-    # 2. Supplementary Data to ensure > 10500 target
-    if len(findings_to_process) < 10500:
-        needed = 10500 - len(findings_to_process)
-        supp_data = generate_supplementary_cves(needed)
-        findings_to_process.extend(supp_data)
-        
     print(f"Total heuristics queued for Brain Engine processing: {len(findings_to_process)}")
     
-    # Process in chunks to simulate widespread crowdsourced reporting
+    # Process in chunks
     chunk_size = 500
     for i in range(0, len(findings_to_process), chunk_size):
         chunk = findings_to_process[i:i+chunk_size]
-        # Process each chunk a few times to build 'observation_count' weight
-        for _ in range(random.randint(2, 10)):
-            process_findings_for_global_intel(chunk)
+        process_findings_for_global_intel(chunk)
         print(f"Processed chunk {i//chunk_size + 1}/{(len(findings_to_process)//chunk_size)+1}...")
         
-    print(f"\n✅ Seeding complete! Intelligence graph populated with {len(findings_to_process)} real-world heuristics.")
+    print(f"\n✅ Seeding complete! Intelligence graph populated with {len(findings_to_process)} heuristics.")
 
 if __name__ == "__main__":
     seed_database()

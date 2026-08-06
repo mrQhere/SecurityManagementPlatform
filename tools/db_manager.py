@@ -147,7 +147,7 @@ ALL_ACTIVE_STATUSES = [
     "Running Open Redirect", "Running Tech Fingerprint",
     "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
-    # V9.2.3 New Scanners
+    # V9.2.4 New Scanners
     "Running Dalfox", "Running Arjun", "Running DNSx", "Running Katana",
     "Running Commix", "Running JWT Scanner", "Running WPScan",
     "Running Masscan", "Running ParamSpider", "Running Cloud Enum",
@@ -323,7 +323,7 @@ def get_redundancy_connection():
             # Attach the CVE database if it exists (schema uses ATTACH for CVE indexes)
             if os.path.exists(CVE_DB_PATH):
                 try:
-                    conn.execute("ATTACH DATABASE ? KEY '' AS cve_db", (CVE_DB_PATH,))
+                    conn.execute("ATTACH DATABASE ? AS cve_db KEY ''", (CVE_DB_PATH,))
                 except sqlite3.Error as e:
                     logger.error(f"Database error: {e}")
 
@@ -397,7 +397,7 @@ def get_db_connection():
             conn.row_factory = sqlite3.Row
             
             # Attach the unencrypted CVE database
-            conn.execute("ATTACH DATABASE ? KEY '' AS cve_db", (CVE_DB_PATH,))
+            conn.execute("ATTACH DATABASE ? AS cve_db KEY ''", (CVE_DB_PATH,))
             
             # Always run schema migrations — handles both fresh and existing DBs.
             # _initialize_db_schema is idempotent (CREATE TABLE IF NOT EXISTS / ALTER TABLE).
@@ -475,14 +475,14 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
 
-    # V9.2.3 seamless upgrade: Add company_name and submitted_to to targets
+    # V9.2.4 seamless upgrade: Add company_name and submitted_to to targets
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
-    # V9.2.3 seamless upgrade: Soft delete
+    # V9.2.4 seamless upgrade: Soft delete
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
@@ -495,7 +495,7 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         pass
 
-    # Enterprise V9.2.3 — enriched findings columns (idempotent migrations)
+    # Enterprise V9.2.4 — enriched findings columns (idempotent migrations)
     _enterprise_columns = [
         ("url",                 "TEXT"),
         ("evidence",            "TEXT"),
@@ -1307,7 +1307,7 @@ def get_scans_for_target(target_id, limit=10):
 
 def add_finding(scan_id, severity, title, description, source_tool,
                 confidence=50, mitre_id="Unknown",
-                # Enterprise V9.2.3 enriched fields
+                # Enterprise V9.2.4 enriched fields
                 url=None, evidence=None, recommendation=None,
                 cvss_score=None, cve_id=None,
                 affected_component=None, owasp_category=None,

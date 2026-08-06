@@ -1,5 +1,5 @@
 """
-Finding Deduplicator V9.2.3
+Finding Deduplicator V9.2.4
 ==========================
 Merges structurally identical findings from multiple scanners into a single
 finding with all source scanners cited (e.g. Nuclei + Nikto both reporting
@@ -90,7 +90,7 @@ def deduplicate_findings(findings: list) -> list:
         if len(tools) > 1:
             base["description"] += (
                 f"\n\n[Dedup Note] This finding was reported by {len(tools)} scanners: "
-                f"{', '.join(tools)}. Sources merged by SMP V9.2.3 deduplicator."
+                f"{', '.join(tools)}. Sources merged by SMP V9.2.4 deduplicator."
             )
 
         merged.append(base)

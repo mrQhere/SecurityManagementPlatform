@@ -7,7 +7,7 @@ logger = logging.getLogger("smp")
 
 def get_active_bans(log_path="/var/log/fail2ban.log"):
     """
-    V9.2.3 — Parses the fail2ban log file to extract actively banned IPs.
+    V9.2.4 — Parses the fail2ban log file to extract actively banned IPs.
     
     If the file is inaccessible, returns an empty list with an
     'unavailable' indicator — NO MOCK DATA (would mislead analysts).
@@ -22,7 +22,7 @@ def get_active_bans(log_path="/var/log/fail2ban.log"):
 
     if not os.path.isfile(log_path):
         logger.info(f"[Fail2Ban] Log not found at {log_path}. Fail2Ban may not be installed or active.")
-        return []  # V9.2.3: No mock data — return empty, let UI show "Unavailable"
+        return []  # V9.2.4: No mock data — return empty, let UI show "Unavailable"
 
     try:
         # Regex to match Ban and Unban actions

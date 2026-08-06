@@ -1,5 +1,5 @@
 """
-Secrets Scanner V9.2.3
+Secrets Scanner V9.2.4
 =====================
 Real pattern-based secrets detection in HTTP responses, HTML, JS files,
 and raw scanner output. Replaces the empty stubs (trufflehog/gitleaks).
