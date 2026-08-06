@@ -457,7 +457,7 @@ def _download_missing_tools_locally(missing):
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
 
         # New V9.3.3 Enterprise binaries
-        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.3.3/amass_linux_amd64.zip",
+        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/x86_64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-64bit.tar.gz",
@@ -480,7 +480,7 @@ def _download_missing_tools_locally(missing):
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
 
         # New V9.3.3 Enterprise binaries
-        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v9.3.3/amass_linux_arm64.zip",
+        "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_arm64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/aarch64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_arm64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.53.0/trivy_0.53.0_Linux-ARM64.tar.gz",

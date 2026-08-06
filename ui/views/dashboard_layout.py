@@ -114,6 +114,7 @@ QLabel#brand_label {
     font-weight: 700;
     letter-spacing: 0.5px;
     padding: 0px 20px;
+    background-color: transparent;
 }
 
 QLabel#brand_sub {
@@ -121,6 +122,7 @@ QLabel#brand_sub {
     font-size: 10px;
     letter-spacing: 1.5px;
     padding: 0px 20px 16px 20px;
+    background-color: transparent;
 }
 
 QPushButton#nav_btn {
@@ -605,12 +607,12 @@ class DashboardLayoutMixin:
         # Brand — no borders, clean text only
         brand = QLabel("SMP")
         brand.setObjectName("brand_label")
-        brand.setStyleSheet("color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; padding: 0 20px; border: none; background: transparent;")
+        brand.setStyleSheet("color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; padding: 0 20px; border: none; background-color: transparent;")
         layout.addWidget(brand)
 
         brand_sub = QLabel("SECURITY PLATFORM")
         brand_sub.setObjectName("brand_sub")
-        brand_sub.setStyleSheet("color: #444444; font-size: 10px; letter-spacing: 1.5px; padding: 0 20px 14px 20px; border: none; background: transparent;")
+        brand_sub.setStyleSheet("color: #444444; font-size: 10px; letter-spacing: 1.5px; padding: 0 20px 14px 20px; border: none; background-color: transparent;")
         layout.addWidget(brand_sub)
 
         # Divider
@@ -1862,10 +1864,16 @@ class DashboardLayoutMixin:
         
         # Fetch actual intelligence graph data
         def load_intel():
-            conn = get_db_connection()
+            import sqlite3
+            import os
+            from intelligence.brain import GLOBAL_INTEL_DB
             try:
+                if not os.path.exists(GLOBAL_INTEL_DB):
+                    return [], []
+                conn = sqlite3.connect(GLOBAL_INTEL_DB)
+                conn.row_factory = sqlite3.Row
                 # Fetch up to 150 top intelligence heuristics
-                rows = conn.execute("SELECT cve_id, affected_component FROM global_intel ORDER BY observation_count DESC LIMIT 150").fetchall()
+                rows = conn.execute("SELECT cve_id, affected_component FROM global_heuristics ORDER BY observation_count DESC LIMIT 150").fetchall()
                 nodes = []
                 edges = []
                 # Map nodes

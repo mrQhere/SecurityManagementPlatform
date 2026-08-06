@@ -3,8 +3,8 @@
 # Core
 APScheduler>=3.10.0
 requests>=2.31.0
-cryptography>=41.0.5,<42.1
-pyee>=11.0.0,<12.0.0
+cryptography>=41.0.5
+pyee>=11.0.0
 urllib3>=1.25.8,<2.0.0
 protobuf>=3.14,<5.0.0
 
@@ -16,7 +16,7 @@ weasyprint>=60.2
 # Security scanning
 sslyze>=5.2.0
 python-owasp-zap-v2.4>=0.0.21
-theHarvester>=4.0.0
+git+https://github.com/laramies/theHarvester.git
 
 # ── V9.3.3 New Dependencies ──────────────────────────────────────────────────────
 # API (Secured REST API with JWT and rate limiting)

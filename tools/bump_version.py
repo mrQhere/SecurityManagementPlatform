@@ -44,7 +44,8 @@ def main():
             json.dump({"version": new_version}, f, indent=4)
 
     # 2. Global recursive regex replace
-    version_regex = re.compile(r'\b(?:[vV])[4-9]\.\d+(?:\.\d+)?\b')
+    # Require an explicit marker like "SMP_VERSION" before the version string
+    version_regex = re.compile(r'(SMP_VERSION[^\dvV]*?)((?:[vV])[4-9]\.\d+(?:\.\d+)?\b)', re.IGNORECASE)
     
     valid_exts = {".py", ".md", ".txt", ".sh", ".bat", ".ps1", ".json"}
     ignore_dirs = {".git", "__pycache__", "venv", ".vscode", "reports"}
@@ -75,10 +76,11 @@ def main():
                 continue # Skip binary or weirdly encoded files
                 
             def replacer(match):
-                matched_str = match.group(0)
-                if matched_str.startswith('v'):
-                    return "v" + ver_num
-                return new_version
+                prefix = match.group(1)
+                version_str = match.group(2)
+                if version_str.startswith('v'):
+                    return prefix + "v" + ver_num
+                return prefix + new_version
 
             new_content, n = version_regex.subn(replacer, content)
             

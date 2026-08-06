@@ -376,6 +376,17 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     risk_data    = get_risk_score(scan_id)
     trend_deltas = get_scan_trend_deltas(url, scan_id)
 
+    # ── Capture Evidence (Screenshots) ─────────────────────────────────
+    try:
+        from scanners.screenshot_capture import capture_evidence_for_findings
+        evidence_map = capture_evidence_for_findings(current_findings, scan_id)
+        for f in current_findings:
+            title = f.get("title", "")
+            if title in evidence_map:
+                f["evidence_path"] = evidence_map[title]
+    except Exception as e:
+        logger.error(f"Failed to capture evidence: {e}")
+
     ctx = _build_context(scan_id, target, current_findings, previous_scan,
                          scanned_by, technologies, risk_data, trend_deltas)
 
@@ -1107,6 +1118,37 @@ def _generate_vapt_pdf(filepath, ctx):
                 story.append(Paragraph(f"Scan Result Evidence — Raw Output from {_esc(tool)}", st["h4"]))
                 story.append(_code_block(evidence[:1800], st))
                 story.append(_spacer(6))
+
+            # ── Visual Screenshot Evidence ────────────────────────────────
+            evidence_path = f.get("evidence_path")
+            if evidence_path and os.path.exists(evidence_path):
+                story.append(Paragraph("Visual Evidence (Screenshot)", st["h4"]))
+                try:
+                    from reportlab.platypus import Image
+                    from reportlab.lib.utils import ImageReader
+                    
+                    # Read image to get aspect ratio
+                    img = ImageReader(evidence_path)
+                    iw, ih = img.getSize()
+                    
+                    # Max width is BW (body width)
+                    max_width = BW
+                    aspect = ih / float(iw)
+                    
+                    # Scale down if too wide
+                    disp_width = min(iw, max_width)
+                    disp_height = disp_width * aspect
+                    
+                    # Prevent images from being taller than a page
+                    if disp_height > 600:
+                        disp_height = 600
+                        disp_width = disp_height / aspect
+
+                    img_flow = Image(evidence_path, width=disp_width, height=disp_height)
+                    story.append(KeepTogether([img_flow]))
+                    story.append(_spacer(6))
+                except Exception as e:
+                    logger.error(f"Failed to embed screenshot {evidence_path}: {e}")
 
             # ── Remediation Blueprint ─────────────────────────────────────
             story.append(Paragraph("Remediation Blueprint & Mitigation", st["h4"]))
@@ -2031,6 +2073,19 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
                     "<div class='sub-heading'>Scan Evidence</div>",
                     f"<div class='evidence-block'>{_esc(str(evid)[:1200])}</div>",
                 ]
+
+            evidence_path = f.get("evidence_path")
+            if evidence_path and os.path.exists(evidence_path):
+                try:
+                    import base64
+                    with open(evidence_path, "rb") as img_file:
+                        b64_img = base64.b64encode(img_file.read()).decode('utf-8')
+                    lines += [
+                        "<div class='sub-heading'>Visual Evidence (Screenshot)</div>",
+                        f"<div style='margin-top:10px;'><img src='data:image/png;base64,{b64_img}' style='max-width:100%; border:1px solid var(--border); border-radius:8px;'/></div>",
+                    ]
+                except Exception as e:
+                    logger.error(f"HTML screenshot embedding failed: {e}")
 
             if remd:
                 lines += [
