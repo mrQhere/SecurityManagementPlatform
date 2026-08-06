@@ -23,7 +23,7 @@
 #   katana    v1.1.2    projectdiscovery/katana
 #   dnsx      v1.2.1    projectdiscovery/dnsx
 #   ffuf      v2.1.0    ffuf/ffuf
-#   gitleaks  v9.3.2   gitleaks/gitleaks
+#   gitleaks  v9.3.3   gitleaks/gitleaks
 #   dalfox    v2.10.0   hahwul/dalfox
 # =============================================================================
 set -euo pipefail
@@ -322,7 +322,7 @@ if $SKIP_TOOLS; then
   katana:    https://github.com/projectdiscovery/katana/releases/tag/v1.1.2
   dnsx:      https://github.com/projectdiscovery/dnsx/releases/tag/v1.2.1
   ffuf:      https://github.com/ffuf/ffuf/releases/tag/v2.1.0
-  gitleaks:  https://github.com/gitleaks/gitleaks/releases/tag/v9.3.2
+  gitleaks:  https://github.com/gitleaks/gitleaks/releases/tag/v9.3.3
   dalfox:    https://github.com/hahwul/dalfox/releases/tag/v2.10.0
   Place binaries in: bin/
 EOF
@@ -383,9 +383,9 @@ else
     T_ARM[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
     T_GO[ffuf]="github.com/ffuf/ffuf/v2@v2.1.0"
 
-    T_AMD[gitleaks]="$BASE_GL/v9.3.2/gitleaks_8.24.0_linux_x64.tar.gz"
-    T_ARM[gitleaks]="$BASE_GL/v9.3.2/gitleaks_8.24.0_linux_arm64.tar.gz"
-    T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v9.3.2"
+    T_AMD[gitleaks]="$BASE_GL/v9.3.3/gitleaks_8.24.0_linux_x64.tar.gz"
+    T_ARM[gitleaks]="$BASE_GL/v9.3.3/gitleaks_8.24.0_linux_arm64.tar.gz"
+    T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v9.3.3"
 
     T_AMD[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz"
     T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"

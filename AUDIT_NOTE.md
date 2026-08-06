@@ -10,10 +10,10 @@ these commits (NOT rewritten, by design — history rewrite requires
 a manual decision, not an automated one):
 
 ```
-b1629d7 chore: Snapshot auto-update to V9.2.1 - Feat: Built Obsidian-style Force-Directed Neural Graph UI and massive 10K+ data intelligence expansion
-10b1818 chore: Snapshot auto-update to V9.0.2 - Seeded V9 Intelligence Brain with 2200+ real-world CISA KEV and historical vulnerabilities
-197a522 chore: Snapshot auto-update to V9.0.1 - The V9.0.0 Awakening: Global Intelligence DB Pre-populated and test suite isolated
-80acb7a chore: Snapshot auto-update to V7.0.8 - Integrated V9 Neural Correlation Engine (Brain) and crowdsourced global intel database
+b1629d7 chore: Snapshot auto-update to V9.3.3 - Feat: Built Obsidian-style Force-Directed Neural Graph UI and massive 10K+ data intelligence expansion
+10b1818 chore: Snapshot auto-update to V9.3.3 - Seeded V9 Intelligence Brain with 2200+ real-world CISA KEV and historical vulnerabilities
+197a522 chore: Snapshot auto-update to V9.3.3 - The V9.3.3 Awakening: Global Intelligence DB Pre-populated and test suite isolated
+80acb7a chore: Snapshot auto-update to V9.3.3 - Integrated V9 Neural Correlation Engine (Brain) and crowdsourced global intel database
 ```
 
 Anyone who cloned the repo before 2026-08-07 and has not re-pulled may
