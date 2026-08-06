@@ -1,5 +1,5 @@
 """
-CrackMapExec Scanner — SMP V9.2.4
+CrackMapExec Scanner — SMP V9.3.0
 =========================
 Runs CrackMapExec (CME) / NetExec for Active Directory and internal network pentesting.
 """

@@ -40,7 +40,7 @@ except ImportError:
     logger.warning("ReportLab not available. PDF reports will not be generated.")
 
 
-# ── V9.2.4 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
+# ── V9.3.0 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
 # Load visual constants (colors, fonts, sizes, text) from config to allow custom branding
 _REPORT_TEMPLATE_CONFIG_PATH = os.path.join(BASE_DIR, "config", "report_template.json")
 _TEMPLATE_CONFIG = {}
@@ -148,12 +148,12 @@ class _VAPTDoc(SimpleDocTemplate):
         
         # Text logo footer
         canvas.setFont(_get_font("primary_bold", "Helvetica-Bold"), 8)
-        canvas.drawString(18, 10, "SMP | Security Management Platform")
+        canvas.drawString(18, 10, "SMP • Security Management Platform © mrQhere")
         
         canvas.setFont(_get_font("primary", "Helvetica"), 7)
         canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
         
-        # ── V9.2.4 — Dynamic config text footer ──
+        # ── V9.3.0 — Dynamic config text footer ──
         right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
         canvas.drawRightString(W - 18, 10, right_text)
 
@@ -168,7 +168,7 @@ def _styles():
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
-    # ── V9.2.4 — Dynamic Fonts ───────────────────────────────────────────
+    # ── V9.3.0 — Dynamic Fonts ───────────────────────────────────────────
     font_bold = _get_font("primary_bold", "Helvetica-Bold")
     font_reg = _get_font("primary", "Helvetica")
     font_mono = _get_font("mono", "Courier")
@@ -371,7 +371,7 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     from tools.db_manager import get_scan, get_technologies_for_scan, get_risk_score, get_scan_trend_deltas
     scan_rec   = get_scan(scan_id)
     scanned_by = (scan_rec.get("scanned_by") if scan_rec and scan_rec.get("scanned_by") else None) or \
-                 load_settings().get("tester_name") or "Security Auditor"
+                 load_settings().get("tester_name") or "Security Tester"
     technologies = get_technologies_for_scan(scan_id)
     risk_data    = get_risk_score(scan_id)
     trend_deltas = get_scan_trend_deltas(url, scan_id)
@@ -397,9 +397,9 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path)).get("version", "V9.2.4") if os.path.exists(_meta_path) else "V9.2.4"
+        _smp_ver = _json.load(open(_meta_path)).get("version", "V9.3.0") if os.path.exists(_meta_path) else "V9.3.0"
     except Exception:
-        _smp_ver = "V9.2.4"
+        _smp_ver = "V9.3.0"
 
     content_hash = derive_content_hash(
         url            = url,
@@ -592,9 +592,9 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path)).get("version", "V9.2.4") if os.path.exists(_meta_path) else "V9.2.4"
+        _smp_version = _json.load(open(_meta_path)).get("version", "V9.3.0") if os.path.exists(_meta_path) else "V9.3.0"
     except Exception:
-        _smp_version = "V9.2.4"
+        _smp_version = "V9.3.0"
 
     cover_meta = [
         ("Document Title",           "Security Assessment Report"),
@@ -687,7 +687,7 @@ def _generate_vapt_pdf(filepath, ctx):
         story.append(_spacer(4))
         # Convert simple markdown to reportlab paragraph
         insights_html = c["ai_insights"].replace('\n', '<br/>').replace('**', '<b>').replace('`', '<i>')
-        story.append(Paragraph(insights_html, st["body_left"]))
+        story.append(Paragraph(insights_html, st["body"]))
         story.append(_spacer(10))
         story.append(_hr())
 
@@ -926,12 +926,12 @@ def _generate_vapt_pdf(filepath, ctx):
 
     story.append(Paragraph("Assessment Framework Compliance", st["h3"]))
     framework_rows = [
-        ["OWASP WSTG v9.2.4", "Web Security Testing Guide — primary methodology"],
+        ["OWASP WSTG v9.3.0", "Web Security Testing Guide — primary methodology"],
         ["NIST SP 800-115", "Technical Guide to Information Security Testing"],
         ["PTES",            "Penetration Testing Execution Standard"],
-        ["CVSS v9.2.4",       "Common Vulnerability Scoring System for all severity ratings"],
+        ["CVSS v9.3.0",       "Common Vulnerability Scoring System for all severity ratings"],
         ["CWE",             "Common Weakness Enumeration taxonomy for all findings"],
-        ["PCI-DSS v9.2.4",    "Sections 6.4 and 11.3 — penetration testing compliance"],
+        ["PCI-DSS v9.3.0",    "Sections 6.4 and 11.3 — penetration testing compliance"],
     ]
     story.append(_data_table(
         ["Framework / Standard", "Application Scope"],
@@ -1066,7 +1066,7 @@ def _generate_vapt_pdf(filepath, ctx):
                 ("OWASP Category",  owasp_cat),
                 ("MITRE ATT&CK",    mitre_id),
                 ("CVE Identifier",  cve_val),
-                ("CVSS v9.2.4 Score", cvss_score_str),
+                ("CVSS v9.3.0 Score", cvss_score_str),
                 ("CVSS Vector",     cvss_vec)
             ]
             
@@ -1266,7 +1266,7 @@ def _generate_vapt_pdf(filepath, ctx):
         f"<b>{c['scan_time'][:10]}</b> in accordance with the following professional and ethical standards:<br/><br/>"
         f"• The engagement was performed under explicit written authorization from the asset owner.<br/>"
         f"• All testing was conducted within the declared scope boundaries. No out-of-scope assets were accessed.<br/>"
-        f"• Assessment methodologies comply with OWASP WSTG v9.2.4 and NIST SP 800-115.<br/>"
+        f"• Assessment methodologies comply with OWASP WSTG v9.3.0 and NIST SP 800-115.<br/>"
         f"• All test artefacts and injected payloads have been removed from the target environment.<br/>"
         f"• No production data was exfiltrated, stored, or retained by the testing team.<br/>"
         f"• This document contains confidential information and is classified for INTERNAL USE ONLY.<br/><br/>"
@@ -1591,7 +1591,7 @@ def _generate_html_fallback(filepath, ctx):
     h16    = c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
-    smp_ver = c.get("smp_version", "V9.2.4")
+    smp_ver = c.get("smp_version", "V9.3.0")
 
     target  = c.get("target", {})
     company = target.get("company_name") or c["settings"].get("company_name") or "—"

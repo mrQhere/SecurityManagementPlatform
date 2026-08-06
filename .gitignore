@@ -4,21 +4,10 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # Virtual Environment
@@ -32,39 +21,43 @@ venv/
 *.swp
 *.swo
 
-# SMP Specific - V9.0
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# SMP — Runtime artifacts (never commit these)
+config/settings.json
 config/auth.json
 config/license.key
-config/settings.json
+setup.log
+logs/
+*.log
+cache/
+
+# Databases — keep global_intel.db (ships with repo), exclude all others
 database/*.db
 database/*.db.enc
-database/backup/*.db
-database/backup/*.db.enc
-database/backup/*.zip
-reports/pdf/*.pdf
-reports/sbom/*.json
-reports/sbom/*.spdx
-reports/sbom/*.csv
-reports/evidence/screenshots/*.png
-reports/evidence/screenshots/*.html
-cache/
+database/*.db-wal
+database/*.db-shm
+database/backup/
 database/raw_outputs/
-
-# Root DBs
 *.db
 *.db.enc
 *.db-wal
 *.db-shm
 !database/global_intel.db
 
-# Agent/AI temp
-.gemini/
+# Reports (generated output — not source)
+reports/pdf/
+reports/html/
+reports/sbom/
+reports/evidence/
 
-# Logs
-logs/
-*.log
-
-# Binaries and local testing
+# Binaries (installed by setup.sh — not source)
 bin/
+
+# CI/Dev
 test.db
 .codegraph/
+.gemini/

@@ -1,17 +1,17 @@
-# Security Policy — SMP V9.2.4
+# Security Policy — SMP V9.3.0
 
 ## Supported Versions
 
-Only the current V9.2.x release line receives security updates.
+Only the current V9.3.0.x release line receives security updates.
 
 | Version  | Supported |
 | -------- | --------- |
-| V9.2.x   | ✅ Yes    |
-| < V9.2.0 | ❌ No     |
+| V9.3.0.x   | ✅ Yes    |
+| < V9.3.0 | ❌ No     |
 
 ## Security Architecture
 
-SMP is designed to handle highly sensitive vulnerability data. The V9.2.4
+SMP is designed to handle highly sensitive vulnerability data. The V9.3.0
 architecture enforces the following controls:
 
 * **Database Encryption (Pentest Data)**: All sensitive databases (`security.db`,

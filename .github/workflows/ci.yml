@@ -7,13 +7,31 @@ on:
     branches: ["**"]
 
 jobs:
-  verify:
-    name: Verify SMP Components
-    runs-on: ubuntu-22.04
+  lint:
+    name: Lint & Import Check
+    runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint tools
+        run: pip install ruff --quiet
+
+      - name: Ruff lint (errors only)
+        run: ruff check . --select E,F --ignore E501,F401 --exclude venv,__pycache__
+
+  verify:
+    name: Verify SMP Components
+    runs-on: ubuntu-24.04
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -25,7 +43,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
             libsqlcipher-dev \
-            libsqlcipher0 \
+            libsqlcipher0t64 \
             nmap \
             perl \
             git \
@@ -37,16 +55,43 @@ jobs:
             libffi-dev \
             shared-mime-info
 
-      - name: Create virtual environment & install Python deps
+      - name: Create venv & install Python deps
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip --quiet
-          # pysqlcipher3 requires explicit compiler flags on Ubuntu 22.04 + modern OpenSSL
+          # pysqlcipher3 needs explicit compiler flags on Ubuntu 24.04
           CFLAGS="-I/usr/include/sqlcipher" LDFLAGS="-lsqlcipher" \
             pip install pysqlcipher3 --quiet
-          # Install remaining dependencies (pysqlcipher3 already satisfied above)
-          grep -v "^pysqlcipher3" requirements.txt | pip install -r /dev/stdin --quiet
+          grep -v "^pysqlcipher3" requirements.txt | \
+            pip install -r /dev/stdin --quiet
+
+      - name: Smoke test — core imports
+        run: |
+          source venv/bin/activate
+          python -c "
+          import tools.db_manager
+          import tools.config_manager
+          import tools.encryption_manager
+          import tools.risk_scorer
+          import intelligence.brain
+          import intelligence.cisa
+          import intelligence.epss
+          import intelligence.greynoise
+          import intelligence.nvd
+          print('All core imports OK')
+          "
+        env:
+          SMP_CI: "1"
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: Smoke test — API server import
+        run: |
+          source venv/bin/activate
+          python -c "import api.server; print('API server import OK')"
+        env:
+          SMP_CI: "1"
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Run verification suite
         run: |

@@ -49,7 +49,7 @@ def run_open_redirect_scan(url):
         url = "https://" + url
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SecurityManagementPlatform/2.0 (Security Audit)"
+    session.headers["User-Agent"] = "SecurityManagementPlatform/9.3.0 (Security Audit)"
     session.max_redirects = 3
 
     vulnerable_params = []
