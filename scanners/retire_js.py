@@ -23,7 +23,7 @@ KNOWN_VULN = {
 def run_retire_js_scan(url):
     logger.info(f"Retire.js: Scanning {url} for vulnerable JS libraries")
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "SMP/9.3.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "SMP/9.3.2"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             html = resp.read(1_000_000).decode(errors="replace")
     except Exception as e:

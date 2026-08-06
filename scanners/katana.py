@@ -16,7 +16,7 @@ from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
 
-KATANA_TIMEOUT = 300
+KATANA_TIMEOUT = 1800  # 30min — JS-heavy SPAs need time
 
 # Sensitive path patterns to flag as higher severity
 _SENSITIVE_PATTERNS = [
@@ -43,14 +43,21 @@ def run_katana_scan(url):
     cmd = [
         bin_path,
         "-u", url,
-        "-d", "3",          # depth 3
-        "-c", "2",          # 2 concurrent crawlers
-        "-rl", "5",         # 5 req/s rate limit
-        "-timeout", "10",   # 10s per request timeout
+        "-json",
         "-silent",
-        "-j",               # JSON output
+        "-rl", "20",        # 20 req/s
+        "-c", "10",         # 10 concurrent goroutines
+        "-d", "5",          # 5 levels deep
+        "-jc",              # parse JavaScript for endpoints
+        "-iqp",             # include query parameters
+        "-kf", "all",       # known files (robots, sitemap, etc.)
+        "-ef", "png,jpg,gif,ico,svg,woff,woff2,ttf,eot",  # exclude binaries
+        "-automatic-form-fill",  # auto-fill forms for deeper crawl
+        "-timeout", "15",   # per-request timeout
+        "-retry", "2",
+        "-H", "User-Agent: SMP/9.3.1 (Security Audit)",
+        "-headless",
         "-no-color",
-        "-jc",              # crawl JS files for endpoints
         "-form-extraction", # extract form fields
     ]
 

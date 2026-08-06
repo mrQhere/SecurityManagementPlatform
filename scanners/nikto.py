@@ -62,7 +62,18 @@ def run_nikto_scan(url):
     # -nointeractive : never prompt
     # -Tuning x : run all plugin tuning categories  (x = all)
     # -Pause 1 : pause 1 second between requests to throttle
-    cmd = [nikto_bin, "-h", url, "-Format", "csv", "-output", "-", "-nointeractive", "-Tuning", "x", "-Pause", "2"]
+    cmd = [
+        nikto_bin, "-h", url,
+        "-Format", "json",         # JSON for reliable parsing
+        "-output", "-",            # stdout
+        "-nointeractive",
+        "-ssl",                    # always test SSL endpoints
+        "-Tuning", "123456789abc", # all check types (was 'x' = unknown only)
+        "-maxtime", "90m",         # cap at 90 minutes
+        "-timeout", "15",          # per-request timeout
+        "-C", "all",               # check all CGI dirs
+        "-useragent", "SMP/9.3.1 (Security Audit)",
+    ]
 
     try:
         process = subprocess.Popen(

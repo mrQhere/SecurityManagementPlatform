@@ -17,7 +17,7 @@ def run_api_fuzzer(url):
     for path in OPENAPI_PATHS:
         target = url.rstrip("/") + path
         try:
-            req = urllib.request.Request(target, headers={"User-Agent": "SMP-Scanner/9.3.0"})
+            req = urllib.request.Request(target, headers={"User-Agent": "SMP/9.3.2"})
             with urllib.request.urlopen(req, timeout=8) as resp:
                 body = resp.read().decode(errors="replace")
                 if "swagger" in body.lower() or "openapi" in body.lower() or "paths" in body:

@@ -32,8 +32,19 @@ def run_wapiti_scan(url):
         # Deep scan: --level 2 activates form parameter injection (deeper coverage)
         # --max-links-per-page 50: follow more links for comprehensive crawling
         # --flush-session: always start fresh
-        cmd = [wapiti_bin, "-u", url, "-f", "json", "-o", output_file,
-               "--flush-session", "--level", "2", "--max-links-per-page", "50"]
+        cmd = [
+            wapiti_bin, "-u", url,
+            "-f", "json", "-o", output_file,
+            "--flush-session",
+            "--level", "2",
+            "-m", "all",              # ALL attack modules (was missing)
+            "--max-links-per-page", "200",
+            "--max-depth", "10",
+            "--max-scan-time", "90",  # 90 min cap
+            "-S", "thorough",         # thorough crawl mode
+            "--timeout", "15",
+            "-v", "2",                # verbose for better logging
+        ]
                
         # Inject custom auth headers
         auth_headers = settings.get("auth_headers", {})

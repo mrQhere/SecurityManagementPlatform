@@ -53,7 +53,7 @@ def run_robots_scan(url):
     base = _extract_base_url(url)
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SecurityManagementPlatform/9.3.0 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.3.2 (Security Audit)"
 
     # ── Fetch robots.txt ────────────────────────────────────────────────────
     try:

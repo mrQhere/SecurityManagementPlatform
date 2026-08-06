@@ -15,7 +15,7 @@ from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
 
-COMMIX_TIMEOUT = 300
+COMMIX_TIMEOUT = 3600  # 1h
 
 _INJECTION_PATTERNS = [
     r"command injection vulnerability",

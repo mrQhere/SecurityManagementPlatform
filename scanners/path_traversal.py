@@ -21,7 +21,7 @@ def run_path_traversal(url):
         for payload in TRAVERSAL_PAYLOADS[:3]:
             test = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.3.0"})
+                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.3.2"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if "root:x:" in body or "/bin/bash" in body or "/sbin/nologin" in body:

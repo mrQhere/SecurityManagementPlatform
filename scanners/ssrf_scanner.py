@@ -18,7 +18,7 @@ def run_ssrf_scan(url):
         for payload in SSRF_PAYLOADS[:1]:  # Conservative — 1 payload per param
             test_url = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.3.0"})
+                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.3.2"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if any(sig in body for sig in ["ami-id", "instance-id", "169.254", "root:", "localhost"]):

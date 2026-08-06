@@ -140,7 +140,7 @@ def run_secrets_scan(url: str) -> list:
     try:
         import requests
         session = requests.Session()
-        session.headers["User-Agent"] = "SMP-SecretsScanner/9.3.0"
+        session.headers["User-Agent"] = "SMP/9.3.2 (Secrets)"
 
         # Scan main page
         resp = session.get(url, timeout=TIMEOUT, verify=verify_tls)
