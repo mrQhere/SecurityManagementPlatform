@@ -16,7 +16,7 @@ from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
 
-ARJUN_TIMEOUT = 300
+ARJUN_TIMEOUT = 600  # 10 min
 
 
 @register_scanner(name="Arjun", step_name="Running Arjun", depends_on=['Dalfox'], binary_name="arjun", needs_binary=True, confidence=85)
@@ -41,10 +41,10 @@ def run_arjun_scan(url):
         bin_path,
         "-u", url,
         "--export-path", out_path,
-        "-t", "2",       # 2 threads (low rate)
-        "-d", "2",       # 2s delay between requests
-        "--stable",      # conservative mode, fewer false positives
-        "-q",            # quiet
+        "-m", "GET,POST",  # test both HTTP methods
+        "-t", "10",        # 10 threads (was 2)
+        "-c", "50",        # chunk size 50 params per request
+        "-q",              # quiet
     ]
 
     findings = []

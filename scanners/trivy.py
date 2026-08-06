@@ -23,10 +23,23 @@ def scan(target_url: str, scan_id: int, settings: dict) -> dict:
     from tools.narrative_logger import emit_scanner_start, emit_finding
     emit_scanner_start(scan_id, "trivy")
 
-    # In a real environment, target might be an image name or path.
-    # For SMP web targets, we fall back to a filesystem scan of the local config/code
-    # if it's a localhost/internal URL, otherwise we skip.
-    cmd = ["trivy", "fs", ".", "--format", "json"]
+    # Trivy can scan: container images, local filesystems, git repos, and URLs.
+    # For SMP web targets we use 'trivy image' if target looks like an image,
+    # or 'trivy repo' if it's a GitHub URL, otherwise skip (web-only targets
+    # don't have a local FS to scan via Trivy — that's done by Gitleaks).
+    parsed_url = target_url if target_url else ""
+    if "github.com" in parsed_url or "gitlab.com" in parsed_url:
+        cmd = ["trivy", "repo", parsed_url, "--format", "json", "--quiet"]
+        scan_type = "repository"
+    elif "/" in parsed_url and ":" in parsed_url and not parsed_url.startswith("http"):
+        # Looks like image:tag
+        cmd = ["trivy", "image", parsed_url, "--format", "json", "--quiet"]
+        scan_type = "image"
+    else:
+        logger.info(f"[trivy] Skipping web-only target {parsed_url} (use 'image:tag' or GitHub URL)")
+        return {"success": False, "data": [], "raw_output": "Trivy: non-scannable target type"}
+
+    cmd += ["--severity", "CRITICAL,HIGH,MEDIUM,LOW", "--ignore-unfixed"]
 
     logger.info(f"[trivy] Running: {' '.join(cmd)}")
     findings = []

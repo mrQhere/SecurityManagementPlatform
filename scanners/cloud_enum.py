@@ -28,7 +28,7 @@ def run_cloud_enum_scan(url):
     Returns list of finding dicts, [] if none found, None if binary missing.
     """
     settings = load_settings()
-    bin_path = settings.get("cloud_enum_path", "cloud_enum")
+    bin_path = settings.get("cloud_enum_path", "cloud-enum")
 
     import shutil
     if not shutil.which(bin_path):
@@ -57,7 +57,7 @@ def run_cloud_enum_scan(url):
         bin_path,
         "--quickscan",
         "-t", "10",    # 10 threads
-        "--disable-azure",  # comment out if Azure coverage is needed
+        
     ]
     
     for kw in keywords:

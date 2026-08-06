@@ -18,7 +18,7 @@ def run_xxe_scan(url):
             req = urllib.request.Request(
                 base + ep,
                 data=XXE_PAYLOAD.encode(),
-                headers={"Content-Type": "application/xml", "User-Agent": "SMP/9.3.0"},
+                headers={"Content-Type": "application/xml", "User-Agent": "SMP/9.3.2"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=6) as resp:
