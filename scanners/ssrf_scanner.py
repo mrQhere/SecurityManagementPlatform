@@ -6,8 +6,32 @@ from scanners.core.registry import register_scanner
 
 logger = logging.getLogger("smp.scan")
 
-SSRF_PARAMS = ["url", "redirect", "next", "target", "dest", "destination", "redir", "uri", "path", "continue", "return", "returnTo", "goto", "link", "page", "ref", "view", "load", "fetch", "image", "img", "src"]
-SSRF_PAYLOADS = ["http://169.254.169.254/latest/meta-data/", "http://127.0.0.1:80", "http://localhost"]
+SSRF_PARAMS = [
+    "url", "redirect", "next", "target", "dest", "destination", "redir",
+    "uri", "path", "continue", "return", "returnTo", "goto", "link",
+    "page", "ref", "view", "load", "fetch", "image", "img", "src",
+    "host", "webhook", "callback", "endpoint", "proxy", "forward",
+]
+SSRF_PAYLOADS = [
+    # AWS metadata
+    "http://169.254.169.254/latest/meta-data/",
+    "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+    # GCP metadata
+    "http://metadata.google.internal/computeMetadata/v1/",
+    # Azure metadata
+    "http://169.254.169.254/metadata/instance?api-version=2021-02-01",
+    # Internal localhost
+    "http://127.0.0.1:80",
+    "http://127.0.0.1:8080",
+    "http://localhost",
+    # DNS rebinding
+    "http://[::]:80",
+]
+# Signatures in response body that confirm SSRF
+_SSRF_SIGNATURES = [
+    "ami-id", "instance-id", "169.254", "root:", "computeMetadata",
+    "subscriptionId", "resourceGroup", "local",
+]
 
 @register_scanner(name="SSRF Scanner", step_name="Running SSRF Scanner", depends_on=['Tech Fingerprint'], binary_name="", needs_binary=False, confidence=85)
 def run_ssrf_scan(url):
@@ -15,13 +39,13 @@ def run_ssrf_scan(url):
     base = url.rstrip("/")
     findings = []
     for param in SSRF_PARAMS:
-        for payload in SSRF_PAYLOADS[:1]:  # Conservative — 1 payload per param
+        for payload in SSRF_PAYLOADS:  # Test all cloud metadata payloads
             test_url = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
                 req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.3.2"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
-                    if any(sig in body for sig in ["ami-id", "instance-id", "169.254", "root:", "localhost"]):
+                    if any(sig in body for sig in _SSRF_SIGNATURES):
                         findings.append({
                             "severity": "Critical",
                             "title": "SSRF: Server-Side Request Forgery",
