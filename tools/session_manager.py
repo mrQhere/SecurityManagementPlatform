@@ -1,5 +1,5 @@
 """
-Session Manager V9.3.1
+Session Manager V9.3.2
 ====================
 Tracks user activity and fires an auto-lock signal after a configurable
 idle timeout. Designed to work with the PySide6 dashboard without requiring

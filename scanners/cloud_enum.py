@@ -39,7 +39,7 @@ def run_cloud_enum_scan(url):
     parsed = urlparse(url)
     domain = parsed.hostname or url.replace("https://", "").replace("http://", "").split("/")[0]
 
-    # ── V9.3.1 — Custom Keyword List ──────────────────────────────────────────
+    # ── V9.3.2 — Custom Keyword List ──────────────────────────────────────────
     # Derive base keyword from domain (e.g. company name from sub.company.com → company)
     parts = domain.split(".")
     base_keyword = parts[-2] if len(parts) >= 2 else parts[0]

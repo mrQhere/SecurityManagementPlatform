@@ -4,11 +4,11 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.3.1 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.3.2 · Stable                     ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
-║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
+║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                          ║
 ║                                                                      ║
-║    Local-first  ·  57 Scanners  ·  AES-256  ·  Zero Cloud            ║
+║    Local-first  ·  57 Scanners  ·  AES-256  ·  Zero Cloud           ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -363,7 +363,7 @@ Findings are automatically mapped to:
 | CIS Controls v8 | Infrastructure hardening |
 | ISO 27001:2022 | ISMS certification |
 | SOC 2 Type II | SaaS/cloud audit readiness |
-| PCI-DSS v9.3.1 | Payment card compliance |
+| PCI-DSS v9.3.2 | Payment card compliance |
 
 ```python
 from tools.compliance_mapper import map_finding_to_controls
@@ -463,9 +463,9 @@ SecurityManagementPlatform/
 
 ## 12 · Roadmap
 
-**V9.3.1 (current)**
+**V9.3.2 (current)**
 - Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
-- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.3.1, dalfox v2.10.0
+- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.3.2, dalfox v2.10.0
 - --skip-tools flag for Avast-restricted environments
 - Semantic badge colours + QProgressBar/QTabWidget in UI
 - PDF footer © mrQhere, body_left crash fix
