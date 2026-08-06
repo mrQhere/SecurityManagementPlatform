@@ -478,6 +478,52 @@ SecurityManagementPlatform/
 
 ---
 
+## 13 · Advanced Usage & Internals
+
+### Zero-Friction Custom Plugins
+You can add custom scanners by simply dropping a Python script into the `scanners/` directory. SMP auto-discovers scanners using the `PLUGIN_META` dictionary.
+```python
+# scanners/my_custom_tool.py
+PLUGIN_META = {
+    "name": "CustomTool",
+    "binary": "custom_bin",
+    "severity": "Medium",
+    "step_name": "Running Custom Recon",
+    "confidence": 75,
+    "depends_on": ["Subfinder"] # Optional dependency DAG
+}
+
+def scan(target_url: str, scan_id: int, settings: dict):
+    from tools.db_manager import emit_finding, emit_scanner_start
+    emit_scanner_start(scan_id, "CustomTool")
+    # Execute binary and parse results
+    emit_finding(scan_id, "CustomTool", "Medium", "Found custom vulnerability")
+```
+
+### CLI Database Decryption
+Pentest data is encrypted at rest using SQLCipher AES-256. If you need to run complex SQL joins outside of the platform, you can manually decrypt the database using the master key located in `.smp_keystore`:
+```bash
+sqlite3 database/security.db
+sqlite> PRAGMA key = 'YOUR_KEY_FROM_KEYSTORE';
+sqlite> SELECT url, severity FROM findings WHERE severity = 'Critical';
+```
+
+### Headless API & Automation
+SMP features a headless FastAPI server designed for CI/CD integration. 
+Start the API without the GUI:
+```bash
+./run.sh --api-only --port 8000
+```
+Trigger a scan programmatically:
+```bash
+curl -X POST http://localhost:8000/api/scans \
+     -H "Authorization: Bearer <API_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{"target": "https://example.com", "profile": "standard"}'
+```
+
+---
+
 <div align="center">
 
 **SMP** · Local-first · Zero-cloud · Encrypted at rest  
