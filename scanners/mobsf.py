@@ -1,5 +1,5 @@
 """
-MobSF Scanner — SMP V9.3.2
+MobSF Scanner — SMP V9.3.3
 =========================
 Integrates with the Mobile Security Framework (MobSF) REST API.
 """
