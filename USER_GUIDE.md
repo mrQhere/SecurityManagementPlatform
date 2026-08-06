@@ -491,6 +491,48 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 
 ---
 
+## 14 · Advanced Usage for Researchers
+
+SMP is built as a flexible orchestration layer. Security researchers can leverage its core components for custom engagements:
+
+### Neural Graph Threshold Tuning
+The force-directed graph UI (`ui/components/neural_graph.py`) uses a dynamic spring algorithm to group CVEs. You can manipulate the gravity thresholds and repulsive forces in `intelligence/brain.py` to highlight tightly clustered technology stacks (e.g., increasing `GRAVITY_CONSTANT` to group zero-days closer to their root product nodes).
+
+### Direct SQLCipher Queries
+Pentest data is encrypted at rest using AES-256. If you want to bypass the GUI to run complex analytical queries on the raw findings:
+1. Extract your master key from `.smp_keystore`.
+2. Access the database directly:
+```bash
+sqlite3 database/security.db
+sqlite> PRAGMA key = 'YOUR_MASTER_KEY';
+sqlite> SELECT target_url, severity, tool FROM findings WHERE confidence > 90;
+```
+
+### Developing Zero-Config Plugins
+You can add custom exploit scripts or proprietary scanners to the pipeline instantly. Drop your python script into the `scanners/` directory with a `PLUGIN_META` dictionary, and the `scanners.core.registry` will automatically parse it and include it in the DAG for execution.
+
+```python
+PLUGIN_META = {
+    "name": "Custom0Day",
+    "binary": "exploit_bin",
+    "severity": "Critical",
+    "step_name": "Running Custom Exploit",
+    "confidence": 100,
+    "depends_on": ["Subfinder"] # Optional DAG dependency
+}
+def scan(target_url: str, scan_id: int, settings: dict):
+    from tools.db_manager import emit_finding
+    emit_finding(scan_id, "Custom0Day", "Critical", "Found 0-day!")
+```
+
+### Headless API Automation
+SMP features a headless FastAPI server. To integrate SMP into a CI/CD pipeline or custom red-team orchestration bot:
+```bash
+./run.sh --api-only --port 8000
+```
+
+---
+
 <div align="center">
 
 **SMP** · Local-first · Zero-cloud · Encrypted at rest  
