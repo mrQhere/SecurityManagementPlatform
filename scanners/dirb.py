@@ -18,7 +18,7 @@ import subprocess
 logger = logging.getLogger("smp.scan")
 
 
-def run_dirb(target_url: str, scan_id: int, settings: dict) -> dict:
+def run_scan(target_url: str):
     """
     Run Dirb against a target for web content discovery.
 
