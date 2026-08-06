@@ -1,7 +1,8 @@
 import sys
 import time
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
-from PySide6.QtCore import Qt, QThread, Signal
+import random
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar, QGraphicsDropShadowEffect
+from PySide6.QtCore import Qt, QThread, Signal, QPropertyAnimation, QTimer
 from PySide6.QtGui import QColor, QPainter, QLinearGradient
 
 class StartupWorker(QThread):
@@ -86,9 +87,10 @@ class SplashScreen(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Brand / Title
-        self.lbl_title = QLabel("SMP")
+        self.final_title = "SMP"
+        self.lbl_title = QLabel(self.final_title)
         self.lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_title.setStyleSheet("color: #FFFFFF; font-size: 36px; font-weight: 800; letter-spacing: 2px;")
+        self.lbl_title.setStyleSheet("background-color: transparent; color: #FFFFFF; font-size: 36px; font-weight: 800; letter-spacing: 2px; font-family: monospace;")
         layout.addWidget(self.lbl_title)
 
         import json
@@ -102,17 +104,24 @@ class SplashScreen(QWidget):
         except Exception:
             pass
 
-        self.lbl_subtitle = QLabel(f"SECURITY PLATFORM • {version}")
+        self.final_subtitle = f"SECURITY PLATFORM • {version}"
+        self.lbl_subtitle = QLabel(self.final_subtitle)
         self.lbl_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_subtitle.setStyleSheet("color: #007AFF; font-size: 12px; font-weight: 600; letter-spacing: 1px;")
+        self.lbl_subtitle.setStyleSheet("background-color: transparent; color: #007AFF; font-size: 12px; font-weight: 600; letter-spacing: 1px; font-family: monospace;")
         layout.addWidget(self.lbl_subtitle)
+        
+        # Matrix Decoding Timer
+        self.decode_ticks = 0
+        self.decode_timer = QTimer(self)
+        self.decode_timer.timeout.connect(self._animate_matrix_decode)
+        self.decode_timer.start(50)
 
         layout.addSpacing(30)
 
         # Progress Label
-        self.lbl_status = QLabel("Initializing engine...")
+        self.lbl_status = QLabel("> [SYS] Initializing engine...")
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_status.setStyleSheet("color: #AAAAAA; font-size: 11px;")
+        self.lbl_status.setStyleSheet("background-color: transparent; color: #34C759; font-size: 11px; font-family: monospace;")
         layout.addWidget(self.lbl_status)
 
         # Progress Bar
@@ -151,6 +160,41 @@ class SplashScreen(QWidget):
         painter.setPen(QColor("#333333"))
         painter.drawRoundedRect(self.rect(), 12, 12)
 
-    def update_progress(self, value, text):
-        self.progress.setValue(value)
-        self.lbl_status.setText(text)
+    def update_progress(self, val, text):
+        self.progress.setValue(val)
+        self.lbl_status.setText(f"> [SYS] {text}")
+        if val >= 100:
+            self.close()
+
+    def _animate_matrix_decode(self):
+        self.decode_ticks += 1
+        chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;':,./<>?"
+        
+        revealed_count_sub = self.decode_ticks // 2
+        revealed_count_title = self.decode_ticks // 4
+        
+        if revealed_count_sub >= len(self.final_subtitle):
+            self.lbl_subtitle.setText(self.final_subtitle)
+            self.lbl_title.setText(self.final_title)
+            self.decode_timer.stop()
+            return
+            
+        display_sub = ""
+        for i in range(len(self.final_subtitle)):
+            if i < revealed_count_sub:
+                display_sub += self.final_subtitle[i]
+            elif self.final_subtitle[i] == " ":
+                display_sub += " "
+            else:
+                display_sub += random.choice(chars)
+                
+        self.lbl_subtitle.setText(display_sub)
+
+        display_title = ""
+        for i in range(len(self.final_title)):
+            if i < revealed_count_title:
+                display_title += self.final_title[i]
+            else:
+                display_title += random.choice(chars)
+                
+        self.lbl_title.setText(display_title)

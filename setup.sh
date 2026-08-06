@@ -23,7 +23,7 @@
 #   katana    v1.1.2    projectdiscovery/katana
 #   dnsx      v1.2.1    projectdiscovery/dnsx
 #   ffuf      v2.1.0    ffuf/ffuf
-#   gitleaks  v9.3.3   gitleaks/gitleaks
+#   gitleaks  v8.30.1   gitleaks/gitleaks
 #   dalfox    v2.10.0   hahwul/dalfox
 # =============================================================================
 set -euo pipefail
@@ -61,7 +61,7 @@ spin() {
     local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") i=0
     while kill -0 $pid 2>/dev/null; do
         printf "\r\033[K${CYAN}%s${RESET} %s" "${sp[$((i%10))]}" "$msg"
-        ((i++)); sleep 0.1
+        ((i++)) || true; sleep 0.1
     done
     wait $pid && { ok "$msg"; return 0; } || { warn "$msg — see setup.log"; return 1; }
 }
@@ -162,8 +162,9 @@ get_pkg() {
         libsqlcipher0)
             case "$DISTRO" in
                 debian)
-                    # Ubuntu 24.04+ uses t64 suffix
-                    if apt-cache show libsqlcipher0t64 &>/dev/null; then
+                    if apt-cache show libsqlcipher1 &>/dev/null; then
+                        echo "libsqlcipher1"
+                    elif apt-cache show libsqlcipher0t64 &>/dev/null; then
                         echo "libsqlcipher0t64"
                     else
                         echo "libsqlcipher0"
@@ -254,7 +255,7 @@ if ! python3 -c "import ctypes; ctypes.cdll.LoadLibrary('libsqlcipher.so.0')" &>
         if spin "Building SQLCipher from source" bash -c "
             git clone --depth=1 https://github.com/sqlcipher/sqlcipher.git '$_sc_tmp' &&
             cd '$_sc_tmp' &&
-            ./configure CFLAGS='-DSQLITE_HAS_CODEC' LDFLAGS='-lcrypto' --prefix=/usr/local &&
+            ./configure CFLAGS='-DSQLITE_HAS_CODEC -DSQLITE_TEMP_STORE=2 -DSQLITE_EXTRA_INIT=sqlcipher_extra_init -DSQLITE_EXTRA_SHUTDOWN=sqlcipher_extra_shutdown' LDFLAGS='-lcrypto' --prefix=/usr/local &&
             make -j\$(nproc) && sudo make install && sudo ldconfig"; then
             ok "SQLCipher built from source"
         else
@@ -289,7 +290,8 @@ fi
 
 # ── Python venv & dependencies ─────────────────────────────────────────────────
 if ! $SKIP_VENV; then
-    if [[ ! -d "$SCRIPT_DIR/venv" ]]; then
+    if [[ ! -f "$SCRIPT_DIR/venv/bin/activate" ]]; then
+        rm -rf "$SCRIPT_DIR/venv"
         spin "Creating Python virtual environment" python3 -m venv "$SCRIPT_DIR/venv"
     else
         ok "Virtual environment exists"
@@ -310,6 +312,9 @@ if ! $SKIP_VENV; then
 
     spin "Installing Python dependencies" \
         pip install -r "$SCRIPT_DIR/requirements.txt"
+
+    spin "Installing Playwright browser binaries (Evidence Capture)" \
+        playwright install chromium
 fi
 
 # ── Go Security Tools ──────────────────────────────────────────────────────────
@@ -322,7 +327,7 @@ if $SKIP_TOOLS; then
   katana:    https://github.com/projectdiscovery/katana/releases/tag/v1.1.2
   dnsx:      https://github.com/projectdiscovery/dnsx/releases/tag/v1.2.1
   ffuf:      https://github.com/ffuf/ffuf/releases/tag/v2.1.0
-  gitleaks:  https://github.com/gitleaks/gitleaks/releases/tag/v9.3.3
+  gitleaks:  https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1
   dalfox:    https://github.com/hahwul/dalfox/releases/tag/v2.10.0
   Place binaries in: bin/
 EOF
@@ -383,9 +388,9 @@ else
     T_ARM[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
     T_GO[ffuf]="github.com/ffuf/ffuf/v2@v2.1.0"
 
-    T_AMD[gitleaks]="$BASE_GL/v9.3.3/gitleaks_8.24.0_linux_x64.tar.gz"
-    T_ARM[gitleaks]="$BASE_GL/v9.3.3/gitleaks_8.24.0_linux_arm64.tar.gz"
-    T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v9.3.3"
+    T_AMD[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+    T_ARM[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
+    T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v8.30.1"
 
     T_AMD[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz"
     T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"
