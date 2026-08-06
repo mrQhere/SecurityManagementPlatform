@@ -1,5 +1,5 @@
 """
-CVE-to-Technology Correlation Engine  (V9.3.1)
+CVE-to-Technology Correlation Engine  (V9.3.2)
 ============================================
 
 Matching strategy (three tiers of confidence):
@@ -67,7 +67,7 @@ def _version_whole_word_pattern(version: str) -> re.Pattern:
 
 
 def map_to_mitre_attack(description: str) -> str:
-    """Maps CVE description keywords to MITRE ATT&CK tactics (V9.3.1 — expanded)."""
+    """Maps CVE description keywords to MITRE ATT&CK tactics (V9.3.2 — expanded)."""
     desc = description.lower()
     tactics = []
 
