@@ -1860,81 +1860,109 @@ class DashboardLayoutMixin:
         
         # Graph Widget
         from ui.components.neural_graph import NeuralGraphWidget
-        from tools.db_manager import get_db_connection
-        
         self.neural_graph = NeuralGraphWidget()
         
-        # Fetch actual intelligence graph data
-        def load_intel():
-            import sqlite3
-            import os
-            from intelligence.brain import GLOBAL_INTEL_DB
+        # AI Insights Label
+        insights_card = self._make_card("AI Insights")
+        self.insights_label = QLabel("Initializing Neural Engine...")
+        self.insights_label.setWordWrap(True)
+        self.insights_label.setStyleSheet(
+            "color: #AAAAAA; font-size: 13px; line-height: 1.6; padding: 4px;"
+        )
+        insights_card.layout().addWidget(self.insights_label)
+        
+        self.lbl_empty = QLabel(
+            "  No intelligence data yet.\n\n"
+            "  Run a scan to build the CVE knowledge graph.\n"
+            "  Each scan with confirmed CVEs populates this view."
+        )
+        self.lbl_empty.setStyleSheet(
+            "color: #444444; font-size: 14px; padding: 60px; "
+            "border: 1px dashed #222222; border-radius: 12px; background: #0D0D0D;"
+        )
+        self.lbl_empty.setAlignment(Qt.AlignCenter)
+        
+        layout.addWidget(self.lbl_empty, 1)
+        layout.addWidget(self.neural_graph, 1)
+        layout.addWidget(insights_card, 0)
+        
+        self.neural_graph.hide()
+        
+        def refresh_brain_data():
+            import sqlite3, os
+            from intelligence.brain import GLOBAL_INTEL_DB, generate_ai_insights
+            from tools.db_manager import get_db_connection, get_findings_for_scan
+            
             try:
                 if not os.path.exists(GLOBAL_INTEL_DB):
-                    return [], []
+                    return
                 conn = sqlite3.connect(GLOBAL_INTEL_DB)
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute(
-                    "SELECT cve_id, affected_component FROM global_heuristics "
-                    "ORDER BY observation_count DESC LIMIT 150"
+                    "SELECT cve_id, affected_component, severity, centrality_score "
+                    "FROM global_heuristics ORDER BY observation_count DESC LIMIT 200"
                 ).fetchall()
-                nodes = []
-                edges = []
+                conn.close()
+                
+                if not rows:
+                    self.lbl_empty.show()
+                    self.neural_graph.hide()
+                    return
+                    
+                self.lbl_empty.hide()
+                self.neural_graph.show()
+                
+                nodes, edges = [], []
+                added_ids = set()
+                
                 for row in rows:
                     cve = row["cve_id"]
                     comp = row["affected_component"]
-                    nodes.append({"id": cve, "label": cve})
-                    if comp not in [n["id"] for n in nodes]:
-                        nodes.append({"id": comp, "label": comp})
+                    sev = row["severity"]
+                    score = row["centrality_score"]
+                    
+                    if cve not in added_ids:
+                        nodes.append({"id": cve, "label": cve, "type": "cve", "severity": sev, "score": score})
+                        added_ids.add(cve)
+                    if comp not in added_ids:
+                        nodes.append({"id": comp, "label": comp, "type": "component", "severity": "Info", "score": score})
+                        added_ids.add(comp)
+                    
                     edges.append((cve, comp))
-                conn.close()
-                return nodes, edges
+                    
+                self.neural_graph.load_data({"nodes": nodes, "edges": edges})
+                
+                # Update insights
+                conn_main = get_db_connection()
+                latest_row = conn_main.execute("SELECT id FROM scans WHERE status = 'Completed' ORDER BY id DESC LIMIT 1").fetchone()
+                conn_main.close()
+                if latest_row:
+                    findings = list(get_findings_for_scan(latest_row["id"]))
+                    self.insights_label.setText(generate_ai_insights(findings))
+                else:
+                    self.insights_label.setText("Intelligence Engine Active. Run a scan to generate context.")
+                    
             except Exception as e:
-                logger.error(f"Failed to load Neural Brain data: {e}")
-                return [], []
+                logger.error(f"Brain refresh failed: {e}")
 
-        nodes, edges = load_intel()
-
-        if not nodes:
-            lbl_empty = QLabel(
-                "  No intelligence data yet.\n\n"
-                "  Run a scan to build the CVE knowledge graph.\n"
-                "  Each scan with confirmed CVEs populates this view."
-            )
-            lbl_empty.setStyleSheet(
-                "color: #444444; font-size: 14px; padding: 60px; "
-                "border: 1px dashed #222222; border-radius: 12px; background: #0D0D0D;"
-            )
-            lbl_empty.setAlignment(Qt.AlignCenter)
-            layout.addWidget(lbl_empty, 1)
-        else:
-            self.neural_graph.load_data({"nodes": nodes, "edges": edges})
-            layout.addWidget(self.neural_graph, 1)
-
-        # AI Insights panel — populated from most recent completed scan
+        # Initial load
+        refresh_brain_data()
+        
+        # Setup EventBus Thread-Safe Hook
+        from PySide6.QtCore import QObject, Signal
+        class BrainHook(QObject):
+            sig_refresh = Signal()
+            def __init__(self):
+                super().__init__()
+                self.sig_refresh.connect(refresh_brain_data)
+        
+        self._brain_hook = BrainHook()
+        
         try:
-            from intelligence.brain import generate_ai_insights
-            from tools.db_manager import get_findings_for_scan, get_db_connection
-            conn_main = get_db_connection()
-            latest_row = conn_main.execute(
-                "SELECT id FROM scans WHERE status = 'Completed' ORDER BY id DESC LIMIT 1"
-            ).fetchone()
-            conn_main.close()
-            if latest_row:
-                latest_findings = list(get_findings_for_scan(latest_row["id"]))
-                insight_text = generate_ai_insights(latest_findings)
-            else:
-                insight_text = "No completed scans yet. Run a scan to generate AI insights."
-        except Exception as ex:
-            insight_text = f"Intelligence engine unavailable: {ex}"
-
-        insights_card = self._make_card("AI Insights")
-        insights_label = QLabel(insight_text)
-        insights_label.setWordWrap(True)
-        insights_label.setStyleSheet(
-            "color: #AAAAAA; font-size: 13px; line-height: 1.6; padding: 4px;"
-        )
-        insights_card.layout().addWidget(insights_label)
-        layout.addWidget(insights_card)
+            from tools.event_bus import EventBus
+            EventBus.subscribe("scan_completed", lambda e, d: self._brain_hook.sig_refresh.emit())
+        except ImportError:
+            pass # EventBus not available
 
         return page
+
