@@ -1889,7 +1889,8 @@ class DashboardLayoutMixin:
         self.neural_graph.hide()
         
         def refresh_brain_data():
-            import sqlite3, os
+            import sqlite3
+            import os
             from intelligence.brain import GLOBAL_INTEL_DB, generate_ai_insights
             from tools.db_manager import get_db_connection, get_findings_for_scan
             

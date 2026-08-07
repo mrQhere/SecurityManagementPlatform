@@ -634,9 +634,12 @@ class DashboardLogicMixin:
         self.txt_report_email.setText(settings.get("report_email", ""))
         self.chk_zap_enabled.setChecked(settings.get("zap_enabled", False))
         # ── V9.3.3 — Load API Keys & Proxies ──
-        if hasattr(self, "txt_github_token"): self.txt_github_token.setText(settings.get("github_token", ""))
-        if hasattr(self, "txt_http_proxy"): self.txt_http_proxy.setText(settings.get("http_proxy", ""))
-        if hasattr(self, "txt_https_proxy"): self.txt_https_proxy.setText(settings.get("https_proxy", ""))
+        if hasattr(self, "txt_github_token"):
+            self.txt_github_token.setText(settings.get("github_token", ""))
+        if hasattr(self, "txt_http_proxy"):
+            self.txt_http_proxy.setText(settings.get("http_proxy", ""))
+        if hasattr(self, "txt_https_proxy"):
+            self.txt_https_proxy.setText(settings.get("https_proxy", ""))
 
     def save_smtp_settings(self):
         host = self.txt_smtp_host.text().strip()
@@ -657,9 +660,12 @@ class DashboardLogicMixin:
         current_settings["zap_enabled"] = self.chk_zap_enabled.isChecked()
 
         # ── V9.3.3 — Save API Keys & Proxies ──
-        if hasattr(self, "txt_github_token"): current_settings["github_token"] = self.txt_github_token.text().strip()
-        if hasattr(self, "txt_http_proxy"): current_settings["http_proxy"] = self.txt_http_proxy.text().strip()
-        if hasattr(self, "txt_https_proxy"): current_settings["https_proxy"] = self.txt_https_proxy.text().strip()
+        if hasattr(self, "txt_github_token"):
+            current_settings["github_token"] = self.txt_github_token.text().strip()
+        if hasattr(self, "txt_http_proxy"):
+            current_settings["http_proxy"] = self.txt_http_proxy.text().strip()
+        if hasattr(self, "txt_https_proxy"):
+            current_settings["https_proxy"] = self.txt_https_proxy.text().strip()
 
         smtp_configured = True
         if not host and not port_text and not user and not pw and not receiver:

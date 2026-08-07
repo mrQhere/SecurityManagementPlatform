@@ -342,7 +342,7 @@ class TestSMPComponents(unittest.TestCase):
         sys.modules["mock_scanner_module"] = mock_mod
         
         captured_timeout = None
-        def dummy_scan_func(url):
+        def dummy_scan_func(url, **kwargs):
             nonlocal captured_timeout
             captured_timeout = mock_mod.TIMEOUT
             return []
@@ -364,7 +364,7 @@ class TestSMPComponents(unittest.TestCase):
         """Test that missing binary and exception conditions are resiliently handled."""
         from scanners.scan_runner import run_with_resilience
         
-        def dummy_scan_func(url):
+        def dummy_scan_func(url, **kwargs):
             return []
         
         # 1. Test missing binary guard
@@ -376,7 +376,7 @@ class TestSMPComponents(unittest.TestCase):
         self.assertIsNone(res)
         
         # 2. Test execution exception handling
-        def throwing_scan_func(url):
+        def throwing_scan_func(url, **kwargs):
             raise RuntimeError("Subprocess failed or crashed")
         throwing_scan_func.__module__ = "scanners.nmap"
         

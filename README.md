@@ -1,4 +1,4 @@
-# Security Management Platform (SMP) V9.3.3
+# Security Management Platform (SMP) V9.4.0
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
@@ -24,7 +24,7 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 > SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
 
 > [!TIP]
-> **V9.3.3** ships a Neural Correlation Engine (`intelligence/brain.py`) that builds a local heuristics graph from real scan data and the CISA KEV catalog. It includes a force-directed graph UI (`ui/components/neural_graph.py`) to visualise CVE relationships. The CVSS and EPSS values in the graph are populated from live NVD and EPSS API calls — not hardcoded.
+> **V9.4.0** ships a Neural Correlation Engine (`intelligence/brain.py`) that builds a local heuristics graph from real scan data and the CISA KEV catalog. It includes a force-directed graph UI (`ui/components/neural_graph.py`) to visualise CVE relationships. The CVSS and EPSS values in the graph are populated from live NVD and EPSS API calls — not hardcoded.
 
 **The core pitch is not tool count.** It is:
 
@@ -105,7 +105,7 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 
 ## Roadmap
 
-### Near-term (V9.3.3.x)
+### Near-term (V9.4.x.x)
 - Neural Graph filtering by CVE correlation weight
 - Custom Nuclei/SQLMap payload injection from the UI
 - Air-gapped intelligence update via USB import of `global_intel.db`
