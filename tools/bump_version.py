@@ -15,7 +15,10 @@ import os
 import re
 import argparse
 
-GRN = "\033[92m"; YEL = "\033[93m"; RED = "\033[91m"; RST = "\033[0m"
+GRN = "\033[92m"
+YEL = "\033[93m"
+RED = "\033[91m"
+RST = "\033[0m"
 
 def _ok(msg):   print(f"  {GRN}[✓]{RST} {msg}")
 def _warn(msg): print(f"  {YEL}[!]{RST} {msg}")

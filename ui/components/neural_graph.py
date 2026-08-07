@@ -1,6 +1,6 @@
 import math
 import random
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsItem, QWidget, QVBoxLayout, QGraphicsTextItem, QToolTip
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsItem, QWidget, QVBoxLayout, QHBoxLayout, QGraphicsTextItem, QToolTip, QSlider, QLabel
 from PySide6.QtCore import Qt, QTimer, QPointF, QRectF
 from PySide6.QtGui import QColor, QPen, QBrush, QPainter, QRadialGradient, QFont
 
@@ -145,6 +145,21 @@ class NeuralGraphWidget(QWidget):
         
         self.layout.addWidget(self.view)
         
+        # Filter UI
+        self.filter_layout = QHBoxLayout()
+        self.filter_layout.setContentsMargins(10, 5, 10, 5)
+        self.filter_label = QLabel("Min Centrality: 0.00")
+        self.filter_label.setStyleSheet("color: #9CA3AF; font-size: 11px; font-family: Arial;")
+        self.filter_slider = QSlider(Qt.Horizontal)
+        self.filter_slider.setRange(0, 100)
+        self.filter_slider.setValue(0)
+        self.filter_slider.setToolTip("Filter nodes by AI Centrality weight")
+        self.filter_slider.valueChanged.connect(self._on_filter_changed)
+        
+        self.filter_layout.addWidget(self.filter_label)
+        self.filter_layout.addWidget(self.filter_slider)
+        self.layout.addLayout(self.filter_layout)
+        
         # Graph data
         self.nodes = []
         self.edges = []
@@ -158,6 +173,18 @@ class NeuralGraphWidget(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._apply_physics)
         self.is_simulating = False
+        
+    def _on_filter_changed(self, val):
+        min_score = val / 100.0
+        self.filter_label.setText(f"Min Centrality: {min_score:.2f}")
+        for node in self.nodes:
+            # Component nodes are structural and don't get filtered out the same way,
+            # but if they have 0 connections visible they'll naturally be orphans.
+            # We filter based on the node's score.
+            node.setVisible(node.score >= min_score)
+            
+        for edge in self.edges:
+            edge.setVisible(edge.source.isVisible() and edge.target.isVisible())
         
     def load_data(self, graph_data):
         """
