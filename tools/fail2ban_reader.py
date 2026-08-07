@@ -22,7 +22,7 @@ def get_active_bans(log_path="/var/log/fail2ban.log"):
 
     if not os.path.isfile(log_path):
         logger.info(f"[Fail2Ban] Log not found at {log_path}. Fail2Ban may not be installed or active.")
-        return []  # V9.3.3: No mock data — return empty, let UI show "Unavailable"
+        return []  # V9.4.0: No mock data — return empty, let UI show "Unavailable"
 
     try:
         # Regex to match Ban and Unban actions

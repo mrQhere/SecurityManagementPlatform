@@ -1,7 +1,7 @@
 """
 Risk Scoring Engine V9.3.3 — calibrated against real CVE data.
 
-V9.3.3 Improvements:
+V9.4.0 Improvements:
 - Reads cvss_score column directly from the findings table (no regex parsing needed)
 - CISA KEV confirmed-exploited CVEs receive 2× score multiplier
 - CVE match tier (A/B/C from correlator) respected in contribution weight
@@ -89,7 +89,7 @@ def calculate_and_store_risk_score(scan_id, findings):
     """
     Calculates a calibrated risk score from *findings*, persists it, and returns the score dict.
 
-    V9.3.3: Reads cvss_score and epss_score columns directly — no regex parsing.
+    V9.4.0: Reads cvss_score and epss_score columns directly — no regex parsing.
     CISA KEV confirmed findings receive a 2× multiplier.
 
     Returns:
@@ -155,7 +155,7 @@ def calculate_and_store_risk_score(scan_id, findings):
 
         # ── Tool-specific scoring ──────────────────────────────────────────────
         if tool == "CVE Correlation":
-            # V9.3.3: Use CVSS column directly (no regex needed)
+            # V9.4.0: Use CVSS column directly (no regex needed)
             # Tier A/B matches have version confirmed — higher weight
             # Tier C matches (description only) — lower weight
             if cvss and cvss >= 9.0:

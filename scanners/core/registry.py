@@ -89,7 +89,7 @@ def _load_plugin_meta(modname: str, module) -> bool:
 
 def discover_scanners():
     """Auto-discover and import all python files in the scanners/ directory.
-    V9.3.3: Also checks for PLUGIN_META for zero-config plug-and-play scanners.
+    V9.4.0: Also checks for PLUGIN_META for zero-config plug-and-play scanners.
     """
     import scanners
     package = scanners
@@ -106,7 +106,7 @@ def discover_scanners():
 
 def auto_discover_plugins() -> list:
     """
-    V9.3.3 — Explicitly trigger plugin auto-discovery and return list of newly found plugins.
+    V9.4.0 — Explicitly trigger plugin auto-discovery and return list of newly found plugins.
     Called on startup and can be called again if new scanners are dropped in.
     """
     before = set(_REGISTRY.keys())

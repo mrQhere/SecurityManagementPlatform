@@ -3,10 +3,13 @@ DAG Orchestrator
 ================
 Manages the execution of ScannerPlugins based on their dependencies.
 """
+import os
 import threading
 import queue
 import logging
 import time
+
+_CI_MODE = os.environ.get("SMP_CI") == "1"
 
 logger = logging.getLogger("smp.scan")
 
@@ -65,11 +68,12 @@ class DAGOrchestrator:
                     q.put((plugin.name, None, False, "Cancelled"))
                     return
                 
-                # ── V9.3.3 — Inter-Request Delay (Rate Limiting) ────────────────
+                # ── V9.4.0 — Inter-Request Delay (Rate Limiting) ────────────────
                 # Stagger concurrent tool launches to avoid hammering the target.
-                import time
-                import random
-                time.sleep(random.uniform(1.0, 3.0))
+                # Skip in CI to prevent test timeouts.
+                if not _CI_MODE:
+                    import random
+                    time.sleep(random.uniform(1.0, 3.0))
                     
                 # Setup resilient subprocess execution context here if needed...
                 res = plugin.execute()
@@ -139,8 +143,9 @@ class DAGOrchestrator:
                         del threads[name]
                 except queue.Empty:
                     current_time = time.time()
+                    plugin_timeout = 120 if _CI_MODE else 3600
                     for r_name in list(self.running):
-                        if current_time - start_times.get(r_name, current_time) > 3600:
+                        if current_time - start_times.get(r_name, current_time) > plugin_timeout:
                             logger.error(f"[{r_name}] CRITICAL: Plugin timed out after 60 minutes. Moving on.")
                             self.running.remove(r_name)
                             self.failed.add(r_name)
