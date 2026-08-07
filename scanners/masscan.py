@@ -34,12 +34,13 @@ _SERVICE_MAP = {
 
 
 @register_scanner(name="Masscan", step_name="Running Masscan", depends_on=['WPScan'], binary_name="masscan", needs_binary=True, confidence=95)
-def run_masscan_scan(url):
+def run_masscan_scan(url, settings: dict = None):
     """
     Runs Masscan for fast broad port discovery against the target IP/host.
 
     Returns list of finding dicts per open port, [] if none, None if missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("masscan_path", "masscan")
 

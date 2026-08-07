@@ -202,7 +202,7 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None, r
             add_log_entry("ERROR", err_msg)
             _logged_alerts.add(err_msg)
             with open("logs/error.log", "a") as err_log_stream:
-                err_log_stream.write(f"[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
+                err_log_stream.write("[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
         return False
 
     except smtplib.SMTPConnectError as e:
@@ -335,7 +335,7 @@ def process_alerts_for_scan(
             add_log_entry("INFO", f"SMTP: No confirmed findings requiring alert for {url}. Skipped.")
             return
         else:
-            logger.info(f"SMTP: No High/Critical findings, but report_email is configured. Sending report.")
+            logger.info("SMTP: No High/Critical findings, but report_email is configured. Sending report.")
 
     # ── Case 2: New findings or severity escalation ─────────────────────────
     if new_findings_detected or severity_escalated:
@@ -548,5 +548,5 @@ def scan_and_alert_matched_technology_cves(target_url, scan_id, smtp_config):
             print(f"[⚠️ RELAY WARNING] Server node '{node['host']}' failed to route payload: {str(routing_err)}")
             
     with open("logs/error.log", "a") as err_log_stream:
-        err_log_stream.write(f"[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
+        err_log_stream.write("[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
     return False

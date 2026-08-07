@@ -158,7 +158,6 @@ def calculate_and_store_risk_score(scan_id, findings):
             # V9.3.3: Use CVSS column directly (no regex needed)
             # Tier A/B matches have version confirmed — higher weight
             # Tier C matches (description only) — lower weight
-            tier_a_or_b = "Tier A" in desc or "Tier B" in desc or "CPE" in desc or "Version" in desc
             if cvss and cvss >= 9.0:
                 breakdown["cve_confirmed_count"] += 1
                 contribution = cvss * 4.0

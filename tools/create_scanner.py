@@ -136,9 +136,9 @@ def main():
         
     print(f"\n[✓] Scaffolded custom scanner: {filepath}")
     print(f"    1. Open {filepath}")
-    print(f"    2. Update the `cmd` arguments for your tool.")
-    print(f"    3. Update the output parsing logic in step 3.")
-    print(f"    4. That's it! SMP will auto-discover it on the next run.\n")
+    print("    2. Update the `cmd` arguments for your tool.")
+    print("    3. Update the output parsing logic in step 3.")
+    print("    4. That's it! SMP will auto-discover it on the next run.\n")
 
 if __name__ == "__main__":
     main()

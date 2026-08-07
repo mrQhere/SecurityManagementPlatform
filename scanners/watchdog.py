@@ -30,7 +30,6 @@ import requests
 
 from tools.config_manager import BASE_DIR, load_settings
 from tools.db_manager import get_db_connection, get_targets, add_log_entry, add_alert
-from tools.config_manager import load_settings
 verify_tls = not load_settings().get('insecure_scans', False)
 
 

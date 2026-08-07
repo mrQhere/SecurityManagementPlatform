@@ -27,13 +27,14 @@ _SENSITIVE_PATTERNS = [
 
 
 @register_scanner(name="Katana", step_name="Running Katana", depends_on=['HTTPx'], binary_name="katana", needs_binary=True, confidence=90)
-def run_katana_scan(url):
+def run_katana_scan(url, settings: dict = None):
     """
     Runs Katana web crawler against the target URL.
 
     Returns list of finding dicts for interesting URLs discovered.
     Returns [] if nothing notable found, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("katana_path", "katana")
 

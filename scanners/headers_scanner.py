@@ -104,7 +104,6 @@ def run_headers_scan(url):
                                allow_redirects=True)
 
         headers = resp.headers
-        status = resp.status_code
 
         # ── Check missing security headers ─────────────────────────────────
         for header_name, info in _SECURITY_HEADERS.items():

@@ -764,7 +764,8 @@ class DashboardLogicMixin:
                 current_settings["zap_enabled"] = False
                 save_settings(current_settings)
 
-                import shutil, os
+                import shutil
+                import os
                 from tools.config_manager import BASE_DIR
                 cache_dir = os.path.join(BASE_DIR, "cache")
                 if os.path.exists(cache_dir):
@@ -781,7 +782,9 @@ class DashboardLogicMixin:
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             try:
-                import shutil, os, sys
+                import shutil
+                import os
+                import sys
                 from tools.config_manager import BASE_DIR
                 
                 # Wipe config files
@@ -1208,41 +1211,56 @@ class DashboardLogicMixin:
             return
 
         status_map = {
-            "Running HTTPx":            "⬤  [1/34] HTTPx — HTTP probe",
-            "Running WhatWeb":          "⬤  [2/34] WhatWeb — fingerprinting",
-            "Running Subfinder":        "⬤  [3/34] Subfinder — subdomain discovery",
-            "Running CRT.sh":           "⬤  [4/34] CRT.sh — certificate transparency",
-            "Running HackerTarget":     "⬤  [5/34] HackerTarget — reverse DNS",
-            "Running Whois":            "⬤  [6/34] Whois — registry info",
-            "Running Wayback Machine":  "⬤  [7/34] Wayback Machine — historical URLs",
-            "Running Traceroute":       "⬤  [8/34] Traceroute — network path",
-            "Running Nmap":             "⬤  [9/34] Nmap — port & service scan",
-            "Running SSL Scan":         "⬤  [10/34] SSL Scanner — TLS/certificate",
-            "Running Security Headers": "⬤  [11/34] Security Headers — HTTP headers",
-            "Running Robots.txt":       "⬤  [12/34] Robots.txt — sitemap analysis",
-            "Running CORS":             "⬤  [13/34] CORS — misconfiguration check",
-            "Running CMS Scanner":      "⬤  [14/34] CMS Scanner — platform detection",
-            "Running Nikto":            "⬤  [15/34] Nikto — web vulnerability scan",
-            "Running Nuclei":           "⬤  [16/34] Nuclei — template-based scan",
-            "Running ffuf":             "⬤  [17/34] ffuf — directory fuzzing",
-            "Running Open Redirect":    "⬤  [18/34] Open Redirect — parameter check",
-            "Running Tech Fingerprint": "⬤  [19/34] Tech Fingerprint — deep analysis",
-            "Running Wapiti":           "⬤  [20/34] Wapiti — OWASP web scan",
-            "Running SQLMap":           "⬤  [21/34] SQLMap — SQL injection",
-            "Running Shodan":           "⬤  [22/34] Shodan — passive profiling",
-            "Running Gitleaks":         "⬤  [23/34] Gitleaks — secret scanning",
-            "Running theHarvester":     "⬤  [24/34] theHarvester — OSINT profiling",
-            "Running Dalfox":           "⬤  [25/34] Dalfox — XSS parameter scan",
-            "Running Arjun":            "⬤  [26/34] Arjun — HTTP parameter discovery",
-            "Running DNSx":             "⬤  [27/34] DNSx — DNS enumeration",
-            "Running Katana":           "⬤  [28/34] Katana — web crawler",
-            "Running Commix":           "⬤  [29/34] Commix — command injection",
-            "Running JWT Scanner":      "⬤  [30/34] JWT Scanner — token analysis",
-            "Running WPScan":           "⬤  [31/34] WPScan — WordPress scanner",
-            "Running Masscan":          "⬤  [32/34] Masscan — fast port scan",
-            "Running ParamSpider":      "⬤  [33/34] ParamSpider — parameter mining",
-            "Running Cloud Enum":       "⬤  [34/34] Cloud Enum — cloud assets",
-            "Running ZAP":              "⬤  [ZAP] OWASP ZAP — active scan",
+            "Running HTTPx":            "⬤  [1/50] HTTPx — HTTP probe",
+            "Running WhatWeb":          "⬤  [2/50] WhatWeb — fingerprinting",
+            "Running Subfinder":        "⬤  [3/50] Subfinder — subdomain discovery",
+            "Running Amass":            "⬤  [4/50] Amass — OSINT subdomain enum",
+            "Running theHarvester":     "⬤  [5/50] theHarvester — OSINT profiling",
+            "Running SpiderFoot OSINT": "⬤  [6/50] SpiderFoot — passive OSINT",
+            "Running CRT.sh":           "⬤  [7/50] CRT.sh — certificate transparency",
+            "Running HackerTarget":     "⬤  [8/50] HackerTarget — reverse DNS",
+            "Running Whois":            "⬤  [9/50] Whois — registry info",
+            "Running Wayback Machine":  "⬤  [10/50] Wayback Machine — historical URLs",
+            "Running Traceroute":       "⬤  [11/50] Traceroute — network path",
+            "Running Nmap":             "⬤  [12/50] Nmap — port & service scan",
+            "Running Masscan":          "⬤  [13/50] Masscan — fast port scan",
+            "Running DNSx":             "⬤  [14/50] DNSx — DNS enumeration",
+            "Running SSL Scan":         "⬤  [15/50] SSL Scanner — TLS/certificate",
+            "Running HTTP Smuggling Scanner": "⬤  [16/50] HTTP Smuggling — req smuggling",
+            "Running Security Headers": "⬤  [17/50] Security Headers — HTTP headers",
+            "Running Robots.txt":       "⬤  [18/50] Robots.txt — sitemap analysis",
+            "Running CORS":             "⬤  [19/50] CORS — misconfiguration check",
+            "Running CMS Scanner":      "⬤  [20/50] CMS Scanner — platform detection",
+            "Running Katana":           "⬤  [21/50] Katana — web crawler",
+            "Running Nikto":            "⬤  [22/50] Nikto — web vulnerability scan",
+            "Running Nuclei":           "⬤  [23/50] Nuclei — template-based scan",
+            "Running ffuf":             "⬤  [24/50] ffuf — directory fuzzing",
+            "Running Feroxbuster":      "⬤  [25/50] Feroxbuster — deep fuzzing",
+            "Running API Fuzzer":       "⬤  [26/50] API Fuzzer — OpenAPI endpoints",
+            "Running GraphQL Scanner":  "⬤  [27/50] GraphQL Scanner — introspection",
+            "Running ParamSpider":      "⬤  [28/50] ParamSpider — parameter mining",
+            "Running Arjun":            "⬤  [29/50] Arjun — HTTP parameter discovery",
+            "Running Retire.js Scanner":"⬤  [30/50] Retire.js — outdated JS check",
+            "Running Tech Fingerprint": "⬤  [31/50] Tech Fingerprint — deep analysis",
+            "Running Open Redirect":    "⬤  [32/50] Open Redirect — parameter check",
+            "Running CRLF Scanner":     "⬤  [33/50] CRLF Scanner — header injection",
+            "Running Wapiti":           "⬤  [34/50] Wapiti — OWASP web scan",
+            "Running SQLMap":           "⬤  [35/50] SQLMap — SQL injection",
+            "Running Dalfox":           "⬤  [36/50] Dalfox — XSS parameter scan",
+            "Running Commix":           "⬤  [37/50] Commix — command injection",
+            "Running SSRF Scanner":     "⬤  [38/50] SSRF Scanner — server-side forgery",
+            "Running XXE Scanner":      "⬤  [39/50] XXE Scanner — XML entity injection",
+            "Running Path Traversal Scanner": "⬤  [40/50] Path Traversal — LFI testing",
+            "Running JWT Scanner":      "⬤  [41/50] JWT Scanner — token analysis",
+            "Running WPScan":           "⬤  [42/50] WPScan — WordPress scanner",
+            "Running Auth Brute-Force Test": "⬤  [43/50] Auth Brute-Force — hydra",
+            "Running Cloud Enum":       "⬤  [44/50] Cloud Enum — cloud assets",
+            "Running Gitleaks":         "⬤  [45/50] Gitleaks — secret scanning",
+            "Running TruffleHog":       "⬤  [46/50] TruffleHog — secret scanning",
+            "Running Semgrep":          "⬤  [47/50] Semgrep — static analysis",
+            "Running Trivy":            "⬤  [48/50] Trivy — container scan",
+            "Running Shodan":           "⬤  [49/50] Shodan — passive profiling",
+            "Running ZAP":              "⬤  [50/50] OWASP ZAP — active scan",
             "Correlating CVEs":         "◌  CVE Correlation — intel matching",
             "Report Pending":           "◌  Report Generation",
             "Completed":                "✓  Completed",
@@ -1729,7 +1747,8 @@ class DashboardLogicMixin:
             self._on_intel_filter_changed()
 
     def open_latest_report(self, target):
-        import glob, webbrowser
+        import glob
+        import webbrowser
         from tools.config_manager import BASE_DIR
 
         url = target["url"]

@@ -30,11 +30,9 @@ def scan(target_url: str, scan_id: int, settings: dict):
     parsed_url = target_url if target_url else ""
     if "github.com" in parsed_url or "gitlab.com" in parsed_url:
         cmd = ["trivy", "repo", parsed_url, "--format", "json", "--quiet"]
-        scan_type = "repository"
     elif "/" in parsed_url and ":" in parsed_url and not parsed_url.startswith("http"):
         # Looks like image:tag
         cmd = ["trivy", "image", parsed_url, "--format", "json", "--quiet"]
-        scan_type = "image"
     else:
         logger.info(f"[trivy] Skipping web-only target {parsed_url} (use 'image:tag' or GitHub URL)")
         return {"success": False, "data": [], "raw_output": "Trivy: non-scannable target type"}

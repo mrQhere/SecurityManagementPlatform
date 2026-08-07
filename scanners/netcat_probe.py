@@ -63,7 +63,7 @@ def _get_open_ports_from_nmap(scan_id: int) -> list[int]:
         return _DEFAULT_PROBE_PORTS
 
 
-def run_scan(target_url: str):
+def run_scan(target_url: str, scan_id: int = 0):
     """
     Probe open ports for service banners using raw TCP sockets.
 

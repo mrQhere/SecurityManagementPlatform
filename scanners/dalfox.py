@@ -27,11 +27,12 @@ _SEVERITY_MAP = {
 
 
 @register_scanner(name="Dalfox", step_name="Running Dalfox", depends_on=['Gitleaks'], binary_name="dalfox", needs_binary=True, confidence=90)
-def run_dalfox_scan(url):
+def run_dalfox_scan(url, settings: dict = None):
     """
     Full XSS scan: reflected, DOM, and blind XSS with WAF evasion and parameter mining.
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("dalfox_path", "dalfox")
 

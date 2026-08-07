@@ -11,11 +11,12 @@ logger = logging.getLogger("smp.scan")
 NUCLEI_TIMEOUT = 7200  # 2h — nuclei on complex targets needs full time
 
 @register_scanner(name="Nuclei", step_name="Running Nuclei", depends_on=['Nikto'], binary_name="nuclei", needs_binary=True, confidence=95)
-def run_nuclei_scan(url):
+def run_nuclei_scan(url, settings: dict = None):
     """
     Runs a full Nuclei scan against the target URL using all major template categories.
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     nuclei_bin = settings.get("nuclei_path", "nuclei")
 

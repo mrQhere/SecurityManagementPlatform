@@ -34,7 +34,6 @@ from intelligence.mitre_mapper import enrich_finding_with_mitre
 logger = logging.getLogger(__name__)
 
 import socket
-import json
 
 _udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 _IPC_PORT = 5005
@@ -260,7 +259,7 @@ def _initialize_cve_db_schema(conn):
 def init_cve_db():
     """Ensure cve.db exists and has the correct schema, indices, and WAL configuration."""
     init_directories()
-    db_existed = os.path.exists(CVE_DB_PATH)
+    os.path.exists(CVE_DB_PATH)
     conn = _get_conn(CVE_DB_PATH, encrypt=False, timeout=30.0)
     try:
         conn.execute("PRAGMA journal_mode = WAL;")
@@ -300,7 +299,7 @@ def get_redundancy_connection():
     Handles missing cve.db gracefully so tests and fresh environments don't crash.
     """
     init_directories()
-    db_existed = os.path.exists(REDUNDANCY_DB_PATH)
+    os.path.exists(REDUNDANCY_DB_PATH)
 
     retries = 5
     delay = 0.5
@@ -381,7 +380,7 @@ def get_db_connection():
     """Improvement 14: Safe connection builder with optimized transactional busy timeouts and back-off retry locks."""
     init_directories()
     init_cve_db()
-    db_existed = os.path.exists(DB_PATH)
+    os.path.exists(DB_PATH)
     
     retries = 5
     delay = 0.5
@@ -1543,7 +1542,7 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None,
         conn.commit()
         return True
 
-    except Exception as e:
+    except Exception:
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
@@ -2023,7 +2022,7 @@ def backup_scan_to_raw(scan_id, target_url):
 
         conn.close()
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 

@@ -35,12 +35,13 @@ _LFI_PARAMS = {"file", "path", "include", "page", "template", "load", "src", "so
 
 
 @register_scanner(name="ParamSpider", step_name="Running ParamSpider", depends_on=['Masscan'], binary_name="paramspider", needs_binary=True, confidence=85)
-def run_paramspider_scan(url):
+def run_paramspider_scan(url, settings: dict = None):
     """
     Runs ParamSpider to mine GET parameters from web archives for the target domain.
 
     Returns list of finding dicts, [] if nothing found, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("paramspider_path", "paramspider")
     
@@ -101,7 +102,7 @@ def run_paramspider_scan(url):
 
         if not mined_urls:
             logger.info(f"ParamSpider Completed: No archived parameters found for {domain}.")
-            add_log_entry("INFO", f"ParamSpider Completed: No parameters found.")
+            add_log_entry("INFO", "ParamSpider Completed: No parameters found.")
             return []
 
         # Analyse parameters for risk
@@ -135,7 +136,7 @@ def run_paramspider_scan(url):
                     f"Domain: {domain}\n"
                     f"ParamSpider discovered historical URLs containing open redirect parameters:\n\n"
                     + "\n".join(redirect_urls[:10]) +
-                    f"\n\nThese parameters may be exploitable for open redirect or SSRF attacks."
+                    "\n\nThese parameters may be exploitable for open redirect or SSRF attacks."
                 ),
                 "template_id": "PARAMSPIDER-REDIRECT-PARAMS",
             })
@@ -148,7 +149,7 @@ def run_paramspider_scan(url):
                     f"Domain: {domain}\n"
                     f"Historical URLs contain parameters commonly targeted for SQL injection:\n\n"
                     + "\n".join(sqli_urls[:10]) +
-                    f"\n\nRecommendation: Test these endpoints with SQLMap."
+                    "\n\nRecommendation: Test these endpoints with SQLMap."
                 ),
                 "template_id": "PARAMSPIDER-SQLI-PARAMS",
             })
@@ -161,7 +162,7 @@ def run_paramspider_scan(url):
                     f"Domain: {domain}\n"
                     f"Historical URLs contain file path parameters that may be vulnerable to LFI/RFI:\n\n"
                     + "\n".join(lfi_urls[:10]) +
-                    f"\n\nRecommendation: Test each URL manually for Local/Remote File Inclusion."
+                    "\n\nRecommendation: Test each URL manually for Local/Remote File Inclusion."
                 ),
                 "template_id": "PARAMSPIDER-LFI-PARAMS",
             })

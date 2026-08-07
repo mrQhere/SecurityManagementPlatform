@@ -87,7 +87,7 @@ def main():
     new_version = f"V{major}.{minor}.{new_patch}"
 
     print(f"\n{'═'*55}")
-    print(f"  SMP Auto-Snapshot")
+    print("  SMP Auto-Snapshot")
     print(f"  Bumping version: {current_ver} → {new_version}")
     print(f"{'═'*55}\n")
 

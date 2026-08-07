@@ -558,7 +558,7 @@ def _generate_vapt_pdf(filepath, ctx):
     high_n = counts.get("High", 0)
     med_n  = counts.get("Medium", 0)
     low_n  = counts.get("Low", 0)
-    total  = c.get("total", 0)
+    c.get("total", 0)
     W, H   = A4
     st     = _styles()
 
@@ -768,11 +768,11 @@ def _generate_vapt_pdf(filepath, ctx):
     # 3. SSL/TLS sentence — if SSL failures found
     if c.get("findings_by_tool", {}).get("SSL", []):
         exec_paragraphs.append(
-            f"TLS/SSL assessment identified <b>cryptographic weaknesses</b> including support for "
-            f"deprecated protocol versions and/or weak cipher suites. "
-            f"This exposes data in transit to interception attacks and violates compliance "
-            f"requirements under PCI-DSS 4.0, NIST SP 800-52r2, and industry best practice. "
-            f"Immediate enforcement of TLS 1.2+ is mandated."
+            "TLS/SSL assessment identified <b>cryptographic weaknesses</b> including support for "
+            "deprecated protocol versions and/or weak cipher suites. "
+            "This exposes data in transit to interception attacks and violates compliance "
+            "requirements under PCI-DSS 4.0, NIST SP 800-52r2, and industry best practice. "
+            "Immediate enforcement of TLS 1.2+ is mandated."
         )
 
     # 4. Historical context sentence — if we have trend data
@@ -796,11 +796,11 @@ def _generate_vapt_pdf(filepath, ctx):
 
     # 5. Scope/methodology closure sentence — always present
     exec_paragraphs.append(
-        f"This assessment was conducted using Security Management Platform (SMP) employing "
-        f"a 35-module automated VAPT pipeline. All findings are based on authenticated and "
-        f"unauthenticated probes against the live target. "
-        f"Results reflect the security posture of the target at the time of the assessment "
-        f"and should be validated against the production environment before remediation."
+        "This assessment was conducted using Security Management Platform (SMP) employing "
+        "a 35-module automated VAPT pipeline. All findings are based on authenticated and "
+        "unauthenticated probes against the live target. "
+        "Results reflect the security posture of the target at the time of the assessment "
+        "and should be validated against the production environment before remediation."
     )
 
     # Render each paragraph with spacing
@@ -1036,9 +1036,9 @@ def _generate_vapt_pdf(filepath, ctx):
             if not b_impact:
                 # Dynamic fallback if not provided
                 if sev in ("Critical", "High"):
-                    b_impact = f"Exploitation of this vulnerability poses severe business risks, including potential data breach, unauthorized service access, or critical service disruption."
+                    b_impact = "Exploitation of this vulnerability poses severe business risks, including potential data breach, unauthorized service access, or critical service disruption."
                 else:
-                    b_impact = f"This vulnerability poses operational or compliance risks. Exploitation is typically restricted to local network access or requires user interaction."
+                    b_impact = "This vulnerability poses operational or compliance risks. Exploitation is typically restricted to local network access or requires user interaction."
             
             # Render business impact inside a callout box for easy executive readability
             impact_style = ParagraphStyle(
@@ -1630,7 +1630,7 @@ def _generate_html_fallback(filepath, ctx):
     counts = c["counts"]
     site   = c.get("site_name", c["url"])
     c_hash = c.get("content_hash", "")
-    h16    = c.get("hash16", "")
+    c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
     smp_ver = c.get("smp_version", "V9.3.3")
@@ -1684,7 +1684,6 @@ def _generate_html_fallback(filepath, ctx):
     sorted_f = sorted(c["findings"], key=lambda f: _sev_rank(f.get("severity", "Info")))
 
     # ── MITRE ATT&CK colour map ──────────────────────────────────────────────
-    sev_hex = {"Critical": "#dc2626", "High": "#ea580c", "Medium": "#d97706", "Low": "#2563eb", "Info": "#4b5563"}
 
     # ── Tools used ──────────────────────────────────────────────────────────
     tools_used = sorted({f.get("source_tool", "") for f in c["findings"] if f.get("source_tool")})
@@ -1942,11 +1941,11 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
         f"<tr><td>Target URL</td><td><code>{_esc(c['url'])}</code></td></tr>",
         f"<tr><td>Company</td><td>{_esc(company)}</td></tr>",
         f"<tr><td>Assessment Date</td><td>{scan_dt}</td></tr>",
-        f"<tr><td>Assessment Type</td><td>Black-box VAPT (Automated + Correlation)</td></tr>",
+        "<tr><td>Assessment Type</td><td>Black-box VAPT (Automated + Correlation)</td></tr>",
         f"<tr><td>Lead Tester</td><td>{tester}</td></tr>",
         f"<tr><td>QA Reviewer</td><td>{qa_rev}</td></tr>",
-        f"<tr><td>Scope</td><td>Web application, network services, SSL/TLS, headers, OSINT</td></tr>",
-        f"<tr><td>Out of Scope</td><td>Physical access, social engineering, denial of service</td></tr>",
+        "<tr><td>Scope</td><td>Web application, network services, SSL/TLS, headers, OSINT</td></tr>",
+        "<tr><td>Out of Scope</td><td>Physical access, social engineering, denial of service</td></tr>",
         "</table>",
         "<div class='sub-heading'>Security Tools Deployed</div>",
         "<div class='method-grid'>",

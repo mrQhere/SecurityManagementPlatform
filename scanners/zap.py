@@ -65,12 +65,13 @@ def _start_zap_daemon(zap_path, host, port, api_key):
 
 
 @register_scanner(name="ZAP", step_name="Running ZAP", depends_on=['Cloud Enum'], binary_name="zap", needs_binary=False, confidence=85)
-def run_zap_scan(url):
+def run_zap_scan(url, scan_id: int = 0, settings: dict = None):
     """
     Runs OWASP ZAP Spider + Active Scan against the target URL.
 
     Returns list of finding dicts, [] if no alerts, None if ZAP unavailable.
     """
+    settings = settings or {}
     if not _ZAP_LIB_AVAILABLE:
         add_log_entry("WARNING", "ZAP Scan Skipped: python-owasp-zap-v2.4 not installed.")
         return None
@@ -116,8 +117,8 @@ def run_zap_scan(url):
                 time.sleep(5)
                 
         if not zap_ready:
-            logger.error(f"ZAP daemon did not respond after start")
-            add_log_entry("ERROR", f"ZAP Scan Failed: Daemon did not respond")
+            logger.error("ZAP daemon did not respond after start")
+            add_log_entry("ERROR", "ZAP Scan Failed: Daemon did not respond")
             if zap_proc:
                 zap_proc.terminate()
             return None

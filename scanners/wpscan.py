@@ -13,7 +13,6 @@ import json
 import logging
 from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
-from tools.config_manager import load_settings
 verify_tls = not load_settings().get('insecure_scans', False)
 
 
@@ -41,12 +40,13 @@ def _is_wordpress(url):
 
 
 @register_scanner(name="WPScan", step_name="Running WPScan", depends_on=['JWT Scanner'], binary_name="wpscan", needs_binary=True, confidence=90)
-def run_wpscan_scan(url):
+def run_wpscan_scan(url, settings: dict = None):
     """
     Runs WPScan against the target URL (only if WordPress is detected).
 
     Returns list of finding dicts, [] if not WordPress or clean, None on hard failure.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("wpscan_path", "wpscan")
 
@@ -83,7 +83,7 @@ def run_wpscan_scan(url):
             "--plugins-detection", "passive",
         ]
     else:
-        logger.info(f"WPScan: Native binary not found. Falling back to Docker.")
+        logger.info("WPScan: Native binary not found. Falling back to Docker.")
         cmd = [
             "docker", "run", "--rm",
             "wpscanteam/wpscan",

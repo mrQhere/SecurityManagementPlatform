@@ -18,11 +18,12 @@ def _extract_domain(url):
 
 
 @register_scanner(name="Subfinder", step_name="Running Subfinder", depends_on=[], binary_name="subfinder", needs_binary=True, confidence=90)
-def run_subfinder_scan(url):
+def run_subfinder_scan(url, settings: dict = None):
     """
     Passive subdomain enumeration using all available sources.
     Returns list of subdomain dicts: [{'host': ..., 'ip': ..., 'source': ...}]
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path  = settings.get("subfinder_path", "subfinder")
     domain    = _extract_domain(url)
@@ -64,7 +65,7 @@ def run_subfinder_scan(url):
 
     except FileNotFoundError:
         logger.warning(f"Subfinder not found at '{bin_path}'")
-        add_log_entry("WARNING", f"Subfinder not installed. Skipping.")
+        add_log_entry("WARNING", "Subfinder not installed. Skipping.")
         return None
     except Exception as e:
         logger.error(f"Subfinder Failed: {e}")

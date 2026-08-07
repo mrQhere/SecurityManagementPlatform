@@ -80,7 +80,7 @@ def _generate_spdx(scan_id: int, target_url: str, technologies: list, output_pat
         lines = [
             "SPDXVersion: SPDX-2.3",
             "DataLicense: CC0-1.0",
-            f"SPDXID: SPDXRef-DOCUMENT",
+            "SPDXID: SPDXRef-DOCUMENT",
             f"DocumentName: SMP-Scan-{scan_id}",
             f"DocumentNamespace: https://smp/sbom/{scan_id}",
             "",
@@ -94,8 +94,8 @@ def _generate_spdx(scan_id: int, target_url: str, technologies: list, output_pat
                 f"PackageName: {name}",
                 f"SPDXID: SPDXRef-Package-{i}",
                 f"PackageVersion: {version}",
-                f"PackageDownloadLocation: NOASSERTION",
-                f"FilesAnalyzed: false",
+                "PackageDownloadLocation: NOASSERTION",
+                "FilesAnalyzed: false",
                 "",
             ]
 

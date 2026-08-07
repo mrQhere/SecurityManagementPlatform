@@ -139,6 +139,30 @@ QPushButton:disabled {
     border-color: #1A1A1A;
 }
 
+QPushButton#btn_small {
+    background-color: #161616;
+    color: #CCCCCC;
+    border: 1px solid #2A2A2A;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    min-height: 18px;
+}
+QPushButton#btn_small:hover {
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    border-color: #3A3A3A;
+}
+QPushButton#btn_small:pressed {
+    background-color: #0A0A0A;
+}
+QPushButton#btn_small:disabled {
+    background-color: transparent;
+    color: #333333;
+    border-color: #1A1A1A;
+}
+
 /* Specialized Buttons */
 QPushButton#btn_primary {
     background-color: #FFFFFF;

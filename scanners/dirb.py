@@ -18,7 +18,7 @@ import subprocess
 logger = logging.getLogger("smp.scan")
 
 
-def run_scan(target_url: str):
+def run_scan(target_url: str, scan_id: int = 0, settings: dict = None):
     """
     Run Dirb against a target for web content discovery.
 
@@ -30,6 +30,7 @@ def run_scan(target_url: str):
     Returns:
         dict with keys: success (bool), data (list of urls), raw_output (str)
     """
+    settings = settings or {}
     from tools.narrative_logger import emit_scanner_start, emit_finding
     emit_scanner_start(scan_id, "dirb")
 

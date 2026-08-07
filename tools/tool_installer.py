@@ -435,7 +435,6 @@ def _download_missing_tools_locally(missing):
 
     machine = platform.machine().lower()
     is_arm64 = "arm64" in machine or "aarch64" in machine
-    arch = "arm64" if is_arm64 else "amd64"
 
     # ── Complete download URL registry ────────────────────────────────────────
     urls_amd64 = {
@@ -610,19 +609,17 @@ def _download_missing_tools_locally(missing):
 
             elif name == "theHarvester":
                 # Real theHarvester from GitHub (not the pip stub)
-                havester_py = None
                 havester_dir = None
                 for rd, dirs, fns in os.walk(temp_extract_dir):
                     if "theHarvester.py" in fns or "theHarvester" in fns:
                         havester_dir = rd
-                        havester_py = os.path.join(rd, "theHarvester.py") if "theHarvester.py" in fns else os.path.join(rd, "theHarvester")
+                        os.path.join(rd, "theHarvester.py") if "theHarvester.py" in fns else os.path.join(rd, "theHarvester")
                         break
                     # Also look for the package __main__ approach
                     if "theHarvester" in dirs:
                         pkg_dir = os.path.join(rd, "theHarvester")
                         if os.path.exists(os.path.join(pkg_dir, "__main__.py")):
                             havester_dir = rd
-                            havester_py = "__package__"
                             break
                 if havester_dir:
                     dst = os.path.join(bin_dir, "theHarvester_src")
