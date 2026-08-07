@@ -10,6 +10,9 @@ import fcntl
 if os.environ.get("XDG_SESSION_TYPE") == "wayland":
     os.environ["QT_QPA_PLATFORM"] = "xcb"
 
+# Suppress annoying X11/XKB compose errors that flood the terminal
+os.environ["QT_LOGGING_RULES"] = "qt.qpa.*=false;qt.xkb.compose=false"
+
 # Add the project directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
