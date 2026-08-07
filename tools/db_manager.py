@@ -43,7 +43,7 @@ def _publish_event(event_type, data=None):
         msg = json.dumps({"type": event_type, "data": data or {}}).encode("utf-8")
         _udp_socket.sendto(msg, ("127.0.0.1", _IPC_PORT))
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
 
 import threading
 
@@ -71,7 +71,7 @@ def _encrypt_and_compress_data(data_str: str) -> str:
             fernet = Fernet(active_key)
             final_data = fernet.encrypt(compressed)
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             final_data = compressed
     else:
         # Fallback to no encryption if key is not loaded yet
@@ -110,14 +110,14 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
                 fernet = Fernet(active_key)
                 compressed = fernet.decrypt(encrypted_data)
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
                 compressed = encrypted_data
         else:
             compressed = encrypted_data
             
         return gzip.decompress(compressed).decode("utf-8")
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return ""
 
 def _get_conn(path, encrypt=True, **kwargs):
@@ -233,7 +233,7 @@ def _initialize_cve_db_schema(conn):
     try:
         cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cves_cve ON cves(cve);")
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
 
     # One-time deduplication pass — clean up any pre-index duplicates
     try:
@@ -246,13 +246,13 @@ def _initialize_cve_db_schema(conn):
             )
         """)
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
 
     # Pre-2015 CVEs cleanup migration
     try:
         cursor.execute("DELETE FROM cves WHERE cve LIKE 'CVE-%' AND CAST(SUBSTR(cve, 5, 4) AS INTEGER) < 2015")
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
 
     conn.commit()
 
@@ -262,7 +262,6 @@ def init_cve_db():
     os.path.exists(CVE_DB_PATH)
     conn = _get_conn(CVE_DB_PATH, encrypt=False, timeout=30.0)
     try:
-        conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA synchronous = NORMAL;")
         _initialize_cve_db_schema(conn)
     finally:
@@ -280,7 +279,6 @@ def get_cve_db_connection():
     for attempt in range(retries):
         try:
             conn = _get_conn(CVE_DB_PATH, encrypt=False, timeout=30.0)
-            conn.execute("PRAGMA journal_mode = WAL;")
             conn.execute("PRAGMA synchronous = NORMAL;")
             conn.row_factory = sqlite3.Row
             return conn
@@ -313,10 +311,9 @@ def get_redundancy_connection():
             conn.execute("PRAGMA foreign_keys = ON;")
 
             try:
-                conn.execute("PRAGMA journal_mode = WAL;")
                 conn.execute("PRAGMA synchronous = NORMAL;")
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
             conn.row_factory = sqlite3.Row
 
             # Attach the CVE database if it exists (schema uses ATTACH for CVE indexes)
@@ -324,7 +321,7 @@ def get_redundancy_connection():
                 try:
                     conn.execute("ATTACH DATABASE ? AS cve_db KEY ''", (CVE_DB_PATH,))
                 except sqlite3.Error as e:
-                    logger.error(f"Database error: {e}")
+                    import sys; sys.stderr.write(f"Database error: {e}\n")
 
             # Always run migrations (idempotent) so old redundancy DBs get new columns
             _initialize_db_schema(conn)
@@ -354,7 +351,7 @@ def is_main_db_corrupt_or_missing(scan_id=None):
         finally:
             conn.close()
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return True
 
 def clear_redundancy_db():
@@ -389,10 +386,9 @@ def get_db_connection():
             conn = _get_conn(DB_PATH, timeout=30.0)
             conn.execute("PRAGMA foreign_keys = ON;")
             try:
-                conn.execute("PRAGMA journal_mode = WAL;")
                 conn.execute("PRAGMA synchronous = NORMAL;")
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
             conn.row_factory = sqlite3.Row
             
             # Attach the unencrypted CVE database
@@ -661,7 +657,6 @@ def _init_backup_databases():
     # 1. Active scans raw database
     active_db = os.path.join(BACKUP_DIR, "active_scans.db")
     conn = _get_conn(active_db, timeout=30.0)
-    conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS raw_scans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -686,7 +681,6 @@ def _init_backup_databases():
     # 3. CVE secondary database (backup)
     cve_db = os.path.join(BACKUP_DIR, "cve_secondary.db")
     conn = _get_conn(cve_db, encrypt=False, timeout=30.0)
-    conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS cves_backup (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -712,7 +706,6 @@ def _init_backup_databases():
     # 4. Full mirror database — complete copy of every main table for disaster recovery
     full_db = os.path.join(BACKUP_DIR, "full_backup.db")
     conn = _get_conn(full_db, timeout=30.0)
-    conn.execute("PRAGMA journal_mode = WAL;")
     # Targets mirror
     conn.execute("""
         CREATE TABLE IF NOT EXISTS targets_backup (
@@ -869,7 +862,7 @@ def _restore_from_backup_if_empty():
                         )
                     )
                 except sqlite3.Error as e:
-                    logger.error(f"Database error: {e}")
+                    import sys; sys.stderr.write(f"Database error: {e}\n")
 
             restore_conn.commit()
             _logger.warning(
@@ -914,7 +907,7 @@ def add_target(url, company_name=None, submitted_to=None):
                 bconn.commit()
                 bconn.close()
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
                 pass  # Backup failure is non-fatal
 
         return True
@@ -934,7 +927,7 @@ def delete_target(target_id):
         _publish_event('target_update', {})
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -948,7 +941,7 @@ def set_target_status(target_id, status):
         conn.commit()
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -962,7 +955,7 @@ def update_target_last_scan(target_id, timestamp):
         conn.commit()
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1056,7 +1049,7 @@ def get_scan(scan_id):
                     cached["submitted_to"] = row_dict.get("submitted_to")
                 return cached
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
                 try:
                     conn = get_redundancy_connection()
                     row = conn.execute(
@@ -1070,7 +1063,7 @@ def get_scan(scan_id):
                         cached["submitted_to"] = row_dict.get("submitted_to")
                     return cached
                 except sqlite3.Error as e:
-                    logger.error(f"Database error: {e}")
+                    import sys; sys.stderr.write(f"Database error: {e}\n")
                 return cached
             finally:
                 if conn:
@@ -1085,13 +1078,13 @@ def get_scan(scan_id):
         row = conn.execute("SELECT scans.*, targets.url, targets.company_name, targets.submitted_to FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
         return dict(row) if row else None
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         try:
             conn = get_redundancy_connection()
             row = conn.execute("SELECT scans.*, targets.url, targets.company_name, targets.submitted_to FROM scans JOIN targets ON scans.target_id = targets.id WHERE scans.id = ?", (scan_id,)).fetchone()
             return dict(row) if row else None
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return None
     finally:
         if conn:
@@ -1205,7 +1198,7 @@ def update_scan_scanner_status(scan_id, scanner_status_json):
         _publish_event('scan_status', {'scan_id': scan_id})
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1408,10 +1401,10 @@ def get_findings_for_scan(scan_id):
                     logger.info(f"📦 Findings recovered from redundancy.db for scan {scan_id}")
                     return [dict(r) for r in rrows]
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
         return result
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         try:
             rconn = get_redundancy_connection()
             try:
@@ -1422,7 +1415,7 @@ def get_findings_for_scan(scan_id):
             finally:
                 rconn.close()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return []
     finally:
         if conn:
@@ -1555,7 +1548,7 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None,
             )
             conn.commit()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1644,7 +1637,7 @@ def get_cve_stats():
             "counts": breakdown
         }
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return {"total": 0, "new_today": 0, "critical_today": 0}
     finally:
         conn.close()
@@ -1665,7 +1658,7 @@ def add_log_entry(level, message):
         _publish_event('new_log', {'level': level, 'message': message})
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1691,7 +1684,7 @@ def record_responsibility_acceptance(notes: str = "") -> bool:
         conn.commit()
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1706,7 +1699,7 @@ def get_responsibility_log():
         ).fetchall()
         return [dict(r) for r in rows]
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return []
     finally:
         conn.close()
@@ -1751,11 +1744,11 @@ def add_technology(scan_id, name, version, category, confidence, source_tool):
             finally:
                 rconn.close()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
 
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1784,17 +1777,17 @@ def get_technologies_for_scan(scan_id):
             if rrows:
                 return [dict(r) for r in rrows]
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
         return []
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         try:
             rconn = get_redundancy_connection()
             rrows = rconn.execute("SELECT * FROM technologies WHERE scan_id = ?", (scan_id,)).fetchall()
             rconn.close()
             return [dict(r) for r in rrows]
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return []
     finally:
         if conn:
@@ -1827,11 +1820,11 @@ def add_risk_score(scan_id, score, rating, breakdown_json):
             finally:
                 rconn.close()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
 
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -1859,17 +1852,17 @@ def get_risk_score(scan_id):
             rconn.close()
             return dict(rrow) if rrow else None
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return None
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         try:
             rconn = get_redundancy_connection()
             rrow = rconn.execute("SELECT * FROM risk_scores WHERE scan_id = ?", (scan_id,)).fetchone()
             rconn.close()
             return dict(rrow) if rrow else None
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return None
     finally:
         if conn:
@@ -1900,11 +1893,11 @@ def save_raw_scan_output(scan_id, tool_name, stdout, stderr):
             if existing["stdout"] and os.path.exists(existing["stdout"]):
                 try: os.remove(existing["stdout"])
                 except Exception as e:
-                    logger.error(f"Database error: {e}")
+                    import sys; sys.stderr.write(f"Database error: {e}\n")
             if existing["stderr"] and os.path.exists(existing["stderr"]):
                 try: os.remove(existing["stderr"])
                 except Exception as e:
-                    logger.error(f"Database error: {e}")
+                    import sys; sys.stderr.write(f"Database error: {e}\n")
                 
             conn.execute(
                 "UPDATE raw_scan_output SET stdout = ?, stderr = ?, captured_at = ? WHERE id = ?",
@@ -1939,11 +1932,11 @@ def save_raw_scan_output(scan_id, tool_name, stdout, stderr):
             finally:
                 rconn.close()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
 
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -2060,7 +2053,7 @@ def backup_cve_database():
         bconn.close()
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
 
 
@@ -2079,7 +2072,7 @@ def get_previous_scans_for_target(target_url, limit=5):
         conn.close()
         return [dict(r) for r in rows]
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return []
 
 
@@ -2099,7 +2092,7 @@ def export_raw_scans_as_zip(output_path):
                 zf.write(DB_PATH, "security_main.db")
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
 
 
@@ -2157,7 +2150,7 @@ def purge_old_backup_snapshots(days=30):
                 os.remove(fpath)
                 deleted += 1
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
     if deleted:
         import logging
         logging.getLogger("smp").info(f"[DB Purge] Removed {deleted} backup snapshots older than {days} days.")
@@ -2178,7 +2171,7 @@ def _evaluate_vulnerability_growth_thresholds():
             with open("logs/scan.log", "", encoding="utf-8") as warning_stream:
                 warning_stream.write(f"[⚠️ WARNING ALERT] Structural tracking indicators show high risk numbers: Count={total_severe_vulns}\n")
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
 
 
 def log_scanner_failure_status(scan_id, scanner_name, status):
@@ -2191,7 +2184,7 @@ def log_scanner_failure_status(scan_id, scanner_name, status):
             try:
                 status_dict = json.loads(row["scanner_status"])
             except sqlite3.Error as e:
-                logger.error(f"Database error: {e}")
+                import sys; sys.stderr.write(f"Database error: {e}\n")
         status_dict[scanner_name] = status
         conn.execute(
             "UPDATE scans SET scanner_status = ? WHERE id = ?",
@@ -2200,7 +2193,7 @@ def log_scanner_failure_status(scan_id, scanner_name, status):
         conn.commit()
         return True
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         return False
     finally:
         conn.close()
@@ -2388,7 +2381,7 @@ def get_scan_trend_deltas(target_url, current_scan_id):
             conn = get_db_connection()
         return _compute_deltas(conn)
     except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+        import sys; sys.stderr.write(f"Database error: {e}\n")
         try:
             rconn = get_redundancy_connection()
             try:
@@ -2396,7 +2389,7 @@ def get_scan_trend_deltas(target_url, current_scan_id):
             finally:
                 rconn.close()
         except sqlite3.Error as e:
-            logger.error(f"Database error: {e}")
+            import sys; sys.stderr.write(f"Database error: {e}\n")
             return {"new": 0, "resolved": 0, "persisting": 0, "previous_scan_id": None}
     finally:
         if conn:

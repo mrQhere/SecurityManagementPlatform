@@ -443,9 +443,8 @@ class TestSMPComponents(unittest.TestCase):
             _run_scan_sequence(target)
 
             # Verify scan completed (pipeline may still mark Completed even if some scanners fail)
-            import sqlite3
-            conn = sqlite3.connect(tools.db_manager.DB_PATH)
-            conn.row_factory = sqlite3.Row
+            conn = tools.db_manager.get_db_connection()
+            conn.row_factory = tools.db_manager.sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM scans WHERE target_id = ? ORDER BY id DESC LIMIT 1",
