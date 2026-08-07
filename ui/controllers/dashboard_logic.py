@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QSize, QThread, Signal
 from PySide6.QtGui import QFont, QColor, QBrush, QTextCursor
+from PySide6.QtWidgets import QProgressBar
 import hashlib
 
 from ui.utils import WorkerThread
@@ -1081,6 +1082,16 @@ class DashboardLogicMixin:
             btn_scan = QPushButton("Scan")
             btn_scan.setObjectName("btn_small")
             btn_scan.setFixedHeight(26)
+            # Check if there's an interrupted scan to resume
+            has_interrupted = False
+            try:
+                from tools.db_manager import get_scans_for_target
+                recent = get_scans_for_target(target["id"], limit=1)
+                if recent and recent[0]["status"] not in ("Completed", "Failed", "Cancelled"):
+                    has_interrupted = True
+            except Exception:
+                pass
+
             if is_target_scanning(target["id"]):
                 btn_scan.setText("Cancel")
                 btn_scan.setStyleSheet(
@@ -1088,6 +1099,14 @@ class DashboardLogicMixin:
                     " border-radius: 4px; font-size: 11px; padding: 0 6px;"
                 )
                 btn_scan.clicked.connect(lambda _, t=target: self.cancel_scan(t["id"]))
+            elif has_interrupted:
+                btn_scan.setText("▶ Resume")
+                btn_scan.setStyleSheet(
+                    "background-color: #1A3A1A; color: #22C55E; border: 1px solid #166534;"
+                    " border-radius: 4px; font-size: 11px; padding: 0 6px; font-weight: 600;"
+                )
+                btn_scan.setToolTip("Resume interrupted scan from last checkpoint")
+                btn_scan.clicked.connect(lambda _, t=target: self.trigger_manual_scan(t))
             else:
                 btn_scan.clicked.connect(lambda _, t=target: self.trigger_manual_scan(t))
             actions_layout.addWidget(btn_scan)
@@ -1286,8 +1305,30 @@ class DashboardLogicMixin:
             prog = status_map.get(current_status, f"⬤  {current_status}")
             
             text = f"{scan['url']}   {prog}   [{dur_str}]"
-            color = "#007AFF" if "Running" in prog else "#FF9500" if "◌" in prog else "#34C759"
-            
+            color = "#3B82F6" if "Running" in prog else "#F59E0B" if "◌" in prog else "#22C55E"
+
+            _STEP_MAP = {
+                "Running HTTPx": 1, "Running WhatWeb": 2, "Running Subfinder": 3,
+                "Running Amass": 4, "Running theHarvester": 5, "Running SpiderFoot OSINT": 6,
+                "Running CRT.sh": 7, "Running HackerTarget": 8, "Running Whois": 9,
+                "Running Wayback Machine": 10, "Running Traceroute": 11, "Running Nmap": 12,
+                "Running Masscan": 13, "Running DNSx": 14, "Running SSL Scan": 15,
+                "Running HTTP Smuggling Scanner": 16, "Running Security Headers": 17,
+                "Running Robots.txt": 18, "Running CORS": 19, "Running CMS Scanner": 20,
+                "Running Katana": 21, "Running Nikto": 22, "Running Nuclei": 23,
+                "Running ffuf": 24, "Running Feroxbuster": 25, "Running API Fuzzer": 26,
+                "Running GraphQL Scanner": 27, "Running ParamSpider": 28, "Running Arjun": 29,
+                "Running Retire.js Scanner": 30, "Running Tech Fingerprint": 31,
+                "Running Open Redirect": 32, "Running CRLF Scanner": 33,
+                "Running Wapiti": 34, "Running SQLMap": 35, "Running Dalfox": 36,
+                "Running Commix": 37, "Running SSRF Scanner": 38, "Running XXE Scanner": 39,
+                "Running Path Traversal Scanner": 40, "Running JWT Scanner": 41,
+                "Running WPScan": 42, "Running Auth Brute-Force Test": 43,
+                "Running Cloud Enum": 44, "Running Gitleaks": 45, "Running TruffleHog": 46,
+                "Running Semgrep": 47, "Running Trivy": 48, "Running Shodan": 49,
+                "Running ZAP": 50, "Correlating CVEs": 50, "Report Pending": 50,
+            }
+            step_num = _STEP_MAP.get(current_status, 0)
             existing_item = None
             for idx in range(self.lst_scans.count()):
                 it = self.lst_scans.item(idx)
@@ -1301,30 +1342,56 @@ class DashboardLogicMixin:
                     lbl = widget.findChild(QLabel)
                     if lbl:
                         lbl.setText(text)
-                        lbl.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
+                        lbl.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px; background: transparent;")
+                    pbar = widget.findChild(QProgressBar)
+                    if pbar:
+                        pbar.setValue(step_num)
             else:
                 item = QListWidgetItem()
                 item.setData(Qt.UserRole, target_id)
                 self.lst_scans.addItem(item)
                 
                 widget = QWidget()
-                layout = QHBoxLayout(widget)
-                layout.setContentsMargins(5, 2, 5, 2)
-                
+                widget.setStyleSheet("background: transparent;")
+                layout = QVBoxLayout(widget)
+                layout.setContentsMargins(8, 4, 8, 4)
+                layout.setSpacing(4)
+
+                # Top row: text + cancel button
+                top_row = QHBoxLayout()
+                top_row.setSpacing(6)
+
                 lbl_text = QLabel(text)
-                lbl_text.setWordWrap(True)
-                lbl_text.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px;")
-                layout.addWidget(lbl_text)
-                layout.addStretch()
-                
+                lbl_text.setWordWrap(False)
+                lbl_text.setStyleSheet(f"color: {color}; font-family: Menlo; font-size: 11px; background: transparent;")
+                top_row.addWidget(lbl_text, 1)
+
                 btn_cancel = QPushButton("Cancel")
-                btn_cancel.setFixedSize(60, 20)
-                btn_cancel.setStyleSheet("background-color: #DC2626; color: white; border: none; border-radius: 3px; font-size: 10px;")
+                btn_cancel.setFixedSize(58, 22)
+                btn_cancel.setStyleSheet(
+                    "background-color: #3A0A0A; color: #EF4444; border: 1px solid #7F1D1D;"
+                    " border-radius: 3px; font-size: 10px; font-weight: 600;"
+                )
                 btn_cancel.setCursor(Qt.PointingHandCursor)
                 btn_cancel.clicked.connect(lambda checked=False, tid=target_id: self.cancel_scan(tid))
-                layout.addWidget(btn_cancel)
-                
-                item.setSizeHint(QSize(0, 48))
+                top_row.addWidget(btn_cancel)
+                layout.addLayout(top_row)
+
+                # Progress bar (step_num computed above)
+                pbar = QProgressBar()
+                pbar.setRange(0, 50)
+                pbar.setValue(step_num)
+                pbar.setTextVisible(False)
+                pbar.setFixedHeight(4)
+                pbar.setObjectName("scan_progress")
+                pbar.setStyleSheet(
+                    "QProgressBar { background: #1A1A1A; border: none; border-radius: 2px; }"
+                    "QProgressBar::chunk { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+                    "stop:0 #3B82F6, stop:1 #22C55E); border-radius: 2px; }"
+                )
+                layout.addWidget(pbar)
+
+                item.setSizeHint(QSize(0, 62))
                 self.lst_scans.setItemWidget(item, widget)
 
     def refresh_intel_feed(self):
