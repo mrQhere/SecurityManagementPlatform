@@ -59,6 +59,7 @@ from tools.config_manager import load_settings
 # When True, the scan pipeline skips the redundancy-DB wipe so that any
 # in-flight scan data is preserved for the next session's resume logic.
 _APP_SHUTTING_DOWN: bool = False
+_CI_MODE: bool = os.environ.get("SMP_CI") == "1"
 
 def signal_app_shutdown():
     """Call this before closing the app to protect the redundancy DB."""
@@ -126,6 +127,10 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
     if needs_binary:
         bin_path = settings.get(f"{binary_name}_path", binary_name)
         if not shutil.which(bin_path):
+            if _CI_MODE:
+                # In CI, skip missing binaries immediately — no install attempts
+                logger.warning(f"[{step_name}] CI: Binary '{bin_path}' not in PATH — skipping.")
+                return None, False
             logger.warning(f"[{step_name}] ⚠️  Binary '{bin_path}' not in PATH — triggering self-healing installer...")
             healed = install_single_tool(binary_name)
             if healed and shutil.which(bin_path):
@@ -209,10 +214,11 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
         if module and timeout_var_name and orig_timeout:
             setattr(module, timeout_var_name, orig_timeout)
 
-    # 4. Tailored cooling delay
-    cooling_sleep = get_cooling_delay()
-    logger.info(f"[{step_name}] Cooling down for {cooling_sleep:.1f}s...")
-    time.sleep(cooling_sleep)
+    # 4. Tailored cooling delay (skipped in CI)
+    if not _CI_MODE:
+        cooling_sleep = get_cooling_delay()
+        logger.info(f"[{step_name}] Cooling down for {cooling_sleep:.1f}s...")
+        time.sleep(cooling_sleep)
 
     return result, success
 
@@ -354,7 +360,7 @@ def _should_run_step(step_name, resume_status):
     """
     Returns True if this step should execute given the selected scan profile.
 
-    Scan Profiles (V9.3.3)
+    Scan Profiles (V9.4.0)
     ────────────────────
     osint    — Purely passive, zero traffic to target. Safe for un-permissioned recon.
                Covers: OSINT APIs, certificate transparency, Whois, Wayback, Shodan.
@@ -460,10 +466,16 @@ def _should_run_step(step_name, resume_status):
 
 
 
-def _save_findings(scan_id, results, source_tool, severity_override=None, confidence=50):
+def _save_findings(scan_id, results, source_tool, severity_override=None, confidence=None):
     """Bulk-save a list of finding dicts to the DB, including all enterprise metadata."""
     if not results:
         return
+        
+    if confidence is None:
+        from scanners.core.registry import get_registered_scanners
+        reg = get_registered_scanners()
+        confidence = reg.get(source_tool, {}).get("confidence", 50)
+        
     for item in results:
         sev = severity_override or item.get("severity", "Info")
         desc = item.get("description", "")
@@ -509,7 +521,7 @@ def _save_nmap_findings(scan_id, nmap_results):
             f"State:   {state}"
         )
         add_finding(scan_id=scan_id, severity="Info", title=title,
-                    description=desc, source_tool="Nmap", confidence=95)
+                    description=desc, source_tool="Nmap")
 
 
 def _save_technologies(scan_id, tech_list, source_tool):
@@ -654,7 +666,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     url = target["url"]
     settings = load_settings()
 
-    # ── V9.3.3 — Global Proxy Configuration ────────────────────────────────────
+    # ── V9.4.0 — Global Proxy Configuration ────────────────────────────────────
     http_proxy = settings.get("http_proxy", "").strip()
     https_proxy = settings.get("https_proxy", "").strip()
     if http_proxy:
@@ -666,10 +678,14 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 
     # ── MAC Address Randomisation at scan start ───────────────────────────────
     mac_change_ok = False
-    if settings.get("mac_changer_enabled", True):
+    if _CI_MODE:
+        mac_change_ok = True  # Skip MAC randomisation in CI (no root/hardware)
+    elif settings.get("mac_changer_enabled", True):
         try:
             from tools.mac_changer import change_mac_address
-            mac_ok, mac_msg = change_mac_address(sudo_password=sudo_password)
+            mac_result = change_mac_address(sudo_password=sudo_password)
+            mac_ok = mac_result[0]
+            mac_msg = mac_result[1]
             mac_change_ok = mac_ok
             if mac_ok:
                 logger.info(mac_msg)
@@ -717,7 +733,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
             for f in res.get("findings", []):
                 add_finding(scan_id=scan_id, severity=f["severity"],
                             title=f["title"], description=f["description"],
-                            source_tool="HTTPx", confidence=80)
+                            source_tool="HTTPx")
             tech_list = [
                 {"name": t, "version": "", "category": "Web Technology", "confidence": 75}
                 for t in res.get("tech", [])
@@ -746,33 +762,33 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
                             f"IP: {sub.get('ip', 'N/A')}\n"
                             f"Source: {sub.get('source', 'subfinder')}"
                         ),
-                        source_tool="Subfinder", confidence=90,
+                        source_tool="Subfinder",
                     )
 
     def _process_crtsh_results(res):
         nonlocal crtsh_results
         crtsh_results = res
-        _save_findings(scan_id, res or [], "CRT.sh", confidence=85)
+        _save_findings(scan_id, res or [], "CRT.sh")
 
     def _process_ht_results(res):
         nonlocal ht_results
         ht_results = res
-        _save_findings(scan_id, res or [], "HackerTarget", confidence=80)
+        _save_findings(scan_id, res or [], "HackerTarget")
 
     def _process_whois_results(res):
         nonlocal whois_results
         whois_results = res
-        _save_findings(scan_id, res or [], "Whois", confidence=95)
+        _save_findings(scan_id, res or [], "Whois")
 
     def _process_wayback_results(res):
         nonlocal wayback_results
         wayback_results = res
-        _save_findings(scan_id, res or [], "Wayback Machine", confidence=80)
+        _save_findings(scan_id, res or [], "Wayback Machine")
 
     def _process_trace_results(res):
         nonlocal trace_result
         trace_result = res
-        _save_findings(scan_id, res or [], "Traceroute", confidence=85)
+        _save_findings(scan_id, res or [], "Traceroute")
         if res is None:
             add_log_entry("WARNING", f"Traceroute failed or not installed for {url}")
 
@@ -786,7 +802,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     def _process_ssl_results(res):
         nonlocal ssl_results
         ssl_results = res
-        _save_findings(scan_id, res or [], "SSL", confidence=90)
+        _save_findings(scan_id, res or [], "SSL")
         if res is None:
             add_log_entry("WARNING", f"SSL scan failed for {url}")
 
@@ -830,7 +846,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         if res:
             res = _filter_spa_ffuf_results(res)
         ffuf_results = res
-        _save_findings(scan_id, res or [], "ffuf", confidence=75)
+        _save_findings(scan_id, res or [], "ffuf")
         if res is None:
             add_log_entry("WARNING", f"ffuf failed or not installed for {url}")
 
@@ -871,7 +887,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     def _process_shodan_results(res):
         nonlocal shodan_results
         shodan_results = res
-        _save_findings(scan_id, res or [], "Shodan", confidence=80)
+        _save_findings(scan_id, res or [], "Shodan")
 
     def _process_zap_results(res):
         nonlocal zap_results
@@ -881,46 +897,46 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     def _process_theharvester_results(res):
         nonlocal theharvester_results
         theharvester_results = res
-        _save_findings(scan_id, res or [], "theHarvester", confidence=90)
+        _save_findings(scan_id, res or [], "theHarvester")
 
     def _process_gitleaks_results(res):
         nonlocal gitleaks_results
         gitleaks_results = res
-        _save_findings(scan_id, res or [], "Gitleaks", confidence=95)
+        _save_findings(scan_id, res or [], "Gitleaks")
 
     
     def _process_dalfox_results(res):
-        _save_findings(scan_id, res or [], "Dalfox", confidence=90)
+        _save_findings(scan_id, res or [], "Dalfox")
 
     def _process_arjun_results(res):
-        _save_findings(scan_id, res or [], "Arjun", confidence=85)
+        _save_findings(scan_id, res or [], "Arjun")
 
     def _process_dnsx_results(res):
-        _save_findings(scan_id, res or [], "DNSx", confidence=95)
+        _save_findings(scan_id, res or [], "DNSx")
 
     def _process_katana_results(res):
-        _save_findings(scan_id, res or [], "Katana", confidence=90)
+        _save_findings(scan_id, res or [], "Katana")
 
     def _process_commix_results(res):
-        _save_findings(scan_id, res or [], "Commix", confidence=95)
+        _save_findings(scan_id, res or [], "Commix")
 
     def _process_jwt_scanner_results(res):
-        _save_findings(scan_id, res or [], "JWT Scanner", confidence=85)
+        _save_findings(scan_id, res or [], "JWT Scanner")
 
     def _process_wpscan_results(res):
-        _save_findings(scan_id, res or [], "WPScan", confidence=90)
+        _save_findings(scan_id, res or [], "WPScan")
 
     def _process_masscan_results(res):
-        _save_findings(scan_id, res or [], "Masscan", confidence=95)
+        _save_findings(scan_id, res or [], "Masscan")
 
     def _process_paramspider_results(res):
-        _save_findings(scan_id, res or [], "Paramspider", confidence=85)
+        _save_findings(scan_id, res or [], "Paramspider")
 
     def _process_cloud_enum_results(res):
-        _save_findings(scan_id, res or [], "Cloud Enum", confidence=85)
+        _save_findings(scan_id, res or [], "Cloud Enum")
         
     def _process_zap_results(res):
-        _save_findings(scan_id, res or [], "ZAP", confidence=85)
+        _save_findings(scan_id, res or [], "ZAP")
 
 
     class ScanCancelled(Exception): pass

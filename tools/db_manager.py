@@ -147,7 +147,7 @@ ALL_ACTIVE_STATUSES = [
     "Running Open Redirect", "Running Tech Fingerprint",
     "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
-    # V9.3.3 New Scanners
+    # V9.4.0 New Scanners
     "Running Dalfox", "Running Arjun", "Running DNSx", "Running Katana",
     "Running Commix", "Running JWT Scanner", "Running WPScan",
     "Running Masscan", "Running ParamSpider", "Running Cloud Enum",

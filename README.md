@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
-![License](https://img.shields.io/badge/license-Proprietary-red)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Docker-blue)
 ![Security](https://img.shields.io/badge/security-AES--256-critical)
 ![Scanners](https://img.shields.io/badge/scanners-30%2B_Integrated-blueviolet)
@@ -109,7 +109,7 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 
 ## Roadmap
 
-### Near-term (V9.4.x.x)
+### Near-term (V9.4.0.x.x)
 - Neural Graph filtering by CVE correlation weight
 - Custom Nuclei/SQLMap payload injection from the UI
 - Air-gapped intelligence update via USB import of `global_intel.db`
