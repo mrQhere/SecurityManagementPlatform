@@ -481,7 +481,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
 
 ```text
-       [ V7.0 ]  Base Standardization
+       [ V9.4.0 ]  Base Standardization
           │      (Unified execution scripts and basic GUI)
           ╰───────────╮
                       │
@@ -501,11 +501,11 @@ The platform has undergone a massive architectural evolution from a simple scrip
           │        (SSRF, LFI, and OSINT capabilities restored)
           ╰───────────╮
                       │
-         CISA KEV  [ V9.3.3 ]
+         CISA KEV  [ V9.4.0 ]
                       │      (Regenerated intelligence from live KEV catalog)
           ╭───────────╯
           │
-       [ V9.3.4 ]  Architecture & Tooling Hardening
+       [ V9.4.0 ]  Architecture & Tooling Hardening
           │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
           ╰───────────╮
                       │

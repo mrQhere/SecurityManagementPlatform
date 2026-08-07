@@ -1,4 +1,4 @@
-# 🔬 Scanner Errors — SMP V9.3.3
+# 🔬 Scanner Errors — SMP V9.4.0
 
 ## Nmap: requires root / permission denied
 

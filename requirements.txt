@@ -1,4 +1,4 @@
-# Security Management Platform V9.3.3 — Python Dependencies
+# Security Management Platform V9.4.0 — Python Dependencies
 # =========================================================
 # Core
 APScheduler>=3.10.0
