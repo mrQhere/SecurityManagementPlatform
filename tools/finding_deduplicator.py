@@ -162,7 +162,7 @@ def deduplicate_findings(findings: list) -> list:
         if len(tools) > 1:
             base["description"] += (
                 f"\n\n[Dedup Note] Reported by {len(tools)} scanner(s): "
-                f"{', '.join(tools)}. Merged by SMP V9.3.4 deduplicator."
+                f"{', '.join(tools)}. Merged by SMP V9.4.0 deduplicator."
             )
 
         merged.append(base)

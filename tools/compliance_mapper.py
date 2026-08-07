@@ -6,7 +6,7 @@ Maps SMP finding types and CWE IDs to compliance control references:
   - CIS Controls v8
   - ISO 27001:2022 Annex A
   - SOC 2 Type II (Trust Services Criteria)
-  - PCI-DSS v9.3.3 (Requirements 6, 11)
+  - PCI-DSS v9.4.0 (Requirements 6, 11)
 
 Usage:
     from tools.compliance_mapper import map_finding_to_controls

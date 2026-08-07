@@ -14,7 +14,7 @@ from tools.db_manager import (
 from scanners.watchdog import run_watchdog
 
 def trigger_soft_delete_gc_job():
-    """V9.3.3 - Garbage Collector: Hard deletes soft-deleted targets older than 30 days."""
+    """V9.4.0 - Garbage Collector: Hard deletes soft-deleted targets older than 30 days."""
     logger.info("Scheduler Triggered: Target soft-delete Garbage Collector.")
     from tools.db_manager import get_db_connection
     try:
@@ -109,7 +109,7 @@ def _wait_for_db_ready(max_retries: int = 3, wait_seconds: int = 5) -> bool:
 
 
 def trigger_intel_job():
-    """Hourly threat intelligence feed update job — V9.3.3: waits for DB to be ready."""
+    """Hourly threat intelligence feed update job — V9.4.0: waits for DB to be ready."""
     logger.info("Scheduler Triggered: Threat intelligence update starting.")
     add_log_entry("INFO", "Scheduler Triggered: Threat intelligence update starting.")
 
