@@ -18,6 +18,12 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 
 
 
+## Project Status
+
+> [!WARNING]
+> This is a personal project maintained on a best-effort basis. It is currently at **V9.4.0**.
+> Please see the [CHANGELOG.md](CHANGELOG.md) for recent updates.
+
 ## What it is
 
 > [!NOTE]
@@ -31,7 +37,7 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS, GreyNoise, and CISA KEV to produce a single, weighted risk score that reflects real-world exploitability.
 2. **Provable local-only operation** — outbound intelligence logs every network call to `logs/egress_audit.log`. Set `SMP_LOCAL_ONLY=1` to block all external calls.
 3. **Minimalist UX** — dark aesthetic prioritising raw information density over chrome.
-4. **Compliance gap analysis** — maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v9.3.3.
+4. **Compliance gap analysis** — maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v4.0.
 5. **SQLCipher encryption, not optional** — "Encrypted at rest" is unconditionally enforced on all sensitive pentest data. Public CVE models are deliberately unencrypted for maximum I/O performance.
 
 ---
@@ -97,9 +103,7 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 ## Encryption At Rest
 
 - Sensitive pentest data (targets, scans, findings) is encrypted at rest using **SQLCipher (AES-256)**.
-- Raw scanner stdout is compressed and encrypted with **Fernet (AES-128-CBC + HMAC-SHA256)** before database storage.
 - Public intelligence databases (`cve.db`, `global_intel.db`) are plaintext SQLite for I/O performance — they contain no client data.
-- Master password uses PBKDF2-HMAC-SHA256 with 600,000 iterations (NIST 2024 recommendation).
 
 ---
 
