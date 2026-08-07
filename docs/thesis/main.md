@@ -1,17 +1,14 @@
 # Security Management Platform
-## Evolution of a Local-First Intelligence Engine
+## A Local-First Orchestration Engine and Heuristic Vulnerability Correlator
 
 **Author**: mrQhere  
 **Date**: August 2026  
-**Version**: 9.4.0  
 
 ---
 
 [TOC]
 
 ---
-
-{{ ABSTRACT }}
 
 {{ CHAPTER_1 }}
 
@@ -28,9 +25,3 @@
 {{ CHAPTER_7 }}
 
 {{ CHAPTER_8 }}
-
-{{ CHAPTER_9 }}
-
-{{ GLOSSARY }}
-
-{{ INDEX }}
