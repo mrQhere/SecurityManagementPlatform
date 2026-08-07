@@ -666,7 +666,7 @@ sudo apt install pandoc texlive-xetex texlive-fonts-recommended texlive-plain-ge
 **2. Generate the PDF:**
 ```bash
 # Run this from the root of the repository
-pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Serif"
+pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Serif" -V monofont="DejaVu Sans Mono"
 ```
 
 ---
