@@ -4,7 +4,7 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.3.3 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.0 · Stable                      ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
@@ -54,7 +54,7 @@ cd SecurityManagementPlatform
 
 # Or: headless API mode
 python main.py --api
-# → http://localhost:8000/api/v7/docs
+# → http://localhost:8000/api/v9/docs
 ```
 
 **First scan:**
@@ -109,7 +109,7 @@ make docker-stop     # stop
 make docker-clean    # stop + remove volumes
 ```
 
-API available at `http://localhost:8000/api/v7/docs`.
+API available at `http://localhost:8000/api/v9/docs`.
 
 > The PySide6 desktop GUI runs on Linux/macOS only. On Windows, use Docker + the REST API.
 
@@ -117,7 +117,7 @@ API available at `http://localhost:8000/api/v7/docs`.
 
 1. Install [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
 2. `docker compose up -d`
-3. Open `http://localhost:8000/api/v7/docs`
+3. Open `http://localhost:8000/api/v9/docs`
 
 ---
 
@@ -259,25 +259,25 @@ python3 tools/verify_report.py reports/pdf/SMP_example.com_Report_2026-08-06_a1b
 
 ## 7 · REST API
 
-Base URL: `http://localhost:8000/api/v7/`
+Base URL: `http://localhost:8000/api/v9/`
 
 ```bash
 # Get token
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v7/auth/token \
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v9/auth/token \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"your_password"}' | jq -r .access_token)
 
 # Add target
-curl -X POST http://localhost:8000/api/v7/target \
+curl -X POST http://localhost:8000/api/v9/target \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}'
 
 # Trigger scan
-curl -X POST http://localhost:8000/api/v7/scan/1 -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8000/api/v9/scan/1 -H "Authorization: Bearer $TOKEN"
 
 # Poll status
-curl http://localhost:8000/api/v7/scan/1/status -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8000/api/v9/scan/1/status -H "Authorization: Bearer $TOKEN"
 ```
 
 | Endpoint | Method | Description |
@@ -292,7 +292,7 @@ curl http://localhost:8000/api/v7/scan/1/status -H "Authorization: Bearer $TOKEN
 | `/sbom/{scan_id}` | GET | Download SBOM |
 | `/egress/audit` | GET | Egress audit log |
 
-Interactive docs: `http://localhost:8000/api/v7/docs`
+Interactive docs: `http://localhost:8000/api/v9/docs`
 
 ---
 
@@ -365,7 +365,7 @@ Findings are automatically mapped to:
 | CIS Controls v8 | Infrastructure hardening |
 | ISO 27001:2022 | ISMS certification |
 | SOC 2 Type II | SaaS/cloud audit readiness |
-| PCI-DSS v9.3.3 | Payment card compliance |
+| PCI-DSS v4.0 | Payment card compliance |
 
 ```python
 from tools.compliance_mapper import map_finding_to_controls
@@ -476,7 +476,15 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 
 ## 13 · Roadmap
 
-**V9.3.3 (current)**
+**V9.4.0 (current)**
+- **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
+- Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
+- Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
+- **Event-Driven Reactivity**: Graph now recalculates and visually re-renders in real time via the unified `EventBus`.
+- Fixed scattered semantic versioning (V7 and V9.3.3 discrepancies) globally.
+- Hardened all internal tools (`bump_version.py`, `system_checker.py`, `finding_deduplicator.py`).
+
+**V9.3.4 (past)**
 - Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
 - Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.3.3, dalfox v2.10.0
 - --skip-tools flag for Avast-restricted environments
@@ -495,8 +503,8 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 
 SMP is built as a flexible orchestration layer. Security researchers can leverage its core components for custom engagements:
 
-### Neural Graph Threshold Tuning
-The force-directed graph UI (`ui/components/neural_graph.py`) uses a dynamic spring algorithm to group CVEs. You can manipulate the gravity thresholds and repulsive forces in `intelligence/brain.py` to highlight tightly clustered technology stacks (e.g., increasing `GRAVITY_CONSTANT` to group zero-days closer to their root product nodes).
+### Neural Graph Tuning (Centrality & TF-IDF)
+The Neural Intelligence Engine (`intelligence/brain.py`) now runs a custom Degree Centrality algorithm and a TF-IDF Natural Language clustering matrix. You can manipulate the clustering tolerances in `_tf_idf_cluster(findings)` by adjusting the `cosine_sim() > 0.4` threshold, or change the structural emphasis of chokepoints by modifying the `centrality_score` weights inside `compute_centrality()`. Visual rendering forces (Coulomb repulsion and Hooke spring laws) can be tuned in `ui/components/neural_graph.py` to cluster technologies more aggressively.
 
 ### Direct SQLCipher Queries
 Pentest data is encrypted at rest using AES-256. If you want to bypass the GUI to run complex analytical queries on the raw findings:
