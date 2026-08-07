@@ -1,0 +1,9 @@
+# Abstract
+
+The landscape of cybersecurity orchestration has historically been dominated by monolithic, cloud-reliant platforms that inherently compromise data sovereignty by requiring sensitive vulnerability metrics to be transmitted off-site for analysis. This paper details the genesis, architectural evolution, and mathematical paradigms of the Security Management Platform (SMP)—a revolutionary local-first orchestration engine. 
+
+Tracing its origins from a rudimentary automation script wrapping network mappers (Nmap) to its current iteration (V9.4.0), SMP demonstrates the viability of high-fidelity threat intelligence operating entirely within an air-gapped or localized perimeter. Through the implementation of a Directed Acyclic Graph (DAG) task runner, the platform successfully orchestrates over 50 disparate security binaries (written in Go, Python, Ruby, and Perl) while enforcing strict execution timeouts, multi-processed concurrency, and normalized data schemas.
+
+Furthermore, this thesis explores the "Neural Brain" heuristic engine, proving that complex structural threat analysis—such as PageRank-style Degree Centrality for chokepoint detection and Term Frequency-Inverse Document Frequency (TF-IDF) for semantic vulnerability clustering—can be achieved natively in standard Python without relying on external, memory-intensive Large Language Models (LLMs) or third-party Machine Learning frameworks. By marrying military-grade cryptography (AES-256 via SQLCipher) with intuitive, reactive user interfaces (PySide6), SMP establishes a new standard for localized, highly-secure Vulnerability Assessment and Penetration Testing (VAPT).
+
+**Keywords**: *Cybersecurity, Orchestration, Directed Acyclic Graph (DAG), Local-First, Vulnerability Assessment, Threat Intelligence, TF-IDF, Graph Centrality, Python, PySide6.*
