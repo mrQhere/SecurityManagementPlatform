@@ -28,7 +28,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libsqlcipher-dev libsqlcipher0t64 build-essential
+          sudo apt-get install -y -qq libsqlcipher-dev build-essential
 
       - name: Install Python dependencies for CodeQL
         run: |
