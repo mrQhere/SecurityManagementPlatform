@@ -112,7 +112,7 @@ def emit(scan_id: int, scanner: str, message: str, level: str = "INFO") -> None:
 
     # Write to per-scan narrative log
     try:
-        with open(_narrative_path(scan_id), "a", encoding="utf-8") as f:
+        with open(_narrative_path(scan_id, encoding="utf-8"), "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except Exception as e:
         logger.debug(f"narrative_logger: file write failed: {e}")

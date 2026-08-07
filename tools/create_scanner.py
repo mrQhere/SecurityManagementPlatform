@@ -14,7 +14,7 @@ import sys
 import argparse
 
 TEMPLATE = '''"""
-{name} Scanner — SMP V9.3.3
+{name} Scanner — SMP V9.3.4
 =========================
 Auto-generated scanner plugin.
 """
@@ -25,7 +25,7 @@ import json
 
 logger = logging.getLogger("smp.scan")
 
-# V9.3.3 Zero-Friction Plugin Registration
+# V9.3.4 Zero-Friction Plugin Registration
 PLUGIN_META = {{
     "name": "{name}",
     "binary": "{binary}",
@@ -35,7 +35,8 @@ PLUGIN_META = {{
     "depends_on": []  # e.g., ["Nmap"] if you need Nmap to run first
 }}
 
-def scan(target_url: str, scan_id: int, settings: dict) -> dict:
+def scan(target_url: str, scan_id: int = 0, settings: dict = None) -> dict:
+    settings = settings or {}
     from tools.narrative_logger import emit_scanner_start, emit_finding
     emit_scanner_start(scan_id, "{binary}")
 

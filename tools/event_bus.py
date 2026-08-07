@@ -61,3 +61,22 @@ def clear():
     """Clear all subscriptions (used in tests)."""
     with _lock:
         _subscriptions.clear()
+
+class EventBus:
+    """Class wrapper for backward compatibility."""
+    @staticmethod
+    def subscribe(event: str, callback):
+        subscribe(event, callback)
+        
+    @staticmethod
+    def unsubscribe(event: str, callback):
+        unsubscribe(event, callback)
+        
+    @staticmethod
+    def emit(event: str, data: dict = None):
+        emit(event, data)
+        
+    @staticmethod
+    def clear():
+        clear()
+

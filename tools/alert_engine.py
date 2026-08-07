@@ -201,7 +201,7 @@ def send_email_alert(subject, body_text, body_html=None, attachment_path=None, r
             logger.error(err_msg)
             add_log_entry("ERROR", err_msg)
             _logged_alerts.add(err_msg)
-            with open("logs/error.log", "a") as err_log_stream:
+            with open("logs/error.log", "", encoding="utf-8") as err_log_stream:
                 err_log_stream.write("[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
         return False
 
@@ -547,6 +547,6 @@ def scan_and_alert_matched_technology_cves(target_url, scan_id, smtp_config):
         except Exception as routing_err:
             print(f"[⚠️ RELAY WARNING] Server node '{node['host']}' failed to route payload: {str(routing_err)}")
             
-    with open("logs/error.log", "a") as err_log_stream:
+    with open("logs/error.log", "", encoding="utf-8") as err_log_stream:
         err_log_stream.write("[SMTP ALERT ENGINE CRIT] All available messaging channels exhausted. Notification delivery failed.\n")
     return False

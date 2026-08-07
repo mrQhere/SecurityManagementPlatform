@@ -549,7 +549,7 @@ def _download_missing_tools_locally(missing):
                     if os.path.exists(dst): shutil.rmtree(dst)
                     shutil.move(os.path.dirname(nikto_pl), dst)
                     wrapper = os.path.join(bin_dir, "nikto")
-                    with open(wrapper, "w") as wf:
+                    with open(wrapper, "w", encoding="utf-8") as wf:
                         wf.write(f'#!/usr/bin/env bash\nperl "{os.path.join(dst, "nikto.pl")}" "$@"\n')
                     os.chmod(wrapper, 0o755)
                     logger.info("[Installer] Nikto installed successfully.")
@@ -574,7 +574,7 @@ def _download_missing_tools_locally(missing):
                         capture_output=True, timeout=120
                     )
                     wrapper = os.path.join(bin_dir, "cloud_enum")
-                    with open(wrapper, "w") as wf:
+                    with open(wrapper, "w", encoding="utf-8") as wf:
                         wf.write(f'#!/usr/bin/env bash\nexec "{sys.executable}" "{os.path.join(dst, "cloud_enum.py")}" "$@"\n')
                     os.chmod(wrapper, 0o755)
                     logger.info("[Installer] cloud-enum installed successfully.")
@@ -601,7 +601,7 @@ def _download_missing_tools_locally(missing):
                         capture_output=True, timeout=120
                     )
                     wrapper = os.path.join(bin_dir, "paramspider")
-                    with open(wrapper, "w") as wf:
+                    with open(wrapper, "w", encoding="utf-8") as wf:
                         wf.write(f'#!/usr/bin/env bash\ncd "{dst}"\nexec "{sys.executable}" "{os.path.basename(ps_py)}" "$@"\n')
                     os.chmod(wrapper, 0o755)
                     logger.info("[Installer] ParamSpider installed successfully.")
@@ -637,11 +637,11 @@ def _download_missing_tools_locally(missing):
                     wrapper = os.path.join(bin_dir, "theHarvester")
                     theharvester_entry = os.path.join(dst, "theHarvester.py")
                     if os.path.exists(theharvester_entry):
-                        with open(wrapper, "w") as wf:
+                        with open(wrapper, "w", encoding="utf-8") as wf:
                             wf.write(f'#!/usr/bin/env bash\nexec "{sys.executable}" "{theharvester_entry}" "$@"\n')
                     else:
                         # Package-style: run as python -m theHarvester
-                        with open(wrapper, "w") as wf:
+                        with open(wrapper, "w", encoding="utf-8") as wf:
                             wf.write(f'#!/usr/bin/env bash\ncd "{dst}"\nexec "{sys.executable}" -m theHarvester "$@"\n')
                     os.chmod(wrapper, 0o755)
                     logger.info("[Installer] theHarvester installed successfully.")
@@ -669,7 +669,7 @@ def _download_missing_tools_locally(missing):
                         capture_output=True, timeout=120
                     )
                     wrapper = os.path.join(bin_dir, "jwt_tool")
-                    with open(wrapper, "w") as wf:
+                    with open(wrapper, "w", encoding="utf-8") as wf:
                         wf.write(f'#!/usr/bin/env bash\nexec "{sys.executable}" "{dst_py}" "$@"\n')
                     os.chmod(wrapper, 0o755)
                     logger.info("[Installer] jwt_tool installed successfully.")
