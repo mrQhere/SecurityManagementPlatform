@@ -651,6 +651,26 @@ def build_masscan_cmd(target: str) -> list:
 
 ---
 
+## 15 · Generating the Thesis PDF
+
+The massive 100+ page professional academic thesis detailing the mathematical and technical architecture of SMP is located in `docs/thesis/SMP_Academic_Thesis.md`. 
+
+To convert this markdown file into a beautifully formatted, print-ready PDF (complete with a table of contents, LaTeX styling, and page numbers), use `pandoc`.
+
+**1. Install Required Packages (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install pandoc texlive-xetex texlive-fonts-recommended texlive-plain-generic
+```
+
+**2. Generate the PDF:**
+```bash
+# Run this from the root of the repository
+pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Serif"
+```
+
+---
+
 <div align="center">
 
 **SMP** · Local-first · Zero-cloud · Encrypted at rest  
