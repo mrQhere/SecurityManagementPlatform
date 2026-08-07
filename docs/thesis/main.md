@@ -36,3 +36,9 @@ toc-depth: 2
 {{ APPENDIX_A }}
 
 {{ APPENDIX_B }}
+
+{{ APPENDIX_C }}
+
+{{ GLOSSARY }}
+
+{{ INDEX }}

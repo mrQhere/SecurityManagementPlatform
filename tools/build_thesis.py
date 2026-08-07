@@ -29,6 +29,9 @@ def compile_thesis():
         ("{{ CHAPTER_9 }}", "09_system_integrity.md"),
         ("{{ APPENDIX_A }}", "10_scanner_compendium.md"),
         ("{{ APPENDIX_B }}", "11_database_schemas.md"),
+        ("{{ APPENDIX_C }}", "14_api_docs.md"),
+        ("{{ GLOSSARY }}", "12_glossary.md"),
+        ("{{ INDEX }}", "13_index.md"),
     ]
     
     for tag, filename in chapter_files:
