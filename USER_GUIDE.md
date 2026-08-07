@@ -78,6 +78,8 @@ python main.py --api
 
 `setup.sh` installs: Python venv, SQLCipher, `nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`, `nmap`, `nikto`, `whatweb`, WPScan, ClamAV, Trivy, Prowler, CrackMapExec.
 
+You can also use `--no-venv` if you want to bypass the Python virtual environment creation.
+
 Every binary is downloaded from its official GitHub Releases page and verified with SHA-256 before installation. The script prints the full URL before each download.
 
 ### SQLCipher (hard requirement — SMP won't start without it)
@@ -233,10 +235,10 @@ SMP_LOCAL_ONLY=1 ./run.sh
 | Data | Encryption |
 |------|-----------|
 | Pentest DB (`security.db`, `redundancy.db`) | SQLCipher AES-256 |
-| Raw scanner output (stored as blobs) | Fernet AES-128-CBC + HMAC-SHA256 |
+| Raw scanner output (stored as blobs) | Compressed and stored in SQLCipher |
 | Intelligence DBs (`cve.db`, `global_intel.db`) | Plaintext — no client data |
 
-Key derivation: **PBKDF2-HMAC-SHA256, 600,000 iterations, random 32-byte salt** (NIST 2024).
+Key derivation: **PBKDF2-HMAC-SHA256**.
 
 Lost your password? There is no recovery path — this is by design. Back up `database/security.db` before changing passwords.
 
@@ -459,7 +461,7 @@ SecurityManagementPlatform/
 | Database | SQLCipher AES-256 | `tools/db_manager.py` |
 | Pipeline | DAG + multiprocessing | `scanners/scan_runner.py` |
 | Intelligence | REST + local cache | `intelligence/` |
-| Encryption | SQLCipher + Fernet + PBKDF2 | `tools/encryption_manager.py` |
+| Encryption | SQLCipher + PBKDF2 | `tools/encryption_manager.py` |
 
 ---
 
@@ -616,11 +618,11 @@ headers = {"Authorization": "Bearer YOUR_JWT"}
 payload = {"target": "10.0.0.0/24", "profile": "full", "stealth": True}
 
 # Trigger scan
-resp = requests.post("http://127.0.0.1:8000/api/v1/scans", json=payload, headers=headers)
+resp = requests.post("http://127.0.0.1:8000/api/v9/scan/1", json=payload, headers=headers)
 scan_id = resp.json()["scan_id"]
 
 # Stream real-time events
-response = requests.get(f"http://127.0.0.1:8000/api/v1/scans/{scan_id}/stream", headers=headers, stream=True)
+response = requests.get(f"http://127.0.0.1:8000/api/v9/scan/{scan_id}/status", headers=headers, stream=True)
 client = sseclient.SSEClient(response)
 for event in client.events():
     print(f"Live Finding: {json.loads(event.data)}")
