@@ -1,53 +1,37 @@
-# Security Policy — SMP V9.3.3
+# Security Policy
 
 ## Supported Versions
 
-Only the current V9.3.3.x release line receives security updates.
+Only the current V9.4.0.x release line receives security updates.
 
 | Version  | Supported |
 | -------- | --------- |
-| V9.3.3.x   | ✅ Yes    |
-| < V9.3.3 | ❌ No     |
+| V9.4.0.x   | ✅ Yes    |
+| < V9.4.0 | ❌ No     |
 
 ## Security Architecture
 
-SMP is designed to handle highly sensitive vulnerability data. The V9.3.3
-architecture enforces the following controls:
+SMP is designed to handle highly sensitive vulnerability data.
 
-* **Database Encryption (Pentest Data)**: All sensitive databases (`security.db`,
-  `redundancy.db`) are encrypted at rest using **SQLCipher — AES-256-CBC**.
+* **Database Encryption (Pentest Data)**: Sensitive databases (`security.db`,
+  `redundancy.db`) are encrypted at rest using **SQLCipher (AES-256)**.
   Public intelligence databases (`cve.db`, `global_intel.db`) are plaintext
   SQLite for I/O performance; they contain no client data.
-
-* **Raw Output Encryption**: Raw scanner stdout is compressed (gzip) and
-  encrypted with **Fernet (AES-128-CBC + HMAC-SHA256)** before being stored
-  as a blob in the database.
-
-* **Key Derivation**: The encryption key is derived using **PBKDF2-HMAC-SHA256**
-  with 600,000 iterations and a random 32-byte salt (NIST 2024 recommendation).
-
-* **Password Complexity**: Enforced 12+ characters, mixed case, numbers, and
-  special characters.
-
 * **Audit Trail**: All intelligence outbound calls are logged to
-  `logs/egress_audit.log` (one JSON line per call, with `ALLOWED`/`BLOCKED`
-  status). Scan activity is logged to `logs/smp.log`.
-
-* **API Security**: The REST API is secured with short-lived JWT Bearer tokens
-  and per-IP rate limiting (60 RPM default).
-
+  `logs/egress_audit.log`. Scan activity is logged to `logs/smp.log`.
+* **API Security**: The REST API is secured with JWT Bearer tokens.
 * **Single-Instance Lock**: A file-based lock (`/tmp/smp.lock`) prevents
   multiple simultaneous SMP processes from corrupting the database.
+
+> [!WARNING]
+> **Project Disclaimer**
+> SMP is a personal project maintained on a best-effort basis. It has not undergone any formal third-party security audits. Use this software at your own risk.
 
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability within SMP, please **do not** open a
 public issue.
 
-Report it directly to the maintainer:
+Report it directly by contacting `@mrQhere` or by using **GitHub Security Advisories** on this repository if enabled.
 
-* **Repository**: [https://github.com/mrQhere/SecurityManagementPlatform](https://github.com/mrQhere/SecurityManagementPlatform)
-* Contact `@mrQhere` directly, or use **GitHub Security Advisories** if enabled.
-
-Please include detailed steps to reproduce the issue. Reports are acknowledged
-within 24 hours.
+Please include detailed steps to reproduce the issue. Reports are generally acknowledged within 24 hours.
