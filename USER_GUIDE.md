@@ -484,6 +484,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 - **Vulnerability Deduplication**: Upgraded `finding_deduplicator.py` with Levenshtein fuzzy matching (≥0.82 similarity) and vulnerability aliasing (e.g., merging "SQLi" and "SQL Injection") to aggressively reduce scanner noise.
 - **Cross-Platform Hardening**: Audited all 28 internal tools and enforced strict `encoding="utf-8"` standard for seamless Windows compatibility.
 - **Tooling Overhauls**: Rebuilt `bump_version.py` into a robust CLI with auto-bumping (`--minor`/`--major`) and `--dry-run` protections, and enabled `system_checker.py` for standalone execution.
+- **Engine Robustness**: Hardened the module registry by implementing a thread-safe `EventBus` class wrapper to prevent plugin ImportErrors, and upgraded the plugin generator (`create_scanner.py`) to enforce the strict `scan(target, scan_id, settings)` signature, eradicating `NameError` crashes in custom scanners.
 - Fixed scattered semantic versioning (V7 and V9.3.3 discrepancies) globally.
 
 **V9.3.4 (past)**
