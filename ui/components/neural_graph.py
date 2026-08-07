@@ -1,32 +1,82 @@
 import math
 import random
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsItem, QWidget, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsItem, QWidget, QVBoxLayout, QGraphicsTextItem, QToolTip
 from PySide6.QtCore import Qt, QTimer, QPointF, QRectF
-from PySide6.QtGui import QColor, QPen, QBrush, QPainter, QRadialGradient
+from PySide6.QtGui import QColor, QPen, QBrush, QPainter, QRadialGradient, QFont
 
 class NeuralNode(QGraphicsEllipseItem):
-    def __init__(self, node_id, label, radius=6):
-        super().__init__(-radius, -radius, radius * 2, radius * 2)
+    def __init__(self, node_id, label, n_type="component", severity="Info", score=0.0):
+        # Base radius
+        self.base_radius = 6
+        if n_type == "cve":
+            # Scale CVE nodes based on centrality score
+            self.base_radius = 8 + (score * 15)
+        else:
+            self.base_radius = 6 + (score * 10)
+            
+        super().__init__(-self.base_radius, -self.base_radius, self.base_radius * 2, self.base_radius * 2)
+        
         self.node_id = node_id
         self.label = label
-        self.radius = radius
+        self.n_type = n_type
+        self.severity = severity
+        self.score = score
+        
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setAcceptHoverEvents(True)
-        self.setZValue(10)
+        self.setZValue(10 + score) # Higher centrality = on top
         
         # Velocity for physics
         self.vx = 0.0
         self.vy = 0.0
         
-        # Appearance
-        self.default_color = QColor(255, 255, 255, 200)
+        # Appearance based on severity
+        if n_type == "cve":
+            if severity == "Critical":
+                base_col = QColor(239, 68, 68, 240)  # Red
+            elif severity == "High":
+                base_col = QColor(249, 115, 22, 240) # Orange
+            elif severity == "Medium":
+                base_col = QColor(234, 179, 8, 240)  # Yellow
+            else:
+                base_col = QColor(156, 163, 175, 240) # Gray
+        else:
+            base_col = QColor(59, 130, 246, 240) # Accent Blue for components
+            
+        self.default_color = base_col
         self.hover_color = QColor(0, 229, 255, 255)
-        self.setBrush(QBrush(self.default_color))
+        
+        # Glow effect for high centrality (Linchpins)
+        if score > 0.5:
+            grad = QRadialGradient(0, 0, self.base_radius)
+            grad.setColorAt(0, self.default_color)
+            grad.setColorAt(0.7, self.default_color)
+            grad.setColorAt(1, QColor(self.default_color.red(), self.default_color.green(), self.default_color.blue(), 50))
+            self.setBrush(QBrush(grad))
+        else:
+            self.setBrush(QBrush(self.default_color))
+            
         self.setPen(QPen(Qt.NoPen))
         
+        # Tooltip data
+        info = f"<b>{label}</b><br/>Type: {n_type.upper()}<br/>Centrality: {score:.2f}"
+        if n_type == "cve":
+            info += f"<br/>Severity: {severity}"
+        self.setToolTip(info)
+        
         self.edges = []
+        
+        # Label text (only for Linchpins or components)
+        if score > 0.3 or n_type == "component":
+            self.text_item = QGraphicsTextItem(label, self)
+            self.text_item.setDefaultTextColor(QColor(200, 200, 200))
+            font = QFont("Arial", 8)
+            self.text_item.setFont(font)
+            # Center below node
+            br = self.text_item.boundingRect()
+            self.text_item.setPos(-br.width()/2, self.base_radius + 2)
         
     def add_edge(self, edge):
         self.edges.append(edge)
@@ -39,11 +89,18 @@ class NeuralNode(QGraphicsEllipseItem):
         
     def hoverEnterEvent(self, event):
         self.setBrush(QBrush(self.hover_color))
-        self.setScale(1.5)
+        self.setScale(1.2)
         super().hoverEnterEvent(event)
         
     def hoverLeaveEvent(self, event):
-        self.setBrush(QBrush(self.default_color))
+        if self.score > 0.5:
+            grad = QRadialGradient(0, 0, self.base_radius)
+            grad.setColorAt(0, self.default_color)
+            grad.setColorAt(0.7, self.default_color)
+            grad.setColorAt(1, QColor(self.default_color.red(), self.default_color.green(), self.default_color.blue(), 50))
+            self.setBrush(QBrush(grad))
+        else:
+            self.setBrush(QBrush(self.default_color))
         self.setScale(1.0)
         super().hoverLeaveEvent(event)
 
@@ -56,7 +113,13 @@ class NeuralEdge(QGraphicsLineItem):
         self.source.add_edge(self)
         self.target.add_edge(self)
         self.setZValue(1)
-        self.setPen(QPen(QColor(100, 100, 100, 80), 1))
+        
+        # Edge styling based on connection weight
+        combined_score = (source_node.score + target_node.score) / 2
+        alpha = int(40 + (combined_score * 150))
+        width = 1 + (combined_score * 2)
+        
+        self.setPen(QPen(QColor(100, 100, 150, alpha), width))
         self.adjust()
 
     def adjust(self):
@@ -71,14 +134,14 @@ class NeuralGraphWidget(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         
         self.scene = QGraphicsScene(self)
-        self.scene.setBackgroundBrush(QBrush(QColor(0, 0, 0)))
+        self.scene.setBackgroundBrush(QBrush(QColor(10, 10, 12))) # Darker, richer background
         
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setDragMode(QGraphicsView.RubberBandDrag)
-        self.view.setStyleSheet("border: none; background: #000000;")
+        self.view.setStyleSheet("border: none; background: #0A0A0C;")
         
         self.layout.addWidget(self.view)
         
@@ -87,9 +150,9 @@ class NeuralGraphWidget(QWidget):
         self.edges = []
         
         # Physics Engine constants
-        self.repulsion_constant = 4000.0
-        self.spring_constant = 0.03
-        self.spring_length = 80.0
+        self.repulsion_constant = 6000.0
+        self.spring_constant = 0.04
+        self.spring_length = 100.0
         self.damping = 0.85
         
         self.timer = QTimer(self)
@@ -99,7 +162,10 @@ class NeuralGraphWidget(QWidget):
     def load_data(self, graph_data):
         """
         Loads graph data and starts the simulation.
-        graph_data: {'nodes': [{'id': 'CVE-123', 'label': 'WordPress'}, ...], 'edges': [('CVE-123', 'CVE-456'), ...]}
+        graph_data: {
+            'nodes': [{'id': 'CVE-123', 'label': 'CVE-123', 'type': 'cve', 'severity': 'High', 'score': 0.8}, ...],
+            'edges': [('CVE-123', 'Component-X'), ...]
+        }
         """
         self.scene.clear()
         self.nodes.clear()
@@ -107,15 +173,19 @@ class NeuralGraphWidget(QWidget):
         
         node_map = {}
         
-        # Optimization: Only load up to 150 nodes to maintain 60FPS UI
-        max_nodes = 150
+        max_nodes = 200 # Bumped slightly due to optimizations
         nodes_to_render = graph_data.get('nodes', [])[:max_nodes]
         allowed_ids = {n['id'] for n in nodes_to_render}
         
         # Create Nodes
         for n_data in nodes_to_render:
-            node = NeuralNode(n_data['id'], n_data.get('label', ''))
-            # Random initial cluster
+            node = NeuralNode(
+                n_data['id'], 
+                n_data.get('label', ''),
+                n_type=n_data.get('type', 'component'),
+                severity=n_data.get('severity', 'Info'),
+                score=n_data.get('score', 0.0)
+            )
             node.setPos(random.uniform(-100, 100), random.uniform(-100, 100))
             self.scene.addItem(node)
             self.nodes.append(node)
@@ -153,9 +223,12 @@ class NeuralGraphWidget(QWidget):
                     dy = random.uniform(-1, 1)
                 
                 # Optimized repulsion distance limit
-                if dist_sq < 40000: # ~200px
+                if dist_sq < 60000: # Increased repulsion distance
                     dist = math.sqrt(dist_sq)
                     force = self.repulsion_constant / dist_sq
+                    # High centrality nodes repulse more
+                    force *= (1.0 + n1.score + n2.score)
+                    
                     fx = (dx / dist) * force
                     fy = (dy / dist) * force
                     
@@ -175,6 +248,9 @@ class NeuralGraphWidget(QWidget):
                 dist = 0.1
                 
             force = (dist - self.spring_length) * self.spring_constant
+            # High centrality edges pull tighter
+            force *= (1.0 + n1.score + n2.score)
+            
             fx = (dx / dist) * force
             fy = (dy / dist) * force
             
@@ -204,7 +280,7 @@ class NeuralGraphWidget(QWidget):
             new_y = n.scenePos().y() + n.vy
             n.setPos(new_x, new_y)
             
-        # Optional: Auto-stop when settled
+        # Stop when settled
         if total_movement < len(self.nodes) * 0.05:
             self.is_simulating = False
             self.timer.stop()
