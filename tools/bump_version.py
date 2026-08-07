@@ -3,7 +3,10 @@
 SMP Version Bumper — updates version everywhere it matters.
 Usage: python3 tools/bump_version.py V9.3.3
 """
-import sys, json, os, re
+import sys
+import json
+import os
+import re
 
 GRN = "\033[92m"; YEL = "\033[93m"; RED = "\033[91m"; RST = "\033[0m"
 def _ok(msg):   print(f"  {GRN}[✓]{RST} {msg}")

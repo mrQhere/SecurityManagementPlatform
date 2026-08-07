@@ -40,7 +40,7 @@ def _classify_severity(description: str) -> str:
 
 
 @register_scanner(name="Nikto", step_name="Running Nikto", depends_on=['CMS Scanner'], binary_name="nikto", needs_binary=True, confidence=90)
-def run_nikto_scan(url):
+def run_nikto_scan(url, settings: dict = None):
     """
     Runs Nikto against a target URL.
 
@@ -50,6 +50,7 @@ def run_nikto_scan(url):
     Returns [] on a clean/no-findings run.
     Returns None if the nikto binary is missing or a hard crash occurs.
     """
+    settings = settings or {}
     settings = load_settings()
     nikto_bin = settings.get("nikto_path", "nikto")
 

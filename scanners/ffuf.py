@@ -57,11 +57,12 @@ def _get_wordlist(settings):
 
 
 @register_scanner(name="ffuf", step_name="Running ffuf", depends_on=['Nuclei'], binary_name="ffuf", needs_binary=True, confidence=90)
-def run_ffuf_scan(url):
+def run_ffuf_scan(url, settings: dict = None):
     """
     Directory/file brute-force + extension fuzzing using ffuf.
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings  = load_settings()
     bin_path  = settings.get("ffuf_path", "ffuf")
     base_url  = url.rstrip("/") + "/FUZZ"

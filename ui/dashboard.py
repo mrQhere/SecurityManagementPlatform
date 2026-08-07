@@ -89,7 +89,6 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
     def __init__(self):
         super().__init__()
         import json
-        import os
         version = "V9.3.3"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
@@ -128,7 +127,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                 self.dashboard_splitter.restoreState(QByteArray(base64.b64decode(s['dashboard_splitter'])))
             if hasattr(self, 'targets_splitter') and 'targets_splitter' in s:
                 self.targets_splitter.restoreState(QByteArray(base64.b64decode(s['targets_splitter'])))
-        except Exception as e:
+        except Exception:
             pass
 
         self.load_smtp_fields()
@@ -155,9 +154,9 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         Shows a confirmation dialog, handles running scans gracefully, then
         performs a safe shutdown with visual feedback before the window hides.
         """
-        from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QLabel
-        from PySide6.QtCore import Qt, QTimer
-        from tools.db_manager import get_active_scans, update_scan_status
+        from PySide6.QtWidgets import QDialog
+        from PySide6.QtCore import QTimer
+        from tools.db_manager import update_scan_status
 
         active = get_active_scans()
         n_active = len(active)
@@ -215,7 +214,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             if hasattr(self, 'targets_splitter'):
                 s['targets_splitter'] = base64.b64encode(self.targets_splitter.saveState().data()).decode('utf-8')
             save_settings(s)
-        except Exception as e:
+        except Exception:
             pass
 
         # 2. Stop UI timers so no further DB reads race with shutdown

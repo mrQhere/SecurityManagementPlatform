@@ -15,7 +15,6 @@ import logging
 import requests
 from tools.config_manager import load_settings
 from tools.db_manager import add_log_entry
-from tools.config_manager import load_settings
 verify_tls = not load_settings().get('insecure_scans', False)
 
 
@@ -45,12 +44,13 @@ def _extract_jwts_from_response(url):
 
 
 @register_scanner(name="JWT Scanner", step_name="Running JWT Scanner", depends_on=['Commix'], binary_name="jwt_tool", needs_binary=True, confidence=85)
-def run_jwt_scanner_scan(url):
+def run_jwt_scanner_scan(url, settings: dict = None):
     """
     Extracts JWT tokens from the target and analyses them for vulnerabilities.
 
     Returns list of finding dicts, [] if no JWTs found, None on hard failure.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("jwt_tool_path", "jwt_tool")
 
@@ -118,7 +118,8 @@ def run_jwt_scanner_scan(url):
 
 def _analyse_jwt_statically(token, url):
     """Statically decode and analyse a JWT for common weaknesses."""
-    import base64, json as json_mod
+    import base64
+    import json as json_mod
     findings = []
     try:
         parts = token.split(".")

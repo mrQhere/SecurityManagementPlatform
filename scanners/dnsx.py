@@ -20,12 +20,13 @@ DNSX_TIMEOUT = 180
 
 
 @register_scanner(name="DNSx", step_name="Running DNSx", depends_on=['Subfinder'], binary_name="dnsx", needs_binary=True, confidence=95)
-def run_dnsx_scan(url):
+def run_dnsx_scan(url, settings: dict = None):
     """
     Runs DNSx against the target domain for DNS record enumeration.
 
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("dnsx_path", "dnsx")
 

@@ -310,11 +310,18 @@ if ! $SKIP_VENV; then
         ok "pysqlcipher3 installed"
     fi
 
-    spin "Installing Python dependencies" \
+    if spin "Installing Python dependencies" \
         pip install -r "$SCRIPT_DIR/requirements.txt"
-
-    spin "Installing Playwright browser binaries (Evidence Capture)" \
-        playwright install chromium
+    then
+        ok "Dependencies installed"
+        
+        # Install playwright browsers if playwright is in requirements
+        if grep -q "playwright" "$SCRIPT_DIR/requirements.txt"; then
+            spin "Installing Playwright browser binaries" \
+                playwright install chromium
+            ok "Playwright binaries installed"
+        fi
+    fi
 fi
 
 # ── Go Security Tools ──────────────────────────────────────────────────────────

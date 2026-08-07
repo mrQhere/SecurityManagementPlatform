@@ -29,11 +29,12 @@ def extract_host_from_url(url):
         return url
 
 @register_scanner(name="Traceroute", step_name="Running Traceroute", depends_on=['Wayback Machine'], binary_name="traceroute", needs_binary=True, confidence=90)
-def run_traceroute(url):
+def run_traceroute(url, settings: dict = None):
     """
     Runs traceroute against the target.
     Returns a list of finding dicts.
     """
+    settings = settings or {}
     findings = []
     host = extract_host_from_url(url)
     settings = load_settings()
@@ -78,7 +79,7 @@ def run_traceroute(url):
         
     except FileNotFoundError:
         logger.warning(f"Traceroute not installed ('{bin_path}' not found).")
-        add_log_entry("WARNING", f"Traceroute not installed. Skipping.")
+        add_log_entry("WARNING", "Traceroute not installed. Skipping.")
         return None
     except subprocess.TimeoutExpired:
         process.kill()

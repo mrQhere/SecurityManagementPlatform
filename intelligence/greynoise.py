@@ -166,7 +166,6 @@ def classify_scan_ips(scan_findings: list, api_key: str = "") -> list:
     
     Returns: Enriched findings list
     """
-    import re
     ip_pattern = re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b')
 
     for finding in scan_findings:

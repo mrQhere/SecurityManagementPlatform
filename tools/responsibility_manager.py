@@ -1,4 +1,6 @@
-import json, os, hashlib
+import json
+import os
+import hashlib
 from datetime import datetime, timedelta
 
 # Path to responsibility flag file

@@ -23,7 +23,7 @@ _CATEGORY_MAP = {
 
 
 @register_scanner(name="WhatWeb", step_name="Running WhatWeb", depends_on=['HTTPx'], binary_name="whatweb", needs_binary=True, confidence=85)
-def run_whatweb_scan(url):
+def run_whatweb_scan(url, settings: dict = None):
     """
     Runs WhatWeb against a target URL.
 
@@ -32,6 +32,7 @@ def run_whatweb_scan(url):
 
     Returns [] on clean run, None if binary missing / hard crash.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("whatweb_path", "whatweb")
 

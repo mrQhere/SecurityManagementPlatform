@@ -193,7 +193,7 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
     result = None
     success = False
     try:
-        result = scan_func(url)
+        result = scan_func(url, scan_id=scan_id, settings=settings)
         if result is not None:
             success = True
             log_scanner_failure_status(scan_id, step_name, "Success")
@@ -1058,7 +1058,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
                 update_scan_status(scan_id, active_steps[0])
                 
         orchestrator = DAGOrchestrator(dag_plugins, max_workers=6, on_active_change=_on_active_change)
-        dag_results = orchestrator.run(cancel_event=cancel_event)
+        orchestrator.run(cancel_event=cancel_event)
         
         # Populate results for Phase 2 correlation
         for plugin in dag_plugins:
@@ -1070,7 +1070,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
             logger.info("\n[*] Initial sequence concluded. Re-attempting deferred failures with adaptive timeout balancing...")
             for step_name, scan_func, binary_name, process_fn in deferred_retry_queue:
                 logger.info(f"[*] Retrying failed/timed out step: {step_name} with 1.5x timeout...")
-                res, success = run_with_resilience(scan_id, step_name, scan_func, url, binary_name, attempt=2)
+                res, success = run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=2)
                 if success:
                     process_fn(res)
                     logger.info(f"[✅ RECOVERY] Fallback execution succeeded for step: {step_name}")

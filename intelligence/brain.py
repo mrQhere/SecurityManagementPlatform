@@ -92,7 +92,7 @@ def generate_ai_insights(findings):
     
     critical_cves = [f.get('cve_id') for f in findings if f.get('severity') == 'Critical' and f.get('cve_id')]
     
-    insight_md = f"### Neural Correlation Summary\n\n"
+    insight_md = "### Neural Correlation Summary\n\n"
     insight_md += f"The SMP Brain engine processed **{total_vulns}** total data points.\n"
     
     if severity_counts.get('Critical', 0) > 0 or severity_counts.get('High', 0) > 0:

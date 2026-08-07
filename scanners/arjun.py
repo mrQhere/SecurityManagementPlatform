@@ -20,19 +20,20 @@ ARJUN_TIMEOUT = 600  # 10 min
 
 
 @register_scanner(name="Arjun", step_name="Running Arjun", depends_on=['Dalfox'], binary_name="arjun", needs_binary=True, confidence=85)
-def run_arjun_scan(url):
+def run_arjun_scan(url, settings: dict = None):
     """
     Runs Arjun HTTP parameter discovery against the target URL.
 
     Returns list of finding dicts, [] if none found, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("arjun_path", "arjun")
 
     logger.info(f"Arjun Started: HTTP parameter discovery for {url}")
     add_log_entry("INFO", f"Arjun Started: Discovering HTTP parameters on {url}")
 
-    import tempfile, os
+    import tempfile
     out_file = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
     out_path = out_file.name
     out_file.close()

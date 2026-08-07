@@ -14,12 +14,13 @@ SQLMAP_TIMEOUT = 7200  # 2h
 
 
 @register_scanner(name="SQLMap", step_name="Running SQLMap", depends_on=['Wapiti'], binary_name="sqlmap", needs_binary=True, confidence=95)
-def run_sqlmap_scan(url):
+def run_sqlmap_scan(url, settings: dict = None):
     """
     Full SQLMap scan: form crawling, high level/risk, technique coverage,
     DB/table enumeration, tamper scripts for WAF bypass.
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings   = load_settings()
     sqlmap_bin = settings.get("sqlmap_path", "sqlmap")
 
@@ -98,7 +99,7 @@ def run_sqlmap_scan(url):
 def _parse_sqlmap_output(output_dir, stdout, url):
     """Parse sqlmap output directory and stdout for injection findings."""
     findings = []
-    hostname = urllib.parse.urlparse(url).hostname or ""
+    urllib.parse.urlparse(url).hostname or ""
 
     # Walk output_dir for per-domain log and JSON files
     for root, dirs, files in os.walk(output_dir):

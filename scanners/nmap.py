@@ -31,11 +31,12 @@ def extract_host_from_url(url):
         return url
 
 @register_scanner(name="Nmap", step_name="Running Nmap", depends_on=['Traceroute'], binary_name="nmap", needs_binary=True, confidence=95)
-def run_nmap_scan(url):
+def run_nmap_scan(url, settings: dict = None):
     """
     Runs Nmap against a URL's host.
     Returns a list of dicts: [{'port': 80, 'service': 'http', 'version': 'Apache 2.4', 'state': 'open'}]
     """
+    settings = settings or {}
     host = extract_host_from_url(url)
     settings = load_settings()
     nmap_bin = settings.get("nmap_path", "nmap")

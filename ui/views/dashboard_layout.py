@@ -729,7 +729,6 @@ class DashboardLayoutMixin:
 
     def _scan_all_targets(self):
         """Triggers a scan for all enabled targets."""
-        from tools.db_manager import get_targets
         from scanners.scan_runner import is_target_scanning
         targets = get_targets()
         enabled_targets = [t for t in targets if t.get("status") == "Enabled" and not is_target_scanning(t["id"])]
@@ -1252,7 +1251,7 @@ class DashboardLayoutMixin:
         auth_desc.setWordWrap(True)
         auth_layout.addWidget(auth_desc)
 
-        from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView as QHV
+        from PySide6.QtWidgets import QTableWidget, QHeaderView as QHV
         self.tbl_auth_headers = QTableWidget()
         self.tbl_auth_headers.setColumnCount(2)
         self.tbl_auth_headers.setHorizontalHeaderLabels(["Header Name", "Value"])
@@ -1368,8 +1367,9 @@ class DashboardLayoutMixin:
 
     def _build_reports_page(self):
         """Reports Viewer — lists all generated HTML/PDF reports on disk."""
-        import subprocess, platform
-        from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
+        import subprocess
+        import platform
+        from PySide6.QtWidgets import QTableWidget, QHeaderView
         from PySide6.QtGui import QColor
         from tools.config_manager import BASE_DIR
 
@@ -1444,8 +1444,9 @@ class DashboardLayoutMixin:
 
     def _refresh_reports_table(self):
         """Populate the Reports table from disk."""
-        import os, platform, subprocess, hashlib
-        from datetime import datetime
+        import os
+        import platform
+        import subprocess
         from tools.config_manager import BASE_DIR
         from PySide6.QtWidgets import QTableWidgetItem, QPushButton, QWidget, QHBoxLayout
 
@@ -1487,7 +1488,6 @@ class DashboardLayoutMixin:
             self.tbl_reports.setItem(row_idx, 0, num_item)
 
             # Col 1: filename (clickable-looking)
-            from PySide6.QtGui import QColor
             fname_item = QTableWidgetItem(fname)
             fname_item.setForeground(QColor("#88BBFF"))
             self.tbl_reports.setItem(row_idx, 1, fname_item)
@@ -1547,7 +1547,9 @@ class DashboardLayoutMixin:
 
     def _open_report(self, path):
         """Open a report file using the system default application."""
-        import subprocess, sys, os
+        import subprocess
+        import sys
+        import os
         try:
             if sys.platform.startswith("linux"):
                 subprocess.Popen(["xdg-open", path])
@@ -1872,38 +1874,67 @@ class DashboardLayoutMixin:
                     return [], []
                 conn = sqlite3.connect(GLOBAL_INTEL_DB)
                 conn.row_factory = sqlite3.Row
-                # Fetch up to 150 top intelligence heuristics
-                rows = conn.execute("SELECT cve_id, affected_component FROM global_heuristics ORDER BY observation_count DESC LIMIT 150").fetchall()
+                rows = conn.execute(
+                    "SELECT cve_id, affected_component FROM global_heuristics "
+                    "ORDER BY observation_count DESC LIMIT 150"
+                ).fetchall()
                 nodes = []
                 edges = []
-                # Map nodes
-                added_cves = []
                 for row in rows:
                     cve = row["cve_id"]
                     comp = row["affected_component"]
                     nodes.append({"id": cve, "label": cve})
-                    # Add component as a node too
                     if comp not in [n["id"] for n in nodes]:
                         nodes.append({"id": comp, "label": comp})
                     edges.append((cve, comp))
-                    added_cves.append(cve)
-                    
-                # Cross-link randomly to simulate complex correlation weights
-                for _ in range(50):
-                    if len(added_cves) > 2:
-                        c1 = random.choice(added_cves)
-                        c2 = random.choice(added_cves)
-                        if c1 != c2:
-                            edges.append((c1, c2))
-                            
-                self.neural_graph.load_data({"nodes": nodes, "edges": edges})
+                conn.close()
+                return nodes, edges
             except Exception as e:
                 logger.error(f"Failed to load Neural Brain data: {e}")
-            finally:
-                conn.close()
-                
-        import random
-        load_intel()
-        
-        layout.addWidget(self.neural_graph, 1)
+                return [], []
+
+        nodes, edges = load_intel()
+
+        if not nodes:
+            lbl_empty = QLabel(
+                "  No intelligence data yet.\n\n"
+                "  Run a scan to build the CVE knowledge graph.\n"
+                "  Each scan with confirmed CVEs populates this view."
+            )
+            lbl_empty.setStyleSheet(
+                "color: #444444; font-size: 14px; padding: 60px; "
+                "border: 1px dashed #222222; border-radius: 12px; background: #0D0D0D;"
+            )
+            lbl_empty.setAlignment(Qt.AlignCenter)
+            layout.addWidget(lbl_empty, 1)
+        else:
+            self.neural_graph.load_data({"nodes": nodes, "edges": edges})
+            layout.addWidget(self.neural_graph, 1)
+
+        # AI Insights panel — populated from most recent completed scan
+        try:
+            from intelligence.brain import generate_ai_insights
+            from tools.db_manager import get_findings_for_scan, get_db_connection
+            conn_main = get_db_connection()
+            latest_row = conn_main.execute(
+                "SELECT id FROM scans WHERE status = 'Completed' ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            conn_main.close()
+            if latest_row:
+                latest_findings = list(get_findings_for_scan(latest_row["id"]))
+                insight_text = generate_ai_insights(latest_findings)
+            else:
+                insight_text = "No completed scans yet. Run a scan to generate AI insights."
+        except Exception as ex:
+            insight_text = f"Intelligence engine unavailable: {ex}"
+
+        insights_card = self._make_card("AI Insights")
+        insights_label = QLabel(insight_text)
+        insights_label.setWordWrap(True)
+        insights_label.setStyleSheet(
+            "color: #AAAAAA; font-size: 13px; line-height: 1.6; padding: 4px;"
+        )
+        insights_card.layout().addWidget(insights_label)
+        layout.addWidget(insights_card)
+
         return page

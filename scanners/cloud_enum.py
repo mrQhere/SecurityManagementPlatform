@@ -21,12 +21,13 @@ CLOUDENUM_TIMEOUT = 240
 
 
 @register_scanner(name="Cloud Enum", step_name="Running Cloud Enum", depends_on=['ParamSpider'], binary_name="cloud_enum", needs_binary=True, confidence=85)
-def run_cloud_enum_scan(url):
+def run_cloud_enum_scan(url, settings: dict = None):
     """
     Runs cloud_enum to discover public cloud assets for the target domain/keyword.
 
     Returns list of finding dicts, [] if none found, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("cloud_enum_path", "cloud-enum")
 
@@ -149,7 +150,7 @@ def run_cloud_enum_scan(url):
 
         if not findings and not (s3_buckets or gcs_buckets or azure_blobs or azure_sites):
             logger.info(f"Cloud Enum Completed: No cloud assets found for '{keywords}'.")
-            add_log_entry("INFO", f"Cloud Enum Completed: No cloud assets found.")
+            add_log_entry("INFO", "Cloud Enum Completed: No cloud assets found.")
             return []
 
         logger.info(f"Cloud Enum Completed: {len(findings)} cloud asset findings.")

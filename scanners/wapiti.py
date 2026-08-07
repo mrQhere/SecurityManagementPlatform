@@ -13,11 +13,12 @@ logger = logging.getLogger("smp.scan")
 WAPITI_TIMEOUT = 7200
 
 @register_scanner(name="Wapiti", step_name="Running Wapiti", depends_on=['Tech Fingerprint'], binary_name="wapiti", needs_binary=True, confidence=90)
-def run_wapiti_scan(url):
+def run_wapiti_scan(url, settings: dict = None):
     """
     Runs Wapiti scan on the target URL.
     Returns a list of dicts representing findings.
     """
+    settings = settings or {}
     settings = load_settings()
     wapiti_bin = settings.get("wapiti_path", "wapiti")
     

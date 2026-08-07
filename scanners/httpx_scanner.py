@@ -11,12 +11,13 @@ HTTPX_TIMEOUT = 120
 
 
 @register_scanner(name="HTTPx", step_name="Running HTTPx", depends_on=[], binary_name="httpx", needs_binary=True, confidence=95)
-def run_httpx_scan(url):
+def run_httpx_scan(url, settings: dict = None):
     """
     Full HTTP probe using httpx — extracts tech stack, TLS, headers, CDN, JARM,
     response hashing, redirect chains, and favicon hash.
     Returns enriched probe dict + derived findings list.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("httpx_path", "httpx")
 

@@ -458,7 +458,7 @@ class TestSMPComponents(unittest.TestCase):
 
             # Check findings were populated from at least one successful scanner
             cursor.execute("SELECT * FROM findings WHERE scan_id = ?", (scan_rec["id"],))
-            findings = cursor.fetchall()
+            cursor.fetchall()
             # We don't strictly require specific findings because the mocks may be
             # patched after GenericPlugin resolves func names — just ensure the
             # pipeline ran end-to-end without crashing

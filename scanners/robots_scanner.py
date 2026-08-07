@@ -107,7 +107,7 @@ def run_robots_scan(url):
                         f"can use to target admin/internal areas:\n\n"
                         + "\n".join(f"  {p}" for p in sensitive_found[:20])
                         + "\n\nRecommendation: Remove sensitive paths from robots.txt — "
-                        f"'Disallow' does NOT prevent access, it only instructs search crawlers."
+                        "'Disallow' does NOT prevent access, it only instructs search crawlers."
                     ),
                     "confidence": 80,
                 })

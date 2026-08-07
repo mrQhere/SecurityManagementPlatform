@@ -27,12 +27,13 @@ _INJECTION_PATTERNS = [
 
 
 @register_scanner(name="Commix", step_name="Running Commix", depends_on=['Katana'], binary_name="commix", needs_binary=True, confidence=95)
-def run_commix_scan(url):
+def run_commix_scan(url, settings: dict = None):
     """
     Runs Commix command injection scanner against the target URL.
 
     Returns list of finding dicts, [] if clean, None if binary missing.
     """
+    settings = settings or {}
     settings = load_settings()
     bin_path = settings.get("commix_path", "commix")
 

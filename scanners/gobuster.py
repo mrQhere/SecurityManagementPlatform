@@ -24,7 +24,7 @@ import subprocess
 logger = logging.getLogger("smp.scan")
 
 
-def run_scan(target_url: str):
+def run_scan(target_url: str, scan_id: int = 0, settings: dict = None):
     """
     Run Gobuster against a target in directory, DNS, and vhost modes.
 
@@ -36,6 +36,7 @@ def run_scan(target_url: str):
     Returns:
         dict with keys: success (bool), data (list of findings), raw_output (str)
     """
+    settings = settings or {}
     from tools.narrative_logger import emit_scanner_start, emit_finding
     emit_scanner_start(scan_id, "gobuster")
 

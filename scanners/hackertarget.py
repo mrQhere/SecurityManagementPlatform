@@ -42,7 +42,7 @@ def run_hackertarget_scan(url):
             })
             
             logger.info(f"HackerTarget Completed: {len(lines)} records found.")
-            add_log_entry("INFO", f"HackerTarget Completed: Mapping successful.")
+            add_log_entry("INFO", "HackerTarget Completed: Mapping successful.")
         else:
             logger.warning(f"HackerTarget API error: {response.status_code}")
             

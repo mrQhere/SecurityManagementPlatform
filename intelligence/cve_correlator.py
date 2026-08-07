@@ -195,7 +195,7 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                     (match_query,)
                 )
                 candidates = [dict(row) for row in cursor.fetchall()]
-            except Exception as e:
+            except Exception:
                 # Fallback: older schema without affected_products/cisa_known_exploited
                 try:
                     cursor.execute(
@@ -323,7 +323,7 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                         cvss_score=cvss,
                         owasp_category=owasp_cat,
                     )
-                except Exception as e:
+                except Exception:
                     # Retry without optional columns (older schema)
                     try:
                         add_finding(
