@@ -89,12 +89,12 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
     def __init__(self):
         super().__init__()
         import json
-        version = "V9.3.3"
+        version = "V9.3.4"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V9.3.3")
+                version = metadata.get("version", "V9.3.4")
         except Exception:
             pass
         self.setWindowTitle(f"Security Management Platform • {version}")
