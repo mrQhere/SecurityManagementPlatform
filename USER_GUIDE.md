@@ -485,6 +485,10 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 - **Cross-Platform Hardening**: Audited all 28 internal tools and enforced strict `encoding="utf-8"` standard for seamless Windows compatibility.
 - **Tooling Overhauls**: Rebuilt `bump_version.py` into a robust CLI with auto-bumping (`--minor`/`--major`) and `--dry-run` protections, and enabled `system_checker.py` for standalone execution.
 - **Engine Robustness**: Hardened the module registry by implementing a thread-safe `EventBus` class wrapper to prevent plugin ImportErrors, and upgraded the plugin generator (`create_scanner.py`) to enforce the strict `scan(target, scan_id, settings)` signature, eradicating `NameError` crashes in custom scanners.
+- **Air-Gapped Workstation Sync**: The intelligence brain now natively supports exporting and importing the `global_intel.db` via portable `.tar.gz` archives for physically isolated, air-gapped machine synchronization.
+- **Neural Graph Filtering**: Analysts can now dynamically filter the Force-Directed Graph by AI Centrality Score using a new UI slider, instantly isolating "Linchpin" vulnerabilities by dissolving low-impact noise.
+- **V10.0 API Client Foundation**: Prepared the application for distributed decoupling by establishing `ui/api_client.py`, which provides a robust HTTP/JWT interface for the UI to speak directly with the backend FastAPI engine.
+- **CI/CD Reliability**: Eradicated legacy linting errors (E701, E702, E402) and resolved GitHub Dependency Graph parsing failures caused by unpinned `git+https` pip dependencies, ensuring the automated CodeQL and SMP CI pipelines pass 100%.
 - Fixed scattered semantic versioning (V7 and V9.3.3 discrepancies) globally.
 
 **V9.3.4 (past)**
