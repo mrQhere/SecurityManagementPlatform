@@ -45,11 +45,11 @@ def generate_compendium():
             content += f"The `{filename}` module serves as the primary execution wrapper for the `{name}` tool. Because this tool relies on `{deps}`, the Kahn's Topological Sort algorithm explicitly prevents its execution until those dependencies successfully exit with a `0` status code. If `{binary}` is not present in the system `PATH` or the `bin/` directory, the orchestrator will automatically mark this node as `SKIPPED`.\n\n"
             
             # Find the command building logic if possible
-            cmd_match = re.search(r'def build_.*?\s*return\s*\[(.*?)\]', code, re.DOTALL)
+            cmd_match = re.search(r'def build_.*?\s*return\s*(\[.*?\])', code, re.DOTALL)
             if cmd_match:
-                cmd = cmd_match.group(1).strip().replace('\n', ' ')
+                cmd = cmd_match.group(1).strip()
                 content += "### Subprocess Command Structure\n"
-                content += "```python\n# Dynamic CLI Generation\n[" + cmd + "]\n```\n\n"
+                content += "```python\n# Dynamic CLI Generation\n" + cmd + "\n```\n\n"
             
             content += "### DAG Memory Profiling\n"
             content += f"Upon execution, the standard output of `{name}` is intercepted by the `SubprocessWatchdog`. The execution thread calculates the delta between the start epoch and end epoch, updating the `dag_state` SQLite table in real-time. Results are piped into the Neural Brain matrix, weighted by the base confidence score of {confidence}.\n\n"
