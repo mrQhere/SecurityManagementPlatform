@@ -49,7 +49,8 @@ def _get_cpu_percent() -> float:
             return idle, total
 
         idle1, total1 = _read_stat()
-        import time; time.sleep(0.3)
+        import time
+        time.sleep(0.3)
         idle2, total2 = _read_stat()
         d_idle = idle2 - idle1
         d_total = total2 - total1

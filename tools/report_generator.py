@@ -1648,8 +1648,11 @@ def _generate_html_fallback(filepath, ctx):
     risk_score = risk.get("score", 0) if isinstance(risk, dict) else 0
     risk_label = risk.get("label", "Low") if isinstance(risk, dict) else "Low"
 
-    crit_n = counts["Critical"]; high_n = counts["High"]
-    med_n  = counts["Medium"];   low_n  = counts["Low"]; info_n = counts["Info"]
+    crit_n = counts["Critical"]
+    high_n = counts["High"]
+    med_n  = counts["Medium"]
+    low_n  = counts["Low"]
+    info_n = counts["Info"]
 
     # ── Derive executive summary text dynamically ────────────────────────────
     if total_f == 0:
