@@ -474,9 +474,46 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 
 ---
 
-## 13 · Roadmap
+## 13 · Platform Evolution Timeline
 
-**V9.4.0 (current)**
+The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
+
+```text
+       [ V7.0 ]  Base Standardization
+          │      (Unified execution scripts and basic GUI)
+          ╰───────────╮
+                      │
+      Intel Audit  [ V9.2.4 ]
+                      │      (Seed data purged, SQLCipher AES-256 fixed)
+          ╭───────────╯
+          │
+       [ V9.3.0 ]  Scanner Overhaul & UI Fixes
+          │        (F821 crashes patched in 24 tools, UI styling hardened)
+          ╰───────────╮
+                      │
+   Installer Sync  [ V9.3.1 ]
+                      │      (Debian, Arch, RHEL multi-distro installers)
+          ╭───────────╯
+          │
+       [ V9.3.2 ]  Exploitation Capability Pass
+          │        (SSRF, LFI, and OSINT capabilities restored)
+          ╰───────────╮
+                      │
+         CISA KEV  [ V9.3.3 ]
+                      │      (Regenerated intelligence from live KEV catalog)
+          ╭───────────╯
+          │
+       [ V9.3.4 ]  Architecture & Tooling Hardening
+          │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
+          ╰───────────╮
+                      │
+     Neural Graph  [ V9.4.0 ]  (CURRENT)
+     & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
+                      │       Air-gapped sync, V10 API Client foundation)
+                      V
+```
+
+### V9.4.0 (current)
 - **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
