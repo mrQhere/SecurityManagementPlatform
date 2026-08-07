@@ -146,6 +146,33 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         self.poll_updates()
         logger.info("Program Started")
 
+        # ── Startup: notify user if interrupted scans are being resumed ──
+        def _check_resume_on_startup():
+            try:
+                from tools.db_manager import get_db_connection
+                conn = get_db_connection()
+                rows = conn.execute(
+                    "SELECT COUNT(*) as n FROM scans WHERE status = 'Paused'"
+                ).fetchone()
+                conn.close()
+                n = rows["n"] if rows else 0
+                if n > 0:
+                    scan_word = "scan" if n == 1 else "scans"
+                    msg = QMessageBox(self)
+                    msg.setWindowTitle("Resuming Interrupted Scans")
+                    msg.setIcon(QMessageBox.Information)
+                    msg.setText(f"<b>▶  Resuming {n} interrupted {scan_word}</b>")
+                    msg.setInformativeText(
+                        f"SMP found {n} {scan_word} that were paused when the application "
+                        "was last closed.\n\nThey will resume from where they left off."
+                    )
+                    msg.setStandardButtons(QMessageBox.Ok)
+                    msg.exec()
+            except Exception:
+                pass
+
+        QTimer.singleShot(800, _check_resume_on_startup)
+
     # ─── Graceful Close ────────────────────────────────────────────────────────
 
     def closeEvent(self, event):
