@@ -41,7 +41,7 @@ def _get_cpu_percent() -> float:
     try:
         # Fallback: read /proc/stat (Linux only)
         def _read_stat():
-            with open("/proc/stat") as f:
+            with open("/proc/stat", encoding="utf-8") as f:
                 line = f.readline()
             vals = list(map(int, line.split()[1:8]))
             idle = vals[3]
@@ -67,7 +67,7 @@ def _get_free_ram_mb() -> float:
     except ImportError:
         pass
     try:
-        with open("/proc/meminfo") as f:
+        with open("/proc/meminfo", encoding="utf-8") as f:
             lines = f.readlines()
         mem = {}
         for line in lines:
@@ -174,3 +174,16 @@ def check_system_resources(settings: dict = None) -> dict:
         logger.info(f"[SystemChecker] All system checks passed. CPU={cpu:.1f}% RAM={ram_mb:.0f}MB Disk={disk_gb:.2f}GB")
 
     return result
+
+if __name__ == "__main__":
+    import json
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    res = check_system_resources()
+    if res["ok"]:
+        print("\n✅ System Checks Passed!")
+    else:
+        print("\n❌ System Checks Failed or Warned:")
+        for w in res["warnings"]:
+            print(f"  {w}")
+    print("\nMetrics:")
+    print(json.dumps(res["metrics"], indent=2))

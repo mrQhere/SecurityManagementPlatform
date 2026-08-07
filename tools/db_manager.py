@@ -2135,7 +2135,7 @@ def trigger_scheduled_system_backup_sequence():
         _evaluate_vulnerability_growth_thresholds()
         return True
     except Exception as data_err:
-        with open("logs/error.log", "a") as telemetry_errs:
+        with open("logs/error.log", "", encoding="utf-8") as telemetry_errs:
             telemetry_errs.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Backup processing error context: {str(data_err)}\n")
         return False
 
@@ -2175,7 +2175,7 @@ def _evaluate_vulnerability_growth_thresholds():
         
         # Flag structural spikes matching infrastructure breach indicators
         if total_severe_vulns > 75:
-            with open("logs/scan.log", "a") as warning_stream:
+            with open("logs/scan.log", "", encoding="utf-8") as warning_stream:
                 warning_stream.write(f"[⚠️ WARNING ALERT] Structural tracking indicators show high risk numbers: Count={total_severe_vulns}\n")
     except sqlite3.Error as e:
         logger.error(f"Database error: {e}")

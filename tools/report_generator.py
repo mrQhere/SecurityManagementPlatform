@@ -65,7 +65,7 @@ _P = {
 
 if os.path.exists(_REPORT_TEMPLATE_CONFIG_PATH):
     try:
-        with open(_REPORT_TEMPLATE_CONFIG_PATH, "r") as f:
+        with open(_REPORT_TEMPLATE_CONFIG_PATH, "", encoding="utf-8") as f:
             _TEMPLATE_CONFIG = json.load(f)
             if "palette" in _TEMPLATE_CONFIG:
                 _P.update(_TEMPLATE_CONFIG["palette"])
@@ -408,7 +408,7 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path)).get("version", "V9.3.4") if os.path.exists(_meta_path) else "V9.3.4"
+        _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.3.4") if os.path.exists(_meta_path) else "V9.3.4"
     except Exception:
         _smp_ver = "V9.3.4"
 
@@ -603,9 +603,9 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path)).get("version", "V9.3.4") if os.path.exists(_meta_path) else "V9.3.4"
+        _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.3.4") if os.path.exists(_meta_path) else "V9.3.4"
     except Exception:
-        _smp_version = "V9.3.4"
+        _smp_version = "--help"
 
     cover_meta = [
         ("Document Title",           "Security Assessment Report"),
@@ -1633,7 +1633,7 @@ def _generate_html_fallback(filepath, ctx):
     c.get("hash16", "")
     meta_b = c.get("meta_block", "")
     h_tok  = c.get("hash_token", "")
-    smp_ver = c.get("smp_version", "V9.3.4")
+    smp_ver = c.get("smp_version", "--help")
 
     target  = c.get("target", {})
     company = target.get("company_name") or c["settings"].get("company_name") or "—"

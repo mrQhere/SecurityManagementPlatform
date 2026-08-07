@@ -48,7 +48,7 @@ _ETHERNET_OUIS = [
 def _get_primary_interface():
     """Detect the primary active network interface (default route)."""
     try:
-        with open("/proc/net/route", "r") as f:
+        with open("/proc/net/route", "", encoding="utf-8") as f:
             for line in f.readlines()[1:]:
                 parts = line.strip().split()
                 if len(parts) >= 2 and parts[1] == "00000000":
@@ -79,7 +79,7 @@ def _get_current_mac(iface):
     """Read the current MAC address of an interface."""
     try:
         path = f"/sys/class/net/{iface}/address"
-        with open(path, "r") as f:
+        with open(path, "", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
         pass

@@ -61,7 +61,7 @@ def get_baseline_ports(target_id: int) -> list:
     try:
         cache_path = _cache_path(str(target_id))
         if os.path.exists(cache_path):
-            with open(cache_path, "r") as f:
+            with open(cache_path, "", encoding="utf-8") as f:
                 data = json.load(f)
             return data.get("ports", [])
     except Exception as e:
@@ -109,7 +109,7 @@ def set_baseline_ports(target_id: int, target_url: str, ports: list):
     # Fallback: file cache (always write, even if DB succeeded)
     try:
         cache_path = _cache_path(target_url)
-        with open(cache_path, "w") as f:
+        with open(cache_path, "", encoding="utf-8") as f:
             json.dump({"target_id": target_id, "url": target_url, "ports": ports, "updated_at": now}, f, indent=2)
     except Exception as e:
         logger.error(f"[Baseline] File cache write failed: {e}")
