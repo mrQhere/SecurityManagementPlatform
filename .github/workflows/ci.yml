@@ -43,7 +43,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
             libsqlcipher-dev \
-            libsqlcipher0t64 \
             nmap \
             perl \
             git \
