@@ -8,9 +8,25 @@ The primary requirement for the orchestration engine was the ability to interfac
 
 Python (specifically version 3.10 and above) was selected as the foundational language over compiled alternatives such as C++ or Rust. While compiled languages offer superior execution speed, orchestration platforms are inherently I/O bound (waiting on network responses) rather than CPU bound. The minor latency introduced by the Python interpreter is negligible compared to the latency of a network request. Furthermore, Python’s expansive standard library—specifically the `subprocess`, `concurrent.futures`, and `threading` modules—provides a robust, high-level abstraction over OS-level process management, which is critical for the stability of the platform.
 
-For the graphical interface, PySide6 (the official Python bindings for the Qt framework) was chosen over web-based wrappers such as Electron. Electron applications bundle a complete Chromium rendering engine, resulting in severe memory overhead. Qt operates via native C++ rendering, allowing SMP to provide a complex, real-time reactive interface while consuming less than 150MB of system RAM at idle.
+## 3.2 Repository Architecture and Subsystem Mapping
 
-## 3.2 The Decentralized Scanner Registry
+To maintain the principles of modularity, the SMP codebase is strictly segregated into physical directory subsystems, each governed by specific operational responsibilities.
+
+```text
+SecurityManagementPlatform/
+├── api/               # FastAPI REST backend (server.py, auth.py) handling headless orchestration.
+├── config/            # JSON definitions for hardening rules, metadata, and reporting schemas.
+├── database/          # Persistent SQLite databases (security.db encrypted via SQLCipher).
+├── intelligence/      # Neural Brain heuristics (brain.py), and external API mappers (NVD, EPSS).
+├── scanners/          # 50+ standalone security plugins and the core DAG execution pipeline.
+├── tools/             # Operational utilities (encryption_manager, risk_scorer, report_generator).
+├── ui/                # PySide6 GUI components, views, and event controllers.
+└── main.py            # Unified entrypoint for both graphical and headless API execution.
+```
+
+Each subsystem operates independently. The `scanners/` directory, for instance, has no inherent knowledge of the `ui/` directory. They are bridged entirely by the `tools/event_bus.py` subsystem.
+
+## 3.3 The Decentralized Scanner Registry
 
 A fundamental design flaw in many security platforms is the tight coupling between the execution logic and the parser logic. In SMP, the integration of third-party tools is abstracted through a decentralized module registry.
 
