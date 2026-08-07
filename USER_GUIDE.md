@@ -481,8 +481,10 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
 - **Event-Driven Reactivity**: Graph now recalculates and visually re-renders in real time via the unified `EventBus`.
+- **Vulnerability Deduplication**: Upgraded `finding_deduplicator.py` with Levenshtein fuzzy matching (≥0.82 similarity) and vulnerability aliasing (e.g., merging "SQLi" and "SQL Injection") to aggressively reduce scanner noise.
+- **Cross-Platform Hardening**: Audited all 28 internal tools and enforced strict `encoding="utf-8"` standard for seamless Windows compatibility.
+- **Tooling Overhauls**: Rebuilt `bump_version.py` into a robust CLI with auto-bumping (`--minor`/`--major`) and `--dry-run` protections, and enabled `system_checker.py` for standalone execution.
 - Fixed scattered semantic versioning (V7 and V9.3.3 discrepancies) globally.
-- Hardened all internal tools (`bump_version.py`, `system_checker.py`, `finding_deduplicator.py`).
 
 **V9.3.4 (past)**
 - Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
