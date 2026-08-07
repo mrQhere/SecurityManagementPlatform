@@ -26,6 +26,9 @@ def compile_thesis():
         ("{{ CHAPTER_6 }}", "06_evaluation.md"),
         ("{{ CHAPTER_7 }}", "07_discussion_conclusion.md"),
         ("{{ CHAPTER_8 }}", "08_bibliography.md"),
+        ("{{ CHAPTER_9 }}", "09_system_integrity.md"),
+        ("{{ APPENDIX_A }}", "10_scanner_compendium.md"),
+        ("{{ APPENDIX_B }}", "11_database_schemas.md"),
     ]
     
     for tag, filename in chapter_files:
@@ -40,7 +43,7 @@ def compile_thesis():
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(content)
         
-    print(f"Successfully compiled academic thesis to {output_file}")
+    print(f"Successfully compiled massive academic thesis to {output_file}")
 
 if __name__ == "__main__":
     compile_thesis()
