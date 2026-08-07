@@ -65,7 +65,7 @@ _P = {
 
 if os.path.exists(_REPORT_TEMPLATE_CONFIG_PATH):
     try:
-        with open(_REPORT_TEMPLATE_CONFIG_PATH, "", encoding="utf-8") as f:
+        with open(_REPORT_TEMPLATE_CONFIG_PATH, "r", encoding="utf-8") as f:
             _TEMPLATE_CONFIG = json.load(f)
             if "palette" in _TEMPLATE_CONFIG:
                 _P.update(_TEMPLATE_CONFIG["palette"])
@@ -697,7 +697,9 @@ def _generate_vapt_pdf(filepath, ctx):
         story.append(Paragraph("<b><font color='#00aaff'>Neural Correlation Engine (Brain)</font></b>", st["h3"]))
         story.append(_spacer(4))
         # Convert simple markdown to reportlab paragraph
-        insights_html = c["ai_insights"].replace('\n', '<br/>').replace('**', '<b>').replace('`', '<i>')
+        import re
+        insights_html = c["ai_insights"].replace('\n', '<br/>').replace('`', '<i>')
+        insights_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', insights_html)
         story.append(Paragraph(insights_html, st["body"]))
         story.append(_spacer(10))
         story.append(_hr())

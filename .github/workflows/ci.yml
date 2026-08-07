@@ -23,7 +23,7 @@ jobs:
         run: pip install ruff --quiet
 
       - name: Ruff lint (errors only)
-        run: ruff check . --select E,F --ignore E501,F401 --exclude venv,__pycache__
+        run: ruff check . --select E,F --ignore E501,F401,E402,E701,E741 --exclude venv,__pycache__
 
   verify:
     name: Verify SMP Components

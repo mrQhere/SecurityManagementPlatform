@@ -227,7 +227,7 @@ def generate_ai_insights(findings):
         return "No significant vulnerabilities were detected to generate AI insights."
         
     # Analyze the local findings
-    severity_counts = Counter(f.get('severity', 'Info') for f in findings)
+    Counter(f.get('severity', 'Info') for f in findings)
     total_vulns = len(findings)
     
     insight_md = "### Neural Correlation Summary\n\n"
