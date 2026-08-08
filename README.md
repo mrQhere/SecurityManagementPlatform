@@ -124,3 +124,14 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 
 Use only against systems you have written authorisation to test.  
 Maintained by [@mrQhere](https://github.com/mrQhere) · © mrQhere. See [LICENSE](LICENSE).
+
+
+## About
+
+Built and maintained by mrQhere. This started as a learning project
+and turned into something I actually care about getting right — the
+mistakes are in the git history on purpose, not hidden, because I'd
+rather someone learn from how this got fixed than think it was
+perfect from the start. If you're using this for real work, read
+SECURITY.md first and don't trust anything blindly, including this
+note. Good luck.
