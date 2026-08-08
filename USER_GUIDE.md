@@ -4,7 +4,7 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.0 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.1 · Stable                      ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
@@ -379,6 +379,10 @@ controls = map_finding_to_controls("SQL Injection", "CWE-89")
 
 ## 10 · Troubleshooting
 
+### apt update / apt install connection failed (archive.ubuntu.com)
+If you are on a fresh VM and `setup.sh` fails with an apt connection error, your corporate antivirus or network firewall is likely intercepting port 80/443 traffic.
+**Fix**: Add network exceptions in your AV/firewall for `archive.ubuntu.com`, `security.ubuntu.com`, and `github.com`.
+
 ### Fatal: pysqlcipher3 not installed
 ```bash
 # Ubuntu 24.04+
@@ -481,7 +485,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
 
 ```text
-       [ V9.4.0 ]  Base Standardization
+       [ V9.4.1 ]  Base Standardization
           │      (Unified execution scripts and basic GUI)
           ╰───────────╮
                       │
@@ -501,21 +505,21 @@ The platform has undergone a massive architectural evolution from a simple scrip
           │        (SSRF, LFI, and OSINT capabilities restored)
           ╰───────────╮
                       │
-         CISA KEV  [ V9.4.0 ]
+         CISA KEV  [ V9.4.1 ]
                       │      (Regenerated intelligence from live KEV catalog)
           ╭───────────╯
           │
-       [ V9.4.0 ]  Architecture & Tooling Hardening
+       [ V9.4.1 ]  Architecture & Tooling Hardening
           │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
           ╰───────────╮
                       │
-     Neural Graph  [ V9.4.0 ]  (CURRENT)
+     Neural Graph  [ V9.4.1 ]  (CURRENT)
      & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
                       │       Air-gapped sync, V10 API Client foundation)
                       V
 ```
 
-### V9.4.0 (current)
+### V9.4.1 (current)
 - **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).

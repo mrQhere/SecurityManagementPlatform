@@ -379,7 +379,7 @@ The development of the Security Management Platform (SMP) demonstrates the viabi
 
 ## 7.1 System Limitations
 
-Despite the significant algorithmic optimizations achieved in V9.4.0, the platform is currently constrained by its monolithic physical deployment model. 
+Despite the significant algorithmic optimizations achieved in V9.4.1, the platform is currently constrained by its monolithic physical deployment model. 
 
 Because the Directed Acyclic Graph (DAG) orchestration engine dispatches tasks to a local `ProcessPoolExecutor`, the platform's concurrency limit is strictly bound by the physical CPU cores and RAM available on the analyst's host machine. While a standard workstation (e.g., 8 cores, 16GB RAM) is sufficient for evaluating a /24 subnet (254 hosts), executing a comprehensive penetration test against a global enterprise footprint (e.g., a /16 subnet containing 65,536 hosts) would result in a severe memory exhaustion event (OOM Killer) as hundreds of concurrent `masscan` and `nuclei` processes overwhelm the local kernel scheduler.
 
@@ -1287,7 +1287,7 @@ Upon execution, the standard output of `ZAP` is intercepted by the `SubprocessWa
 
 # Appendix B: Database Schemas and Data Dictionaries
 
-To ensure localized data sovereignty and high-performance querying, the Security Management Platform (SMP) persists state across three discrete SQLite databases. This appendix documents the formal Data Definition Language (DDL) and schema architecture utilized in V9.4.0.
+To ensure localized data sovereignty and high-performance querying, the Security Management Platform (SMP) persists state across three discrete SQLite databases. This appendix documents the formal Data Definition Language (DDL) and schema architecture utilized in V9.4.1.
 
 ## B.1 The Encrypted Pentest Database (`security.db`)
 

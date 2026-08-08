@@ -108,7 +108,15 @@ $SKIP_TOOLS && warn "--skip-tools: Go binary downloads will be skipped"
 # ── Package manager helpers ───────────────────────────────────────────────────
 pkg_update() {
     case "$PKG_MGR" in
-        apt)    sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq ;;
+        apt)
+            local retries=5
+            while (( retries > 0 )); do
+                if sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq; then return 0; fi
+                sleep 5
+                ((retries--))
+            done
+            return 1
+            ;;
         dnf)    sudo dnf makecache -q ;;
         pacman) sudo pacman -Sy --noconfirm ;;
         zypper) sudo zypper refresh -q ;;
@@ -118,7 +126,15 @@ pkg_update() {
 
 pkg_install() {
     case "$PKG_MGR" in
-        apt)    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" ;;
+        apt)
+            local retries=5
+            while (( retries > 0 )); do
+                if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"; then return 0; fi
+                sleep 5
+                ((retries--))
+            done
+            return 1
+            ;;
         dnf)    sudo dnf install -y -q "$@" ;;
         pacman) sudo pacman -S --noconfirm --needed "$@" ;;
         zypper) sudo zypper install -y -q "$@" ;;
@@ -211,7 +227,10 @@ if [[ "$OS" != "Darwin" ]]; then
 fi
 
 # ── System packages ────────────────────────────────────────────────────────────
-spin "Updating package index" pkg_update
+if ! spin "Updating package index" pkg_update; then
+    [[ "$PKG_MGR" == "apt" ]] && fail "apt update failed. If this is a fresh VM, check your AV/firewall network exceptions for archive.ubuntu.com and github.com."
+    exit 1
+fi
 
 CANONICAL_PKGS=(python3 python3-pip python3-venv python3-dev
                 libsqlcipher-dev libsqlcipher0 build-essential
@@ -235,7 +254,10 @@ for cpkg in "${CANONICAL_PKGS[@]}"; do
 done
 
 if [[ ${#PKGS_TO_INSTALL[@]} -gt 0 ]]; then
-    spin "Installing system packages" pkg_install "${PKGS_TO_INSTALL[@]}"
+    if ! spin "Installing system packages" pkg_install "${PKGS_TO_INSTALL[@]}"; then
+        [[ "$PKG_MGR" == "apt" ]] && fail "apt install failed. If this is a fresh VM, check your AV/firewall network exceptions for archive.ubuntu.com and github.com."
+        exit 1
+    fi
 else
     ok "System packages already installed"
 fi
@@ -428,7 +450,7 @@ fi
 
 # ── WPScan ─────────────────────────────────────────────────────────────────────
 if ! have wpscan; then
-    if gem install wpscan --no-user-install >> "$LOG_FILE" 2>&1 && have wpscan; then
+    if sudo gem install wpscan --no-user-install >> "$LOG_FILE" 2>&1 && have wpscan; then
         ok "wpscan installed via gem"
     elif have docker; then
         printf '#!/usr/bin/env bash\nexec docker run --rm --network=host wpscanteam/wpscan "$@"\n' \

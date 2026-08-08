@@ -1,5 +1,5 @@
 """
-In-Process Event Bus V9.4.0
+In-Process Event Bus V9.4.1
 ==========================
 Thread-safe publish/subscribe event bus replacing the old unsafe UDP IPC socket.
 Allows decoupled communication between scanner threads and the UI.

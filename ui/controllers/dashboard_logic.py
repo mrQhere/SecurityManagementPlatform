@@ -633,7 +633,7 @@ class DashboardLogicMixin:
             self.txt_qa_reviewer.setText(settings.get("qa_reviewer", "QA Manager"))
         self.txt_report_email.setText(settings.get("report_email", ""))
         self.chk_zap_enabled.setChecked(settings.get("zap_enabled", False))
-        # ── V9.4.0 — Load API Keys & Proxies ──
+        # ── V9.4.1 — Load API Keys & Proxies ──
         if hasattr(self, "txt_github_token"):
             self.txt_github_token.setText(settings.get("github_token", ""))
         if hasattr(self, "txt_http_proxy"):
@@ -659,7 +659,7 @@ class DashboardLogicMixin:
         current_settings["report_email"] = report_email
         current_settings["zap_enabled"] = self.chk_zap_enabled.isChecked()
 
-        # ── V9.4.0 — Save API Keys & Proxies ──
+        # ── V9.4.1 — Save API Keys & Proxies ──
         if hasattr(self, "txt_github_token"):
             current_settings["github_token"] = self.txt_github_token.text().strip()
         if hasattr(self, "txt_http_proxy"):
@@ -716,7 +716,7 @@ class DashboardLogicMixin:
                 QMessageBox.warning(
                     self, "No Embedded Hash",
                     f"No SMP verification hash was found in this file.\n\n"
-                    f"This may be an older report (pre-V9.4.0) or not an SMP report.\n\n"
+                    f"This may be an older report (pre-V9.4.1) or not an SMP report.\n\n"
                     f"Raw file SHA256:\n{raw_file_hash}"
                 )
                 return

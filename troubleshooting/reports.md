@@ -1,4 +1,4 @@
-# 📄 Reports & SBOM Troubleshooting — SMP V9.4.0
+# 📄 Reports & SBOM Troubleshooting — SMP V9.4.1
 
 ## PDF not generated: ReportLab not installed
 

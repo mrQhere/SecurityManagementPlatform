@@ -40,7 +40,7 @@ except ImportError:
     logger.warning("ReportLab not available. PDF reports will not be generated.")
 
 
-# ── V9.4.0 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
+# ── V9.4.1 — Extract ReportLab PDF template to JSON/YAML config ─────────────────
 # Load visual constants (colors, fonts, sizes, text) from config to allow custom branding
 _REPORT_TEMPLATE_CONFIG_PATH = os.path.join(BASE_DIR, "config", "report_template.json")
 _TEMPLATE_CONFIG = {}
@@ -153,7 +153,7 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.setFont(_get_font("primary", "Helvetica"), 7)
         canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
         
-        # ── V9.4.0 — Dynamic config text footer ──
+        # ── V9.4.1 — Dynamic config text footer ──
         right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
         canvas.drawRightString(W - 18, 10, right_text)
 
@@ -168,7 +168,7 @@ def _styles():
     def S(name, **kw):
         return ParagraphStyle(name, parent=base["Normal"], **kw)
 
-    # ── V9.4.0 — Dynamic Fonts ───────────────────────────────────────────
+    # ── V9.4.1 — Dynamic Fonts ───────────────────────────────────────────
     font_bold = _get_font("primary_bold", "Helvetica-Bold")
     font_reg = _get_font("primary", "Helvetica")
     font_mono = _get_font("mono", "Courier")
@@ -408,9 +408,9 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.0") if os.path.exists(_meta_path) else "V9.3.4"
+        _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.1") if os.path.exists(_meta_path) else "V9.3.4"
     except Exception:
-        _smp_ver = "V9.4.0"
+        _smp_ver = "V9.4.1"
 
     content_hash = derive_content_hash(
         url            = url,
@@ -603,7 +603,7 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.0") if os.path.exists(_meta_path) else "V9.3.4"
+        _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.1") if os.path.exists(_meta_path) else "V9.3.4"
     except Exception:
         _smp_version = "--help"
 
@@ -944,7 +944,7 @@ def _generate_vapt_pdf(filepath, ctx):
         ["PTES",            "Penetration Testing Execution Standard"],
         ["CVSS v3.1",       "Common Vulnerability Scoring System for all severity ratings"],
         ["CWE",             "Common Weakness Enumeration taxonomy for all findings"],
-        ["PCI-DSS v4.0",    "Sections 6.4 and 11.3 — penetration testing compliance"],
+        ["PCI-DSS v9.4.1",    "Sections 6.4 and 11.3 — penetration testing compliance"],
     ]
     story.append(_data_table(
         ["Framework / Standard", "Application Scope"],
