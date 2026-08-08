@@ -1,4 +1,4 @@
-# Security Management Platform (SMP) V9.4.1
+# Security Management Platform (SMP) V9.4.2
 
 [![CI](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml/badge.svg)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen)
@@ -112,7 +112,7 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 
 ## Roadmap
 
-### Near-term (V9.4.1.x.x)
+### Near-term (V9.4.2.x.x)
 - Neural Graph filtering by CVE correlation weight
 - Custom Nuclei/SQLMap payload injection from the UI
 - Air-gapped intelligence update via USB import of `global_intel.db`

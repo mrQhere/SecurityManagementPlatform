@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-Only the current V9.4.1.x release line receives security updates.
+Only the current V9.4.2.x release line receives security updates.
 
 | Version  | Supported |
 | -------- | --------- |
-| V9.4.1.x   | ✅ Yes    |
+| V9.4.2.x   | ✅ Yes    |
 | < V9.4.0 | ❌ No     |
 
 ## Security Architecture
