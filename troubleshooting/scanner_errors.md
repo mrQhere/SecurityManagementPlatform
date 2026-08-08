@@ -1,5 +1,11 @@
-# 🔬 Scanner Errors — SMP V9.4.1
+# 🔬 Scanner Errors — SMP V9.4.2
 
+## Automated Troubleshooting Simulator (New in V9.4.2)
+If you are experiencing unexpected crashes, missing binaries, or permission errors, run the new Troubleshooting Simulator. It will analyze your system and provide exact copy-paste commands to fix any issues.
+
+```bash
+python3 tools/troubleshoot.py
+```
 ## Nmap: requires root / permission denied
 
 ```
@@ -20,6 +26,20 @@ Enter your sudo password in **Settings → Sudo Password** in the GUI.
 ```bash
 sudo setcap cap_net_raw,cap_net_admin+eip $(which nmap)
 ```
+
+---
+
+---
+
+## All Scanners: `Unexpected keyword argument 'scan_id'` Crash
+
+```
+[Running Nmap] Execution exception: run_nmap_scan() got an unexpected keyword argument 'scan_id'
+```
+
+If you see this error for Nmap, Nuclei, or other scanners, you are experiencing a known bug where the orchestrator improperly passes the `scan_id` argument to plugins that don't support it.
+
+**Fix:** Upgrade to **SMP V9.4.2** which resolves this issue dynamically.
 
 ---
 
