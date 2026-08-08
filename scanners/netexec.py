@@ -10,25 +10,25 @@ import subprocess
 logger = logging.getLogger("smp.scan")
 
 PLUGIN_META = {
-    "name": "CrackMapExec",
-    "binary": "cme",
+    "name": "NetExec",
+    "binary": "nxc",
     "severity": "Critical",
-    "step_name": "Running Internal AD Recon (CrackMapExec)",
+    "step_name": "Running Internal AD Recon (NetExec)",
     "confidence": 95,
 }
 
 def scan(target_url: str, scan_id: int, settings: dict):
     from tools.narrative_logger import emit_scanner_start, emit_finding
-    emit_scanner_start(scan_id, "crackmapexec")
+    emit_scanner_start(scan_id, "netexec")
 
     # In SMP, we would target IP ranges or specific DCs. For this generic integration,
     # we run an SMB null session probe against the target IP.
     # Note: Target URL must be parsed to an IP/Hostname for CME.
     target = target_url.replace("https://", "").replace("http://", "").split("/")[0]
 
-    cmd = ["cme", "smb", target, "-u", "''", "-p", "''", "--shares"]
+    cmd = ["nxc", "smb", target, "-u", "''", "-p", "''", "--shares"]
     
-    logger.info(f"[crackmapexec] Running: {' '.join(cmd)}")
+    logger.info(f"[netexec] Running: {' '.join(cmd)}")
     findings = []
     raw_output = ""
 
@@ -43,24 +43,24 @@ def scan(target_url: str, scan_id: int, settings: dict):
                     from tools.db_manager import add_finding
                     add_finding(
                         scan_id=scan_id,
-                        scanner="CrackMapExec",
+                        scanner="NetExec",
                         severity="Critical",
                         title="Null Session / Exposed SMB Share",
-                        description="CrackMapExec successfully authenticated using a Null Session and found exposed SMB shares.",
+                        description="NetExec successfully authenticated using a Null Session and found exposed SMB shares.",
                         evidence=line.strip(),
                         remediation="Disable SMBv1, restrict Null Sessions, and require SMB Signing."
                     )
-                    emit_finding(scan_id, "crackmapexec", "Critical", "Exposed SMB Share Found")
+                    emit_finding(scan_id, "netexec", "Critical", "Exposed SMB Share Found")
                 except Exception as e:
-                    logger.debug(f"[crackmapexec] DB write error: {e}")
+                    logger.debug(f"[netexec] DB write error: {e}")
                 
                 findings.append({"exposed_share": line.strip()})
 
     except subprocess.TimeoutExpired:
-        logger.warning("[crackmapexec] Timed out after 300s")
+        logger.warning("[netexec] Timed out after 300s")
         raw_output += "\n[TIMEOUT]"
     except Exception as e:
-        logger.error(f"[crackmapexec] Error: {e}")
+        logger.error(f"[netexec] Error: {e}")
         raw_output = str(e)
 
     return {

@@ -445,7 +445,7 @@ else
         | sh -s -- -b "$BIN_DIR" v0.55.0 >> "$LOG_FILE" 2>&1 && ok "Trivy installed" || true
 
     have prowler    || pip install prowler    -q >> "$LOG_FILE" 2>&1 && ok "Prowler installed"    || true
-    have cme 2>/dev/null || pip install crackmapexec -q >> "$LOG_FILE" 2>&1 || true
+    have nxc 2>/dev/null || pip install netexec -q >> "$LOG_FILE" 2>&1 || true
 fi
 
 # ── WPScan ─────────────────────────────────────────────────────────────────────
