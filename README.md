@@ -21,7 +21,7 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 ## Project Status
 
 > [!WARNING]
-> This is a personal project maintained on a best-effort basis. It is currently at **V9.4.0**.
+> This is a personal project maintained on a best-effort basis. It is currently at **V9.4.2**.
 > Please see the [CHANGELOG.md](CHANGELOG.md) for recent updates.
 
 ## What it is
@@ -30,7 +30,7 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 > SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
 
 > [!TIP]
-> **V9.4.0** ships a Neural Correlation Engine (`intelligence/brain.py`) that builds a local heuristics graph from real scan data and the CISA KEV catalog. It includes a force-directed graph UI (`ui/components/neural_graph.py`) to visualise CVE relationships. The CVSS and EPSS values in the graph are populated from live NVD and EPSS API calls — not hardcoded.
+> **V9.4.2** ships a Neural Correlation Engine (`intelligence/brain.py`) that builds a local heuristics graph from real scan data and the CISA KEV catalog. It includes a force-directed graph UI (`ui/components/neural_graph.py`) to visualise CVE relationships. The CVSS and EPSS values in the graph are populated from live NVD and EPSS API calls — not hardcoded.
 
 **The core pitch is not tool count.** It is:
 

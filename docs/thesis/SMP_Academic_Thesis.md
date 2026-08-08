@@ -276,7 +276,7 @@ To protect the derived key against offline dictionary attacks, brute-forcing, an
 
 1. **Salting**: The system generates a cryptographically secure, pseudo-random 32-byte salt using the host operating system's entropy pool (`os.urandom(32)`).
 2. **Pseudorandom Function (PRF)**: SMP utilizes HMAC-SHA256 as the underlying hashing algorithm.
-3. **Iteration Count**: As of V9.4.0, the platform enforces a minimum of 600,000 iterations, strictly adhering to the 2024 recommendations set forth by the National Institute of Standards and Technology (NIST).
+3. **Iteration Count**: As of V9.4.2, the platform enforces a minimum of 600,000 iterations, strictly adhering to the 2024 recommendations set forth by the National Institute of Standards and Technology (NIST).
 
 The derivation function is defined as:
 $$ \text{DK} = \text{PBKDF2}(\text{PRF}, \text{Password}, \text{Salt}, 600000, 32) $$
@@ -345,7 +345,7 @@ In the legacy, sequential bash-script architecture (V1), total execution time wa
 $$ T_{linear} = \sum_{i=1}^{n} t_i $$
 This resulted in a baseline execution time of exactly 4 hours and 12 minutes ($252$ minutes).
 
-Under the V9.4.0 DAG architecture, utilizing a `ProcessPoolExecutor` parallelized across 8 logical CPU cores, the execution time is bound only by the critical path of the graph—the longest sequence of dependent tools:
+Under the V9.4.2 DAG architecture, utilizing a `ProcessPoolExecutor` parallelized across 8 logical CPU cores, the execution time is bound only by the critical path of the graph—the longest sequence of dependent tools:
 $$ T_{DAG} = \max_{p \in P} \sum_{i \in p} t_i + \text{overhead} $$
 The DAG execution completed the exact same engagement profile in 1 hour and 8 minutes ($68$ minutes). This represents a **73% reduction in total engagement time**, proving the mathematical efficiency of Kahn’s Algorithm for topological task distribution.
 

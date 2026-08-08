@@ -6,8 +6,8 @@ Only the current V9.4.2.x release line receives security updates.
 
 | Version  | Supported |
 | -------- | --------- |
-| V9.4.2.x   | ✅ Yes    |
-| < V9.4.0 | ❌ No     |
+| >= V9.4.2 | ✅ Yes    |
+| < V9.4.2 | ❌ No     |
 
 ## Security Architecture
 
