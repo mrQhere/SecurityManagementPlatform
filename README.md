@@ -81,6 +81,9 @@ cd SecurityManagementPlatform
 python main.py --api
 ```
 
+> [!NOTE]
+> Having installation issues? Check the [Troubleshooting Guides](troubleshooting/).
+
 ### Windows
 
 Use Docker (see [USER_GUIDE.md](USER_GUIDE.md#24-docker--all-platforms)):
@@ -133,5 +136,5 @@ and turned into something I actually care about getting right — the
 mistakes are in the git history on purpose, not hidden, because I'd
 rather someone learn from how this got fixed than think it was
 perfect from the start. If you're using this for real work, read
-SECURITY.md first and don't trust anything blindly, including this
+[SECURITY.md](SECURITY.md) first and don't trust anything blindly, including this
 note. Good luck.
