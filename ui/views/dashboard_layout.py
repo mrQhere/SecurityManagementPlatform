@@ -646,7 +646,7 @@ class DashboardLayoutMixin:
         layout.addStretch()
 
         # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V9.4.1')} • SMP Console")
+        ver = QLabel(f"{getattr(self, 'version', 'V9.4.2')} • SMP Console")
         ver.setObjectName("brand_sub")
         ver.setAlignment(Qt.AlignCenter)
         layout.addWidget(ver)
@@ -1178,7 +1178,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(zap_card)
 
         # ── V9.3.3 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.4.1')}")
+        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.4.2')}")
         api_layout = api_card.layout()
 
         def make_api_field(label_text, widget):
@@ -1206,8 +1206,66 @@ class DashboardLayoutMixin:
         
         scroll_layout.addWidget(api_card)
 
+        # ── V9.4.2 — Scheduler Settings ──
+        scheduler_card = self._make_card(f"Scheduler Settings — {getattr(self, 'version', 'V9.4.2')}")
+        scheduler_layout = scheduler_card.layout()
+
+        def make_sched_field(label_text, widget):
+            row = QHBoxLayout()
+            lbl = QLabel(label_text)
+            lbl.setFixedWidth(200)
+            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
+            row.addWidget(lbl)
+            row.addWidget(widget, 1)
+            scheduler_layout.addLayout(row)
+            scheduler_layout.addSpacing(4)
+
+        from PySide6.QtWidgets import QSpinBox
+        self.spin_scan_hour = QSpinBox()
+        self.spin_scan_hour.setRange(0, 23)
+        self.spin_scan_hour.setValue(load_settings().get("scan_schedule_hour", 2))
+        
+        self.spin_scan_minute = QSpinBox()
+        self.spin_scan_minute.setRange(0, 59)
+        self.spin_scan_minute.setValue(load_settings().get("scan_schedule_minute", 0))
+
+        scan_time_row = QWidget()
+        scan_time_layout = QHBoxLayout(scan_time_row)
+        scan_time_layout.setContentsMargins(0, 0, 0, 0)
+        scan_time_layout.addWidget(QLabel("Hour (0-23):"))
+        scan_time_layout.addWidget(self.spin_scan_hour)
+        scan_time_layout.addWidget(QLabel("Minute (0-59):"))
+        scan_time_layout.addWidget(self.spin_scan_minute)
+        scan_time_layout.addStretch()
+        make_sched_field("Daily Scan Time", scan_time_row)
+
+        self.spin_intel_interval = QSpinBox()
+        self.spin_intel_interval.setRange(1, 168)
+        self.spin_intel_interval.setSuffix(" hours")
+        self.spin_intel_interval.setValue(load_settings().get("intel_sync_interval_hours", 24))
+        make_sched_field("Intel Sync Interval", self.spin_intel_interval)
+
+        btn_save_sched = QPushButton("Save Scheduler Settings")
+        btn_save_sched.setObjectName("btn_secondary")
+        def _save_sched():
+            s = load_settings()
+            s["scan_schedule_hour"] = self.spin_scan_hour.value()
+            s["scan_schedule_minute"] = self.spin_scan_minute.value()
+            s["intel_sync_interval_hours"] = self.spin_intel_interval.value()
+            save_settings(s)
+            
+            try:
+                from tools.scheduler import reschedule_jobs
+                reschedule_jobs()
+                QMessageBox.information(self, "Saved", "Scheduler settings saved and background jobs rescheduled.")
+            except Exception as e:
+                QMessageBox.warning(self, "Warning", f"Settings saved, but could not reschedule: {e}")
+
+        scheduler_layout.addWidget(btn_save_sched)
+        scroll_layout.addWidget(scheduler_card)
+
         # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.4.1')}")
+        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.4.2')}")
         profile_layout = profile_card.layout()
         profile_desc = QLabel(
             "Controls which scanner steps run. Fast = passive OSINT only. "
@@ -1241,7 +1299,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(profile_card)
 
         # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.4.1')}")
+        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.4.2')}")
         auth_layout = auth_card.layout()
         auth_desc = QLabel(
             "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "
@@ -1288,7 +1346,7 @@ class DashboardLayoutMixin:
         scroll_layout.addWidget(auth_card)
 
         # ── Enterprise Scanners ──
-        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.4.1')}")
+        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.4.2')}")
         enterprise_layout = enterprise_card.layout()
         ent_desc = QLabel(
             "Configure advanced enterprise scanning capabilities. "

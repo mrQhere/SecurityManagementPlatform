@@ -1,4 +1,4 @@
-# 🔌 API Errors — SMP V9.4.1
+# 🔌 API Errors — SMP V9.4.2
 
 ## 401 Unauthorized
 

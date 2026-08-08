@@ -4,7 +4,7 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.1 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.2 · Stable                      ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
@@ -485,7 +485,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
 
 ```text
-       [ V9.4.1 ]  Base Standardization
+       [ V9.4.2 ]  Base Standardization
           │      (Unified execution scripts and basic GUI)
           ╰───────────╮
                       │
@@ -505,21 +505,21 @@ The platform has undergone a massive architectural evolution from a simple scrip
           │        (SSRF, LFI, and OSINT capabilities restored)
           ╰───────────╮
                       │
-         CISA KEV  [ V9.4.1 ]
+         CISA KEV  [ V9.4.2 ]
                       │      (Regenerated intelligence from live KEV catalog)
           ╭───────────╯
           │
-       [ V9.4.1 ]  Architecture & Tooling Hardening
+       [ V9.4.2 ]  Architecture & Tooling Hardening
           │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
           ╰───────────╮
                       │
-     Neural Graph  [ V9.4.1 ]  (CURRENT)
+     Neural Graph  [ V9.4.2 ]  (CURRENT)
      & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
                       │       Air-gapped sync, V10 API Client foundation)
                       V
 ```
 
-### V9.4.1 (current)
+### V9.4.2 (current)
 - **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
@@ -715,6 +715,16 @@ sudo apt install pandoc texlive-xetex texlive-fonts-recommended texlive-plain-ge
 # Run this from the root of the repository
 pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Serif" -V monofont="DejaVu Sans Mono"
 ```
+
+---
+
+## 16 · Scheduler Settings
+
+SMP V9.4.2 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
+This allows operators to specify exactly when automated daily scans and threat intelligence synchronizations occur.
+
+- **Daily Scan Time**: Set the Hour and Minute for the automated daily vulnerability scan on all active targets.
+- **Intel Sync Interval**: Control the frequency (in hours) at which the local CVE database updates from NVD, CISA, and GitHub Advisories.
 
 ---
 
