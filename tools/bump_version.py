@@ -3,11 +3,11 @@
 SMP Version Bumper — updates version everywhere it matters.
 
 Usage:
-  python3 tools/bump_version.py V9.4.0          # set explicit version
-  python3 tools/bump_version.py --patch          # auto-bump patch (V9.4.0 → V9.3.4)
-  python3 tools/bump_version.py --minor          # auto-bump minor (V9.4.0 → V9.4.0)
-  python3 tools/bump_version.py --major          # auto-bump major (V9.4.0 → V10.0.0)
-  python3 tools/bump_version.py --dry-run V9.4.0 # preview without writing
+  python3 tools/bump_version.py V9.4.1          # set explicit version
+  python3 tools/bump_version.py --patch          # auto-bump patch (V9.4.1 → V9.3.4)
+  python3 tools/bump_version.py --minor          # auto-bump minor (V9.4.1 → V9.4.0)
+  python3 tools/bump_version.py --major          # auto-bump major (V9.4.1 → V10.0.0)
+  python3 tools/bump_version.py --dry-run V9.4.1 # preview without writing
 """
 import sys
 import json
@@ -36,7 +36,7 @@ def _read_current_version(root: str) -> str:
 
 
 def _auto_bump(current: str, part: str) -> str:
-    """Bump major, minor, or patch from a version string like 'V9.4.0'."""
+    """Bump major, minor, or patch from a version string like 'V9.4.1'."""
     m = re.match(r"[vV]?(\d+)\.(\d+)\.(\d+)", current)
     if not m:
         raise ValueError(f"Cannot parse current version '{current}' for auto-bump.")
@@ -56,7 +56,7 @@ def main():
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("version", nargs="?", metavar="VERSION",
-                       help="Explicit version string, e.g. V9.4.0")
+                       help="Explicit version string, e.g. V9.4.1")
     group.add_argument("--patch", action="store_true", help="Auto-bump patch version")
     group.add_argument("--minor", action="store_true", help="Auto-bump minor version")
     group.add_argument("--major", action="store_true", help="Auto-bump major version")

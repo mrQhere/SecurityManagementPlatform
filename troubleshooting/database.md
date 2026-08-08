@@ -1,8 +1,8 @@
-# 🗄️ Database Troubleshooting — SMP V9.4.0
+# 🗄️ Database Troubleshooting — SMP V9.4.1
 
 ## FATAL: pysqlcipher3 not installed (startup abort)
 
-SMP V9.4.0 exits immediately if SQLCipher is unavailable. See `installation.md`.
+SMP V9.4.1 exits immediately if SQLCipher is unavailable. See `installation.md`.
 
 ---
 

@@ -54,12 +54,12 @@ def _generate_cyclonedx(scan_id: int, target_url: str, technologies: list, outpu
                 "tools": [{
                     "vendor": "mrQhere",
                     "name": "Security Management Platform",
-                    "version": "V9.4.0"
+                    "version": "V9.4.1"
                 }],
                 "component": {
                     "type": "application",
                     "name": target_url,
-                    "description": f"Target scanned by SMP V9.4.0 on {datetime.now().strftime('%Y-%m-%d')}"
+                    "description": f"Target scanned by SMP V9.4.1 on {datetime.now().strftime('%Y-%m-%d')}"
                 }
             },
             "components": components
