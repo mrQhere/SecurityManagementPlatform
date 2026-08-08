@@ -76,7 +76,7 @@ python main.py --api
 ./setup.sh --skip-tools  # skip Go binary downloads (for AV-restricted environments)
 ```
 
-`setup.sh` installs: Python venv, SQLCipher, `nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`, `nmap`, `nikto`, `whatweb`, WPScan, ClamAV, Trivy, Prowler, CrackMapExec.
+`setup.sh` installs: Python venv, SQLCipher, `nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`, `nmap`, `nikto`, `whatweb`, WPScan, ClamAV, Trivy, Prowler, NetExec.
 
 You can also use `--no-venv` if you want to bypass the Python virtual environment creation.
 
@@ -180,7 +180,7 @@ SMP runs all scanners as a **Directed Acyclic Graph (DAG)** — parallel within 
 | Open Redirect | standard+ | 4 | HTTPx | Open redirect chains |
 | XXE Scanner | standard+ | 4 | HTTPx | XML external entity injection |
 | Cloud Enum | standard+ | 4 | Subfinder | S3/GCS/Azure blob exposure |
-| CrackMapExec | standard+ | 4 | Nmap | SMB/WinRM enumeration |
+| NetExec | standard+ | 4 | Nmap | SMB/WinRM enumeration |
 | WPScan | standard+ | 4 | CMS Scanner | WordPress plugins/themes vulns |
 | Dalfox | standard+ | 4 | Wapiti | XSS exploitation validation |
 | Amass | standard+ | 4 | Subfinder | Deep passive subdomain enumeration |
