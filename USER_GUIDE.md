@@ -803,3 +803,34 @@ Top-performing chromosomes are selected for reproduction. The algorithm performs
 
 ---
 End of User Guide.
+
+# Appendix C: Researcher Toolkit & Test Scenarios
+
+The SMP framework is heavily utilized by academic and offensive security researchers to validate new heuristics. This section outlines how to utilize the platform for scenario testing.
+
+## C.1 Designing Test Cases
+When developing a new scanner plugin (e.g., `scanners/my_research_scanner.py`), you must validate its behavior within the DAG pipeline. 
+
+Researchers can utilize the `tools/verify_smp.py` unit test suite to run headless scenarios. A scenario is defined by mocking the HTTP responses or binary standard outputs of your target tool.
+
+### Example Mock Scenario
+To simulate a Zero-Day vulnerability detection without firing actual packets:
+1. Open `tools/verify_smp.py`
+2. Inject your mock into `test_10_resilient_scan_sequence`:
+```python
+elif name == "My Research Scanner":
+    mock_func = Mock(return_value=[{"title": "Zero-Day Found", "severity": "Critical"}])
+```
+3. Run the CI pipeline locally:
+`source venv/bin/activate && python3 tools/verify_smp.py`
+
+## C.2 Performance Profiling Scenarios
+To benchmark the efficiency of the DAG orchestrator against legacy linear bash scripts, researchers can toggle the `SMP_CI` environment variable.
+
+- **`export SMP_CI=1`**: Bypasses all rate-limiting and inter-request delays (`time.sleep()`), flooding the CPU pool for maximum throughput benchmarking.
+- **`export SMP_LOCAL_ONLY=1`**: Drops all egress traffic to external APIs (like NVD or EPSS) to measure purely localized processing times.
+
+For complete memory dumps of the orchestrator state, researchers can attach `pdb` or `py-spy` to the `main.py` execution thread.
+
+---
+End of User Guide.
