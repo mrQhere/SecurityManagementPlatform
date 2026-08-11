@@ -1,0 +1,32 @@
+# CodeRabbit Configuration File
+# https://coderabbit.ai/docs/configure
+
+language: "en-US"
+
+# Focus specifically on our Python backend and DAG orchestrator.
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false # Disable the fun poem, keep it professional
+  review_status: true
+  collapse_walkthrough: true
+  
+  # Custom instructions for CodeRabbit AI to follow when reviewing PRs
+  instructions: |
+    - You are reviewing an enterprise-grade Vulnerability Assessment and Penetration Testing (VAPT) platform.
+    - Security is paramount. Look for hardcoded credentials, insecure deserialization, and path traversal vulnerabilities.
+    - Ensure all subprocess calls (e.g., using `subprocess.run`) use strict timeouts to prevent hanging threads.
+    - Validate that error handling throws specific `SMP-xxxx` codes rather than generic exceptions.
+    - Ensure mathematical complexity is maintained. Do not suggest O(n^2) algorithms if O(n) or O(1) is possible.
+    - Do not comment on stylistic choices if they pass Ruff linting.
+
+  # Ignore documentation and binary files
+  path_filters:
+    - "!docs/**"
+    - "!USER_GUIDE.md"
+    - "!README.md"
+    - "!*.lock"
+
+chat:
+  auto_reply: true
