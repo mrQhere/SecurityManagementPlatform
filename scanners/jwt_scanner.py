@@ -40,7 +40,8 @@ def _extract_jwts_from_response(url):
         tokens.extend(_JWT_RE.findall(resp.text))
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass

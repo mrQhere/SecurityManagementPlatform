@@ -57,7 +57,8 @@ def _get_cpu_percent() -> float:
         return round((1.0 - d_idle / max(d_total, 1)) * 100, 1)
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return 0.0  # Cannot determine — assume ok
@@ -83,7 +84,8 @@ def _get_free_ram_mb() -> float:
         return available_kb / 1024
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return 9999  # Cannot determine — assume ok
@@ -96,7 +98,8 @@ def _get_free_disk_gb(path: str = "/") -> float:
         return usage.free / (1024 ** 3)
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return 9999  # Cannot determine — assume ok
@@ -110,7 +113,8 @@ def _check_network(host: str = _NET_HOST, port: int = _NET_PORT) -> bool:
         return True
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         # Try fallback: DNS resolution
@@ -119,7 +123,8 @@ def _check_network(host: str = _NET_HOST, port: int = _NET_PORT) -> bool:
             return True
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             return False

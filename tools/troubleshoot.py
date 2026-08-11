@@ -295,7 +295,6 @@ def run_cli_troubleshoot(auto_fix: bool = False):
         print(f"  {YEL}Solution ({sol['code']}):{RST} {sol['solution']}")
 
     print_header("4. Checking Permissions & MAC Changer capabilities")
-    import subprocess
     res = subprocess.run(["sudo", "-n", "nmap", "-V"], capture_output=True, text=True)
     if res.returncode == 0:
         print(f"  {GRN}[OK]{RST} Non-interactive sudo Nmap capability active.")

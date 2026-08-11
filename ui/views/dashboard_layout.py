@@ -55,7 +55,8 @@ def get_latest_risk_score_for_target(target_id):
         return dict(row) if row else None
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return None
@@ -75,7 +76,8 @@ def get_latest_scan_operator_for_target(target_id):
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return "N/A"
@@ -1582,7 +1584,8 @@ class DashboardLayoutMixin:
                 full_hash = sha256.hexdigest()
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 file_hash_display = "N/A"

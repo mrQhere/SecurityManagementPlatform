@@ -44,7 +44,8 @@ def get_latest_risk_score_for_target(target_id):
         return dict(row) if row else None
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return None
@@ -64,7 +65,8 @@ def get_latest_scan_operator_for_target(target_id):
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return "N/A"
@@ -549,7 +551,8 @@ class UDPListenerThread(QThread):
             s.close()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -558,7 +561,8 @@ class UDPListenerThread(QThread):
                 self._sock.close()
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass
@@ -591,7 +595,8 @@ class UDPListenerThread(QThread):
                 break  # socket was closed
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass
@@ -600,7 +605,8 @@ class UDPListenerThread(QThread):
             sock.close()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -992,7 +998,8 @@ class DashboardLogicMixin:
             self.timer.stop()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -1125,7 +1132,8 @@ class DashboardLogicMixin:
                     has_interrupted = True
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass
@@ -1206,7 +1214,8 @@ class DashboardLogicMixin:
             return {row["target_id"]: {"score": row["score"], "rating": row["rating"]} for row in rows}
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             return {}
@@ -1231,7 +1240,8 @@ class DashboardLogicMixin:
             return {row["target_id"]: (row["scanned_by"] or "N/A") for row in rows}
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             return {}
@@ -1346,7 +1356,8 @@ class DashboardLogicMixin:
                 dur_str = f"{int(h):02}:{int(m):02}:{int(s):02}"
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass

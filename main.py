@@ -44,7 +44,8 @@ def release_lock():
             lock_file_fd.close()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -62,7 +63,8 @@ def handle_system_signals(signum, frame):
         _sr.signal_app_shutdown()
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -78,7 +80,8 @@ def handle_system_signals(signum, frame):
         shutdown_scheduler()
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -87,7 +90,8 @@ def handle_system_signals(signum, frame):
         QApplication.quit()
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass

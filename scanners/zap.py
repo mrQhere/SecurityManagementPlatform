@@ -101,7 +101,8 @@ def run_zap_scan(url, scan_id: int = 0, settings: dict = None):
         logger.info(f"ZAP daemon already running at {api_url}.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         zap_proc = _start_zap_daemon(zap_path, host, port, api_key)
@@ -119,7 +120,8 @@ def run_zap_scan(url, scan_id: int = 0, settings: dict = None):
                 break
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 time.sleep(5)

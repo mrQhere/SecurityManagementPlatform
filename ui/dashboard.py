@@ -54,7 +54,8 @@ def get_latest_risk_score_for_target(target_id):
         return dict(row) if row else None
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return None
@@ -74,7 +75,8 @@ def get_latest_scan_operator_for_target(target_id):
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return "N/A"
@@ -105,7 +107,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                 version = metadata.get("version", "V9.4.2")
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -141,7 +144,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                 self.targets_splitter.restoreState(QByteArray(base64.b64decode(s['targets_splitter'])))
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -186,7 +190,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                     msg.exec()
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass
@@ -250,7 +255,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             _sr.signal_app_shutdown()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -267,7 +273,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             save_settings(s)
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -277,7 +284,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             self.timer.stop()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -287,7 +295,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             self.ipc_listener.wait(1000)  # wait up to 1 second
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -299,7 +308,8 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                     update_scan_status(scan.get("scan_id", scan.get("id")), "Paused")
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     pass

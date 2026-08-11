@@ -70,7 +70,8 @@ def _version_is_below(version_str, threshold):
         return parse(version_str) < parse(threshold)
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return False

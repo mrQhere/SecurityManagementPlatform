@@ -37,7 +37,8 @@ def _is_wordpress(url):
         return any(indicator in body_lower for indicator in indicators)
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return True  # Run anyway if we can't check
@@ -130,7 +131,8 @@ def run_wpscan_scan(url, settings: dict = None):
             data = json.loads(stdout)
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             logger.warning("WPScan: Could not parse JSON output. Trying text parse.")

@@ -30,7 +30,7 @@ def run_race_the_web_scan(url, scan_id=None, settings=None, brain_insights=None)
     ]
     
     try:
-        process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
         
         findings = []
         if os.path.exists(out_file):

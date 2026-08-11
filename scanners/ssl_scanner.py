@@ -29,7 +29,8 @@ try:
     from tools.db_manager import add_log_entry
 except Exception as e:
     from tools.errors import SMPUnclassifiedError
-    import traceback, logging
+    import traceback
+    import logging
     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
     raise SMPUnclassifiedError(str(e))
     def add_log_entry(level, msg): pass
@@ -163,7 +164,8 @@ def _analyse_result(result, host):
                      f"Recommendation: Disable {proto_name} in your server configuration immediately.")
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -178,7 +180,8 @@ def _analyse_result(result, host):
                      f"{host} does not support TLS_FALLBACK_SCSV, allowing potential downgrade attacks.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -195,7 +198,8 @@ def _analyse_result(result, host):
                          f"This can be abused for denial-of-service attacks.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -208,7 +212,8 @@ def _analyse_result(result, host):
                  f"{host} is vulnerable to the Heartbleed OpenSSL bug. Upgrade OpenSSL immediately.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -221,7 +226,8 @@ def _analyse_result(result, host):
                  f"{host} is vulnerable to the OpenSSL ChangeCipherSpec injection attack.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -234,7 +240,8 @@ def _analyse_result(result, host):
                  f"{host} supports TLS compression, making it vulnerable to the CRIME attack.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -263,7 +270,8 @@ def _analyse_result(result, host):
                      f"{host} has an untrusted or self-signed certificate chain.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass

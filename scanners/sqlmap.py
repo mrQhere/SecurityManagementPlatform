@@ -156,7 +156,8 @@ def _parse_sqlmap_output(output_dir, stdout, url):
                             })
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     pass

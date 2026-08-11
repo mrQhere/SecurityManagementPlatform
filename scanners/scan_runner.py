@@ -115,7 +115,8 @@ def get_cooling_delay():
             return 1.5  # Low load, fast cooling
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return 2.5      # Fallback default
@@ -186,7 +187,8 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
                     os.killpg(os.getpgid(self.pid), signal.SIGKILL)
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     super().kill()
@@ -199,7 +201,8 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
                     os.killpg(os.getpgid(self.pid), signal.SIGTERM)
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     super().terminate()
@@ -583,7 +586,8 @@ def _get_previous_completed_scan(target_id, current_scan_id):
         return dict(row) if row else None
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return None
@@ -636,7 +640,8 @@ def _log_raw(scan_id, tool_name, result_list):
         save_raw_scan_output(scan_id, tool_name, raw_str, "")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -665,7 +670,8 @@ def _filter_spa_ffuf_results(results):
                     lengths.append(cl)
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     lengths.append(-1)
@@ -1222,7 +1228,8 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
             _evaluate_vulnerability_growth_thresholds()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
-            import traceback, logging
+            import traceback
+            import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
             pass
@@ -1333,7 +1340,8 @@ def resume_interrupted_scans():
                                     last_status = status
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 pass

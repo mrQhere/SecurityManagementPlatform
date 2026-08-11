@@ -411,7 +411,8 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
         _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.4.2"
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         _smp_ver = "V9.4.2"
@@ -515,7 +516,8 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
         )
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass
@@ -614,7 +616,8 @@ def _generate_vapt_pdf(filepath, ctx):
         _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.4.2"
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         _smp_version = "--help"
@@ -1205,7 +1208,8 @@ def _generate_vapt_pdf(filepath, ctx):
                             story.append(Paragraph(f"&bull; <a href='{link}'><font color='#10B981'>{_esc(link)}</font></a>", st["body"]))
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     pass
@@ -1391,7 +1395,8 @@ def _generate_vapt_pdf(filepath, ctx):
         s.close()
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         scanner_ip = "127.0.0.1"
@@ -2145,7 +2150,8 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
                         lines.append("</ul>")
                 except Exception as e:
                     from tools.errors import SMPUnclassifiedError
-                    import traceback, logging
+                    import traceback
+                    import logging
                     logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                     raise SMPUnclassifiedError(str(e))
                     pass

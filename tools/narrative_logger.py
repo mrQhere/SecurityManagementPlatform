@@ -195,7 +195,8 @@ def get_narrative(scan_id: int) -> list[str]:
             return [line.rstrip("\n") for line in f if line.strip()]
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return []
@@ -222,7 +223,8 @@ def _ipc_send(scan_id: int, scanner: str, message: str, level: str) -> None:
         sock.close()
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         pass  # IPC failure is non-fatal; narrative still written to file

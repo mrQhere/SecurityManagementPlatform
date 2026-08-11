@@ -40,13 +40,15 @@ def _tcp_banner(host: str, port: int, timeout: float = 4.0) -> str | None:
                 return data.decode("utf-8", errors="replace").strip()
             except Exception as e:
                 from tools.errors import SMPUnclassifiedError
-                import traceback, logging
+                import traceback
+                import logging
                 logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
                 raise SMPUnclassifiedError(str(e))
                 return None
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return None
@@ -69,7 +71,8 @@ def _get_open_ports_from_nmap(scan_id: int) -> list[int]:
         return list(set(ports)) if ports else _DEFAULT_PROBE_PORTS
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return _DEFAULT_PROBE_PORTS
@@ -95,7 +98,8 @@ def run_scan(target_url: str, scan_id: int = 0):
         host = urlparse(target_url).hostname or target_url
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         host = target_url

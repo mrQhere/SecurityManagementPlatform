@@ -50,7 +50,8 @@ def local_only_mode_active() -> bool:
         return bool(load_settings().get("local_only_mode", False))
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
-        import traceback, logging
+        import traceback
+        import logging
         logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
         raise SMPUnclassifiedError(str(e))
         return False

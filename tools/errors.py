@@ -99,7 +99,8 @@ class SMPUnclassifiedError(SMPError):
 
 def handle_unclassified_error(e: Exception, logger=None) -> SMPUnclassifiedError:
     """Logs unexpected exceptions with traceback and returns an SMPUnclassifiedError instance to raise."""
-    import traceback, logging
+    import traceback
+    import logging
     log = logger or logging.getLogger("smp")
     log.error(f"Unexpected error: {e}\n{traceback.format_exc()}")
     return SMPUnclassifiedError(str(e))
