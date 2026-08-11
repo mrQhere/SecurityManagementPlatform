@@ -1,5 +1,5 @@
 """
-SBOM Generator V9.3.3
+SBOM Generator V9.4.2
 ====================
 Generates a CycloneDX JSON Software Bill of Materials from technology
 fingerprinting data collected during a scan.

@@ -1,12 +1,20 @@
 # 🔌 API Errors — SMP V9.4.2
 
+> [!IMPORTANT]
+> **V9.4.2 Self-Healing Engine**: Before attempting manual fixes below, run the automated diagnostic engine:
+> ```bash
+> source venv/bin/activate
+> python3 tools/troubleshoot.py --fix
+> ```
+> This script automatically resolves 90% of missing binaries, missing directories, and database locks.
+
 ## 401 Unauthorized
 
 JWT token expired (default lifetime: 30 minutes).
 
 ```bash
 # Re-authenticate
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v9.3.3/auth/token \
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v9.4.2/auth/token \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"yourpassword"}' | jq -r .access_token)
 echo $TOKEN
@@ -27,7 +35,7 @@ Your token is valid but lacks permission for this endpoint. Ensure you're using 
 
 ## 422 Unprocessable Entity
 
-Request body is malformed. Check the schema at `http://localhost:8000/api/v9.3.3/docs`.
+Request body is malformed. Check the schema at `http://localhost:8000/api/v9.4.2/docs`.
 
 Common mistake — target URL must include protocol:
 ```bash
@@ -76,11 +84,11 @@ sudo apt install libsqlcipher-dev && pip install pysqlcipher3
 
 ---
 
-## /api/v9.3.3/docs returns 404
+## /api/v9.4.2/docs returns 404
 
 The API version in the URL must match the running server version. Check running version:
 ```bash
-curl http://localhost:8000/api/v9.3.3/version
+curl http://localhost:8000/api/v9.4.2/version
 # or try /api/v6/version if on an older install
 ```
 
@@ -108,7 +116,7 @@ python3 -c "import secrets, json, os; p='config/settings.json'; d=json.load(open
 
 A scan is already running for this target. Check:
 ```bash
-curl http://localhost:8000/api/v9.3.3/scan/1/status \
+curl http://localhost:8000/api/v9.4.2/scan/1/status \
   -H "Authorization: Bearer $TOKEN"
 ```
 

@@ -13,7 +13,11 @@ def load_all_attestations() -> dict:
     try:
         with open(RESPONSIBILITY_PATH, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return {}
 
 def check_target_attestation(target_id: int) -> bool:
@@ -62,5 +66,9 @@ def set_target_attestation(target_id: int, typed_sentence: str) -> None:
         record_responsibility_acceptance(
             notes=f"User accepted responsibility disclaimer for target {target_id} at {now.strftime('%Y-%m-%d %H:%M:%S')}"
         )
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass

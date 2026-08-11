@@ -1,6 +1,6 @@
 /* =========================================================
    Security Management Platform — Dark Theme
-   © mrQhere · V9.3.0
+   © mrQhere · V9.4.2
    ========================================================= */
 
 /* ── Root & Globals ── */
@@ -465,7 +465,7 @@ QToolTip {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   V9.3.3 ENHANCEMENTS — Design System Fixes
+   V9.4.2 ENHANCEMENTS — Design System Fixes
    ───────────────────────────────────────────────────────────── */
 
 /* ── Primary CTA button — Blue accent (not white) ── */

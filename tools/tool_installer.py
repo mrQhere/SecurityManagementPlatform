@@ -76,7 +76,7 @@ TOOLS = [
     ("semgrep",           "semgrep",     "pip",    "semgrep"),
     ("SpiderFoot OSINT",  "sf",          "manual", "Download from https://github.com/smicallef/spiderfoot"),
 
-    # New V9.3.3 Enterprise binaries
+    # New V9.4.2 Enterprise binaries
     ("Amass",             "amass",       "binary", ""),
     ("Feroxbuster",       "feroxbuster", "binary", ""),
     ("TruffleHog",        "trufflehog",  "binary", ""),
@@ -405,7 +405,11 @@ def _install_source_deps(src_dir):
                 cwd=src_dir, capture_output=True, timeout=180
             )
             return
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
     if os.path.exists(requirements):
         subprocess.run(
@@ -443,7 +447,7 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.3.3/gitleaks_8.18.2_linux_x64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.2/gitleaks_8.18.2_linux_x64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_amd64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz",
@@ -467,7 +471,7 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.3.3/gitleaks_8.18.2_linux_arm64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.2/gitleaks_8.18.2_linux_arm64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_arm64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz",
@@ -486,7 +490,7 @@ def _download_missing_tools_locally(missing):
     }
     urls = urls_arm64 if is_arm64 else urls_amd64
 
-    # ── V9.3.3 — Security: Download SHA256 Checksums ────────────────────────────
+    # ── V9.4.2 — Security: Download SHA256 Checksums ────────────────────────────
     # Add checksums to verify integrity before extraction
     checksums = {
         "Nuclei": "235f264d32e47e1ccf58d534e2eb4d0d4eeb47f1cae1ebb30a584b8b52565202",
@@ -514,7 +518,7 @@ def _download_missing_tools_locally(missing):
                 for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     
-            # ── V9.3.3 — Security Check: SHA256 ────────────────────────────
+            # ── V9.4.2 — Security Check: SHA256 ────────────────────────────
             if name in checksums:
                 import hashlib
                 h = hashlib.sha256()
@@ -793,6 +797,10 @@ def _ensure_source_tool_deps(bin_dir):
                     [sys.executable, "-m", "pip", "install", "--break-system-packages", "--quiet"] + deps,
                     capture_output=True, timeout=120
                 )
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 

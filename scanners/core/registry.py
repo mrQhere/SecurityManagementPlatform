@@ -37,7 +37,7 @@ def register_scanner(name, step_name, depends_on, binary_name, needs_binary=True
 
 def _load_plugin_meta(modname: str, module) -> bool:
     """
-    V9.3.3 — Zero-Friction Plugin Registration.
+    V9.4.2 — Zero-Friction Plugin Registration.
     
     If a scanner module has a PLUGIN_META dict, auto-register it.
     
@@ -98,7 +98,7 @@ def discover_scanners():
         if not ispkg and modname != "scanners.scan_runner" and not modname.startswith("scanners.core"):
             try:
                 module = importlib.import_module(modname)
-                # V9.3.3: Try PLUGIN_META auto-registration
+                # V9.4.2: Try PLUGIN_META auto-registration
                 _load_plugin_meta(modname, module)
             except Exception as e:
                 logger.error(f"Failed to load scanner module {modname}: {e}")

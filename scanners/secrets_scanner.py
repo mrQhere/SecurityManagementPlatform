@@ -1,5 +1,5 @@
 """
-Secrets Scanner V9.3.3
+Secrets Scanner V9.4.2
 =====================
 Real pattern-based secrets detection in HTTP responses, HTML, JS files,
 and raw scanner output. Replaces the empty stubs (trufflehog/gitleaks).
@@ -175,7 +175,7 @@ def run_secrets_scan(url: str) -> list:
     try:
         import requests
         session = requests.Session()
-        session.headers["User-Agent"] = "SMP/9.3.2 (Secrets)"
+        session.headers["User-Agent"] = "SMP/9.4.2 (Secrets)"
 
         # Scan main page
         resp = session.get(url, timeout=TIMEOUT, verify=verify_tls)
@@ -196,7 +196,11 @@ def run_secrets_scan(url: str) -> list:
                 js_resp = session.get(js_url, timeout=5, verify=verify_tls)
                 if js_resp.status_code == 200 and "javascript" in js_resp.headers.get("content-type", ""):
                     findings += _scan_text(js_resp.text, js_url)
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 continue
 
         logger.info(f"[SecretsScanner] Scanned {url}: {len(findings)} potential secrets found")
@@ -216,7 +220,11 @@ def run_secrets_scan(url: str) -> list:
                         with gzip.open(fpath, "rt", encoding="utf-8", errors="replace") as f:
                             content = f.read()
                         findings += _scan_text(content, f"cached:{fname}")
-                    except Exception:
+                    except Exception as e:
+                        from tools.errors import SMPUnclassifiedError
+                        import traceback, logging
+                        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                        raise SMPUnclassifiedError(str(e))
                         continue
         except Exception as e2:
             logger.error(f"[SecretsScanner] Fallback cache scan also failed: {e2}")

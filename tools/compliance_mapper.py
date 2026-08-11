@@ -6,7 +6,7 @@ Maps SMP finding types and CWE IDs to compliance control references:
   - CIS Controls v8
   - ISO 27001:2022 Annex A
   - SOC 2 Type II (Trust Services Criteria)
-  - PCI-DSS v9.4.2 (Requirements 6, 11)
+  - PCI-DSS v4.0 (Requirements 6, 11)
 
 Usage:
     from tools.compliance_mapper import map_finding_to_controls
@@ -16,7 +16,7 @@ Usage:
 
 Control ID reference format:
   SOC 2  → CC6.1, CC6.6, CC7.2, ...
-  PCI-DSS → Req 6.3.1, Req 6.4.1, Req 11.3.1, ...
+  PCI-DSS → Req 6.2.4, Req 6.4.1, Req 11.4.1, ...
 """
 import logging
 
@@ -178,8 +178,8 @@ _SOC2_TYPE_II = {
     ],
 }
 
-# ── PCI-DSS v9.3.3 ─────────────────────────────────────────────────────────────
-# Source: PCI Security Standards Council PCI DSS v9.3.3 (March 2022)
+# ── PCI-DSS v4.0 ─────────────────────────────────────────────────────────────
+# Source: PCI Security Standards Council PCI DSS v4.0 (March 2022)
 _PCI_DSS_V4 = {
     "Req 6.2.4 - Software Engineering Techniques (Injection Prevention)": [
         "sql injection", "sqli", "command injection", "xxe", "ldap injection",
@@ -204,14 +204,14 @@ _PCI_DSS_V4 = {
     "Req 8.3.2 - Strong Cryptography for Authentication": [
         "authentication", "weak password", "brute force", "cwe-521", "cwe-307",
     ],
-    "Req 8.6.1 - Interactive Login Accounts (MFA)": [
+    "Req 8.4.2 - Multi-Factor Authentication for all access to CDE": [
         "brute force", "authentication", "jwt", "session", "cwe-307", "cwe-522",
     ],
-    "Req 11.3.1 - External Penetration Testing": [
-        "penetration test", "vulnerability scan", "open port", "nmap",
-    ],
-    "Req 11.3.2 - Internal Penetration Testing": [
+    "Req 11.4.1 - Internal Penetration Testing": [
         "ssrf", "internal", "network", "port", "firewall",
+    ],
+    "Req 11.4.2 - External Penetration Testing": [
+        "penetration test", "vulnerability scan", "open port", "nmap",
     ],
     "Req 12.3.2 - Targeted Risk Analysis": [
         "risk", "cvss", "epss", "severity", "critical",
@@ -332,7 +332,7 @@ def format_compliance_table(summary: dict) -> str:
         CIS Controls        45%     5/11
         ISO 27001          55%     6/11
         SOC 2 Type II       40%     4/10
-        PCI-DSS v9.3.3        50%     6/12
+        PCI-DSS v9.4.2        50%     6/12
     """
     lines = [
         "Framework          Coverage   Controls Matched",
@@ -345,7 +345,7 @@ def format_compliance_table(summary: dict) -> str:
         f"{len(summary['iso_categories_hit'])}/{len(_ISO_27001_2022)}",
         f"SOC 2 Type II       {summary['soc2_coverage']:>3}%     "
         f"{len(summary['soc2_controls_hit'])}/{len(_SOC2_TYPE_II)}",
-        f"PCI-DSS v9.3.3        {summary['pci_dss_coverage']:>3}%     "
+        f"PCI-DSS v4.0        {summary['pci_dss_coverage']:>3}%     "
         f"{len(summary['pci_dss_controls_hit'])}/{len(_PCI_DSS_V4)}",
     ]
     return "\n".join(lines)

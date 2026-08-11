@@ -42,7 +42,11 @@ def get_latest_risk_score_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return dict(row) if row else None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
     finally:
         conn.close()
@@ -58,7 +62,11 @@ def get_latest_scan_operator_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return "N/A"
     finally:
         conn.close()
@@ -539,12 +547,20 @@ class UDPListenerThread(QThread):
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.sendto(b'{}', ("127.0.0.1", 5005))
             s.close()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         if self._sock:
             try:
                 self._sock.close()
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 
     def run(self):
@@ -573,12 +589,20 @@ class UDPListenerThread(QThread):
                 continue  # expected — just loops and checks _running
             except OSError:
                 break  # socket was closed
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 
         try:
             sock.close()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
 class DashboardLogicMixin:
@@ -966,7 +990,11 @@ class DashboardLogicMixin:
         try:
             # Stop the polling timer cleanly before exit
             self.timer.stop()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         try:
             import os
@@ -1095,7 +1123,11 @@ class DashboardLogicMixin:
                 recent = get_scans_for_target(target["id"], limit=1)
                 if recent and recent[0]["status"] not in ("Completed", "Failed", "Cancelled"):
                     has_interrupted = True
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 
             if is_target_scanning(target["id"]):
@@ -1172,7 +1204,11 @@ class DashboardLogicMixin:
                 )
             """, target_ids).fetchall()
             return {row["target_id"]: {"score": row["score"], "rating": row["rating"]} for row in rows}
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             return {}
         finally:
             conn.close()
@@ -1193,7 +1229,11 @@ class DashboardLogicMixin:
                 HAVING id = MAX(id)
             """, target_ids).fetchall()
             return {row["target_id"]: (row["scanned_by"] or "N/A") for row in rows}
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             return {}
         finally:
             conn.close()
@@ -1304,7 +1344,11 @@ class DashboardLogicMixin:
                 h, rem = divmod(diff.total_seconds(), 3600)
                 m, s = divmod(rem, 60)
                 dur_str = f"{int(h):02}:{int(m):02}:{int(s):02}"
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
             
             current_status = scan.get("scanner_status") or scan["status"]

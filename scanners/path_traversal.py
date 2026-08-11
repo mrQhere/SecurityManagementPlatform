@@ -32,7 +32,7 @@ def run_path_traversal(url):
         for payload in TRAVERSAL_PAYLOADS:  # test all payloads
             test = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.3.2"})
+                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.2"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if any(sig in body for sig in [
@@ -54,6 +54,10 @@ def run_path_traversal(url):
                             "remediation_code": "# Sanitise file paths:\nimport os\nbase = '/var/www/html'\nrequested = os.path.realpath(os.path.join(base, user_input))\nif not requested.startswith(base): raise ValueError('Path traversal')",
                             "references_json": ["https://owasp.org/www-project-web-security-testing-guide/", "https://cwe.mitre.org/data/definitions/22.html"]
                         })
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 continue
     return findings

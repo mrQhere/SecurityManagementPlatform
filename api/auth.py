@@ -1,5 +1,5 @@
 """
-API Authentication Module V9.3.3
+API Authentication Module V9.4.2
 ================================
 JWT token issuance and verification for the SMP API.
 
@@ -33,7 +33,11 @@ def _get_jwt_secret() -> str:
                 data = json.load(f)
             salt = data.get("salt", "")
             return hashlib.sha256(f"smp-api-jwt-{salt}".encode()).hexdigest()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
 
     # Fallback: env var
@@ -41,9 +45,31 @@ def _get_jwt_secret() -> str:
     if env_secret:
         return env_secret
 
-    # Last resort: fixed string (only for development)
-    logger.warning("[Auth] Using fallback JWT secret — set SMP_JWT_SECRET env var in production.")
-    return "smp-v6-fallback-jwt-secret-change-me"
+    # Last resort: generate and persist a new secret
+    import secrets
+    from tools.config_manager import BASE_DIR
+    auth_path = os.path.join(BASE_DIR, "config", "auth.json")
+    
+    try:
+        data = {}
+        if os.path.exists(auth_path):
+            with open(auth_path) as f:
+                data = json.load(f)
+        
+        # If there's an already generated secret in the file, use it
+        if "jwt_secret" in data:
+            return data["jwt_secret"]
+            
+        new_secret = secrets.token_hex(32)
+        data["jwt_secret"] = new_secret
+        os.makedirs(os.path.dirname(auth_path), exist_ok=True)
+        with open(auth_path, "w") as f:
+            json.dump(data, f, indent=4)
+        logger.info("[Auth] Generated and persisted new JWT secret.")
+        return new_secret
+    except Exception as e:
+        logger.error(f"[Auth] Failed to generate/persist JWT secret: {e}")
+        raise RuntimeError("Failed to obtain or generate JWT secret. Failing closed.")
 
 
 def create_token(username: str, expiry_hours: int = _JWT_EXPIRY_HOURS) -> str:
@@ -52,26 +78,19 @@ def create_token(username: str, expiry_hours: int = _JWT_EXPIRY_HOURS) -> str:
     
     Returns: JWT string
     """
-    try:
-        from jose import jwt as jose_jwt
-        now    = datetime.now(timezone.utc)
-        expire = now + timedelta(hours=expiry_hours)
-        payload = {
-            "sub": username,
-            "iat": int(now.timestamp()),
-            "exp": int(expire.timestamp()),
-            "iss": "smp-v6",
-        }
-        secret = _get_jwt_secret()
-        token = jose_jwt.encode(payload, secret, algorithm="HS256")
-        logger.info(f"[Auth] Token created for '{username}', expires {expire.isoformat()}")
-        return token
-    except ImportError:
-        # Fallback: simple base64 token (no jose library)
-        logger.warning("[Auth] python-jose not installed. Using simple token fallback.")
-        import base64
-        payload = json.dumps({"sub": username, "exp": (datetime.now() + timedelta(hours=expiry_hours)).isoformat()})
-        return base64.urlsafe_b64encode(payload.encode()).decode()
+    from jose import jwt as jose_jwt
+    now    = datetime.now(timezone.utc)
+    expire = now + timedelta(hours=expiry_hours)
+    payload = {
+        "sub": username,
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+        "iss": "smp-v6",
+    }
+    secret = _get_jwt_secret()
+    token = jose_jwt.encode(payload, secret, algorithm="HS256")
+    logger.info(f"[Auth] Token created for '{username}', expires {expire.isoformat()}")
+    return token
 
 
 def verify_token(token: str) -> str:
@@ -80,25 +99,14 @@ def verify_token(token: str) -> str:
     
     Returns: username string if valid, None if invalid/expired.
     """
+    from jose import jwt as jose_jwt, JWTError, ExpiredSignatureError
     try:
-        from jose import jwt as jose_jwt, JWTError, ExpiredSignatureError
         secret = _get_jwt_secret()
         payload = jose_jwt.decode(token, secret, algorithms=["HS256"])
         username = payload.get("sub")
         if not username:
             return None
         return username
-    except ImportError:
-        # Fallback: decode simple base64 token
-        try:
-            import base64
-            payload = json.loads(base64.urlsafe_b64decode(token.encode() + b"=="))
-            exp = datetime.fromisoformat(payload["exp"])
-            if datetime.now() > exp:
-                return None
-            return payload.get("sub")
-        except Exception:
-            return None
     except Exception as e:
         logger.warning(f"[Auth] Token verification failed: {e}")
         return None

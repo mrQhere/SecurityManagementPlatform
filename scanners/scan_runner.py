@@ -53,6 +53,7 @@ from tools.db_manager import (
     clear_redundancy_db,
 )
 from tools.config_manager import load_settings
+from intelligence.brain import process_findings_for_global_intel, generate_ai_insights
 
 # ── Graceful-shutdown flag ─────────────────────────────────────────────────
 # Set to True by main.py / dashboard.py before calling QApplication.quit().
@@ -112,11 +113,15 @@ def get_cooling_delay():
             return 3.0  # Moderate load
         else:
             return 1.5  # Low load, fast cooling
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return 2.5      # Fallback default
 
 
-def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=1):
+def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=1, brain_insights=None):
     """
     Executes a scan function with execution guards, process group tracking,
     adaptive timeouts, and failure tracking.
@@ -179,7 +184,11 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
             if os.name != 'nt':
                 try:
                     os.killpg(os.getpgid(self.pid), signal.SIGKILL)
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     super().kill()
             else:
                 super().kill()
@@ -188,7 +197,11 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
             if os.name != 'nt':
                 try:
                     os.killpg(os.getpgid(self.pid), signal.SIGTERM)
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     super().terminate()
             else:
                 super().terminate()
@@ -205,6 +218,8 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
             kwargs["scan_id"] = scan_id
         if "settings" in sig.parameters:
             kwargs["settings"] = settings
+        if "brain_insights" in sig.parameters:
+            kwargs["brain_insights"] = brain_insights
         
         result = scan_func(url, **kwargs)
         if result is not None:
@@ -242,37 +257,37 @@ def get_sudo_password():
     """Retrieve the sudo password configured for the current scan thread."""
     return getattr(thread_local, "sudo_password", None)
 
-# Ordered list of all step names (must match db_manager.ALL_ACTIVE_STATUSES)
-_PIPELINE_STEPS = [
-    # ── Tier 1: Passive / OSINT (fast, no traffic) ─────────────────────────
+# Grouping list for Phase definitions
+_PHASE_1_STEPS = {
     "Running HTTPx", "Running WhatWeb", "Running Subfinder", "Running Amass",
     "Running theHarvester", "Running SpiderFoot OSINT", "Running CRT.sh",
     "Running HackerTarget", "Running Whois", "Running Wayback Machine",
-    # ── Tier 2: Network & Infrastructure ───────────────────────────────────
-    "Running Traceroute", "Running Nmap", "Running Masscan", "Running DNSx",
-    "Running SSL Scan", "Running HTTP Smuggling Scanner",
-    # ── Tier 3: Web Surface Discovery ──────────────────────────────────────
+    "Running Traceroute", "Running DNSx", "Running SSL Scan", 
     "Running Security Headers", "Running Robots.txt", "Running CORS",
-    "Running CMS Scanner", "Running Katana", "Running ffuf",
-    "Running Feroxbuster", "Running API Fuzzer", "Running GraphQL Scanner",
-    "Running ParamSpider", "Running Arjun",
-    # ── Tier 4: Vulnerability Scanning ─────────────────────────────────────
-    "Running Nikto", "Running Nuclei", "Running ZAP",
-    "Running Retire.js Scanner", "Running Tech Fingerprint",
-    "Running Open Redirect", "Running CRLF Scanner",
-    # ── Tier 5: Deep Exploitation Testing ──────────────────────────────────
-    "Running Wapiti", "Running SQLMap", "Running Dalfox", "Running Commix",
-    "Running SSRF Scanner", "Running XXE Scanner", "Running Path Traversal Scanner",
-    "Running JWT Scanner", "Running WPScan",
-    # ── Tier 6: Auth & Secrets ──────────────────────────────────────────────
-    "Running Auth Brute-Force Test", "Running Cloud Enum",
-    "Running Gitleaks", "Running TruffleHog",
-    "Running Semgrep", "Running Trivy",
-    # ── Tier 7: Passive Intelligence ───────────────────────────────────────
-    "Running Shodan",
-    # ── Terminal ────────────────────────────────────────────────────────────
-    "Correlating CVEs", "Report Pending",
-]
+    "Running Tech Fingerprint", "Running Katana"
+}
+
+_PHASE_2_STEPS = {
+    "Running Nmap", "Running Masscan", "Running HTTP Smuggling Scanner",
+    "Running CMS Scanner", "Running ffuf", "Running Feroxbuster", 
+    "Running API Fuzzer", "Running GraphQL Scanner", "Running ParamSpider", 
+    "Running Arjun", "Running Nikto", "Running Nuclei", "Running Retire.js Scanner", 
+    "Running Open Redirect", "Running CRLF Scanner", "Running Prototype Pollution Scanner",
+    "Running WebSocket Scanner", "Running Race-the-Web Scanner"
+}
+
+_PHASE_3_STEPS = {
+    "Running ZAP", "Running Wapiti", "Running SQLMap", "Running Dalfox", 
+    "Running Commix", "Running SSRF Scanner", "Running XXE Scanner", 
+    "Running Path Traversal Scanner", "Running JWT Scanner", "Running WPScan",
+    "Running Auth Brute-Force Test", "Running Cloud Enum", "Running Gitleaks", 
+    "Running TruffleHog", "Running Semgrep", "Running Trivy", "Running Shodan",
+    "Running IDOR Scanner",
+    "Correlating CVEs", "Report Pending"
+}
+
+# Ordered list of all step names (must match db_manager.ALL_ACTIVE_STATUSES)
+_PIPELINE_STEPS = list(_PHASE_1_STEPS) + list(_PHASE_2_STEPS) + list(_PHASE_3_STEPS)
 
 
 _cancel_events = {}
@@ -429,6 +444,9 @@ def _should_run_step(step_name, resume_status):
         "Running JWT Scanner",     # JWT weakness detection
         "Running API Fuzzer",      # Swagger/OpenAPI endpoint detection
         "Running GraphQL Scanner", # GraphQL introspection check
+        "Running Prototype Pollution Scanner", # Prototype Pollution test
+        "Running WebSocket Scanner", # WebSocket enumeration
+        "Running Race-the-Web Scanner", # Race Condition / TOCTOU
     }
 
     # Full — Deep/intrusive exploitation testing. Requires explicit written permission.
@@ -452,6 +470,7 @@ def _should_run_step(step_name, resume_status):
         "Running Semgrep",         # Static analysis (source code mode)
         "Running ZAP",             # OWASP ZAP active scan
         "Running WPScan",          # (already in standard; run deeper in full)
+        "Running IDOR Scanner",    # IDOR / BOLA scanner
     }
 
     # ── 3. Check profile gating ───────────────────────────────────────────────
@@ -562,7 +581,11 @@ def _get_previous_completed_scan(target_id, current_scan_id):
             (target_id, current_scan_id),
         ).fetchone()
         return dict(row) if row else None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
     finally:
         conn.close()
@@ -611,7 +634,11 @@ def _log_raw(scan_id, tool_name, result_list):
     try:
         raw_str = json.dumps(result_list, default=str) if result_list is not None else "null"
         save_raw_scan_output(scan_id, tool_name, raw_str, "")
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
 
 
@@ -636,7 +663,11 @@ def _filter_spa_ffuf_results(results):
                 try:
                     cl = int(part.split("Content-Length:")[1].split("|")[0].strip())
                     lengths.append(cl)
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     lengths.append(-1)
                 break
         else:
@@ -969,6 +1000,10 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         from scanners.paramspider import run_paramspider_scan
         from scanners.cloud_enum import run_cloud_enum_scan
         from scanners.zap import run_zap_scan
+        from scanners.ppmap import run_ppmap_scan
+        from scanners.wscat_scanner import run_wscat_scan
+        from scanners.idor_scanner import run_idor_scan
+        from scanners.race_the_web import run_race_the_web_scan
 
         from scanners.core.plugin import GenericPlugin
         from scanners.core.dag import DAGOrchestrator
@@ -1019,6 +1054,10 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
             "Masscan": _process_masscan_results,
             "ParamSpider": _process_paramspider_results,
             "Cloud Enum": _process_cloud_enum_results,
+            "Prototype Pollution Scanner": lambda res: _save_findings(scan_id, res or [], "ppmap", 75),
+            "WebSocket Scanner": lambda res: _save_findings(scan_id, res or [], "wscat", 60),
+            "Race-the-Web Scanner": lambda res: _save_findings(scan_id, res or [], "race-the-web", 80),
+            "IDOR Scanner": lambda res: _save_findings(scan_id, res or [], "IDOR", 85),
         }
 
         registered_scanners = get_registered_scanners()
@@ -1080,21 +1119,57 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         def _on_active_change(active_steps):
             if active_steps:
                 update_scan_status(scan_id, active_steps[0])
-                
-        orchestrator = DAGOrchestrator(dag_plugins, max_workers=6, on_active_change=_on_active_change)
-        orchestrator.run(cancel_event=cancel_event)
+
+        # ── Phase 1: Recon & Basic OSINT ──
+        logger.info("[*] Starting Phase 1: Recon & OSINT")
+        phase1_plugins = [p for p in dag_plugins if p.step_name in _PHASE_1_STEPS]
+        orchestrator1 = DAGOrchestrator(phase1_plugins, max_workers=6, on_active_change=_on_active_change)
+        orchestrator1.run(cancel_event=cancel_event)
+
+        # ── Brain Insight 1 ──
+        findings_phase1 = get_findings_for_scan(scan_id)
+        process_findings_for_global_intel(findings_phase1)
+        brain_insight_1 = generate_ai_insights(findings_phase1)
+        logger.info(f"[*] Brain Insight 1 Generated:\n{brain_insight_1}")
+
+        # ── Phase 2: Vulnerability Testers ──
+        logger.info("[*] Starting Phase 2: Vulnerability Testers")
+        phase2_plugins = [p for p in dag_plugins if p.step_name in _PHASE_2_STEPS]
+        for p in phase2_plugins:
+            p.brain_insights = brain_insight_1 # Pass insight to plugin
+        orchestrator2 = DAGOrchestrator(phase2_plugins, max_workers=4, on_active_change=_on_active_change)
+        orchestrator2.run(cancel_event=cancel_event)
+
+        # ── Brain Insight 2 ──
+        findings_phase2 = get_findings_for_scan(scan_id)
+        process_findings_for_global_intel(findings_phase2)
+        brain_insight_2 = generate_ai_insights(findings_phase2)
+        logger.info(f"[*] Brain Insight 2 Generated:\n{brain_insight_2}")
+
+        combined_insight = f"{brain_insight_1}\n\n{brain_insight_2}"
+
+        # ── Phase 3: Deep Exploitation ──
+        logger.info("[*] Starting Phase 3: Deep Exploitation")
+        phase3_plugins = [p for p in dag_plugins if p.step_name in _PHASE_3_STEPS]
+        for p in phase3_plugins:
+            p.brain_insights = combined_insight # Pass insight to plugin
+        orchestrator3 = DAGOrchestrator(phase3_plugins, max_workers=4, on_active_change=_on_active_change)
+        orchestrator3.run(cancel_event=cancel_event)
         
-        # Populate results for Phase 2 correlation
-        for plugin in dag_plugins:
-            if plugin.name in orchestrator.failed:
-                deferred_retry_queue.append((plugin.step_name, plugin.scan_func, plugin.binary_name, plugin.process_func))
+        # Populate results for Phase 2 correlation (Retry deferred failures)
+        for orchestrator in [orchestrator1, orchestrator2, orchestrator3]:
+            for plugin_name in orchestrator.failed:
+                # Find the matching plugin object
+                p_match = next((p for p in dag_plugins if p.name == plugin_name), None)
+                if p_match:
+                    deferred_retry_queue.append((p_match.step_name, p_match.scan_func, p_match.binary_name, p_match.process_func, getattr(p_match, "brain_insights", None)))
 
         # ── Execute Deferred Retry Queue (Improvement 4 & 8) ──────────────
         if deferred_retry_queue:
             logger.info("\n[*] Initial sequence concluded. Re-attempting deferred failures with adaptive timeout balancing...")
-            for step_name, scan_func, binary_name, process_fn in deferred_retry_queue:
+            for step_name, scan_func, binary_name, process_fn, b_insights in deferred_retry_queue:
                 logger.info(f"[*] Retrying failed/timed out step: {step_name} with 1.5x timeout...")
-                res, success = run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=2)
+                res, success = run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=2, brain_insights=b_insights)
                 if success:
                     process_fn(res)
                     logger.info(f"[✅ RECOVERY] Fallback execution succeeded for step: {step_name}")
@@ -1110,6 +1185,15 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         if not is_site_up:
             add_alert(target_id, "Website Unavailable / All Scanners Failed", "High")
             add_log_entry("WARNING", f"Website unavailable or all scanners failed for {url}")
+
+        # ── Finding Deduplication ──────────────────────────────────────────
+        try:
+            from tools.finding_deduplicator import deduplicate_db_findings
+            dedup_removed = deduplicate_db_findings(scan_id)
+            if dedup_removed > 0:
+                logger.info(f"[*] Levenshtein Deduplicator merged {dedup_removed} duplicate finding(s) for scan {scan_id}")
+        except Exception as de_:
+            logger.error(f"Finding deduplication error: {de_}")
 
         # ── CVE Correlation ────────────────────────────────────────────────
         if _should_run_step("Correlating CVEs", resume_status):
@@ -1136,7 +1220,11 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         # Improvement 16: Check long-term stability and flag systemic vulnerability increases
         try:
             _evaluate_vulnerability_growth_thresholds()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         # ── Differential analysis ─────────────────────────────────────────
@@ -1243,7 +1331,11 @@ def resume_interrupted_scans():
                             for status in _PIPELINE_STEPS:
                                 if status in line:
                                     last_status = status
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
             return last_status
 

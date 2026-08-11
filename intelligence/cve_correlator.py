@@ -195,7 +195,11 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                     (match_query,)
                 )
                 candidates = [dict(row) for row in cursor.fetchall()]
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 # Fallback: older schema without affected_products/cisa_known_exploited
                 try:
                     cursor.execute(
@@ -323,7 +327,11 @@ def correlate_cves_for_scan(scan_id: int) -> int:
                         cvss_score=cvss,
                         owasp_category=owasp_cat,
                     )
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     # Retry without optional columns (older schema)
                     try:
                         add_finding(

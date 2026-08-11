@@ -125,7 +125,11 @@ def run_paramspider_scan(url, settings: dict = None):
                         sqli_urls.append(f"{param} in {mined_url[:100]}")
                     if p_lower in _LFI_PARAMS:
                         lfi_urls.append(f"{param} in {mined_url[:100]}")
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 
         if redirect_urls:

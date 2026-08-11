@@ -29,7 +29,9 @@ try:
     from fastapi import FastAPI, HTTPException, Depends, status, Request
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     from fastapi.middleware.cors import CORSMiddleware
-    from pydantic import BaseModel, HttpUrl
+    from fastapi.responses import JSONResponse
+    from pydantic import BaseModel, HttpUrl, validator, Field
+    from tools.errors import SMPError, SMPInvalidTargetError, SMPInvalidPayloadError, SMPDatabaseError
     _FASTAPI_AVAILABLE = True
 except ImportError:
     _FASTAPI_AVAILABLE = False
@@ -65,19 +67,40 @@ if _FASTAPI_AVAILABLE:
         allow_headers=["Authorization", "Content-Type"],
     )
 
-    # Rate limiting via slowapi (graceful fallback if not installed)
-    try:
-        from slowapi import Limiter, _rate_limit_exceeded_handler
-        from slowapi.util import get_remote_address
-        from slowapi.errors import RateLimitExceeded
-        limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
-        app.state.limiter = limiter
-        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-        _RATE_LIMIT = True
-    except ImportError:
-        logger.warning("[API] slowapi not installed — rate limiting disabled.")
-        _RATE_LIMIT = False
-        limiter = None
+    # Rate limiting via slowapi (hard dependency for security)
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    
+    @app.exception_handler(SMPError)
+    async def smp_error_handler(request: Request, exc: SMPError):
+        return JSONResponse(
+            status_code=400 if exc.code.startswith("SMP-4") else 500,
+            content=exc.to_dict(),
+        )
+        
+    from fastapi.exceptions import RequestValidationError
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        from tools.errors import SMPValidationError, SMPInvalidTargetError, SMPInvalidPayloadError
+        error_msg = str(exc.errors())
+        if "URL must start with" in error_msg:
+            err = SMPInvalidTargetError("URL must start with http:// or https://")
+            return JSONResponse(status_code=400, content=err.to_dict())
+        if "Username must be alphanumeric" in error_msg:
+            err = SMPInvalidPayloadError("Username must be alphanumeric.")
+            return JSONResponse(status_code=400, content=err.to_dict())
+            
+        # Fallback to generic validation error
+        return JSONResponse(
+            status_code=400,
+            content=SMPValidationError(f"Invalid payload: {exc.errors()}").to_dict()
+        )
+        
+    _RATE_LIMIT = True
 
 
 # ── JWT Authentication ────────────────────────────────────────────────────────
@@ -85,32 +108,39 @@ if _FASTAPI_AVAILABLE:
 _bearer = HTTPBearer() if _FASTAPI_AVAILABLE else None
 
 
-def _get_current_user(credentials: "HTTPAuthorizationCredentials" = None):
+def _get_current_user(credentials: "HTTPAuthorizationCredentials" = Depends(_bearer) if _bearer else None):
     """Verify JWT token and return username."""
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    try:
-        from api.auth import verify_token
-        username = verify_token(credentials.credentials)
-        if not username:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
-        return username
-    except ImportError:
-        # auth module not yet available — allow during development only
-        logger.warning("[API] auth module not loaded — token verification skipped")
-        return "dev"
+    from api.auth import verify_token
+    username = verify_token(credentials.credentials)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return username
 
 
 # ── Request / Response Models ──────────────────────────────────────────────────
 
 class TargetCreate(BaseModel):
-    url: str
+    url: str = Field(..., description="Target URL")
     company_name: str = ""
     submitted_to: str = ""
 
+    @validator("url")
+    def validate_url(cls, v):
+        if not v.startswith("http://") and not v.startswith("https://"):
+            raise SMPInvalidTargetError("URL must start with http:// or https://")
+        return v
+
 class TokenRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=1)
+
+    @validator("username")
+    def validate_username(cls, v):
+        if not v.isalnum():
+            raise SMPInvalidPayloadError("Username must be alphanumeric.")
+        return v
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -137,7 +167,11 @@ if _FASTAPI_AVAILABLE:
             with open(meta_path) as f:
                 meta = json.load(f)
             return meta
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             return {"version": "V9.4.2", "platform": "SMP"}
 
     @app.post("/api/v6/auth/token", tags=["Authentication"])
@@ -148,17 +182,12 @@ if _FASTAPI_AVAILABLE:
         Authenticates against the SMP master password.
         Returns a Bearer token valid for 24 hours.
         """
-        try:
-            from tools.encryption_manager import verify_password
-            if not verify_password(request.password):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials"
-                )
-        except ImportError:
-            # Development fallback
-            if request.password != "smp-dev":
-                raise HTTPException(status_code=401, detail="Invalid credentials")
+        from tools.encryption_manager import verify_password
+        if not verify_password(request.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
 
         try:
             from api.auth import create_token
@@ -181,7 +210,8 @@ if _FASTAPI_AVAILABLE:
             return {"targets": targets, "count": len(targets)}
         except Exception as e:
             logger.error(f"[API] list_targets error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Failed to fetch targets: {e}")
 
     @app.post("/api/v6/target", tags=["Targets"])
     def create_target(target: TargetCreate, user: str = Depends(_get_current_user)):
@@ -199,17 +229,22 @@ if _FASTAPI_AVAILABLE:
             scans = get_active_scans()
             return {"scans": scans, "count": len(scans)}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Failed to fetch scans: {e}")
 
     @app.get("/api/v6/findings", tags=["Findings"])
     def list_findings(scan_id: int, user: str = Depends(_get_current_user)):
         """Get findings for a specific scan."""
+        if scan_id <= 0:
+            from tools.errors import SMPInvalidPayloadError
+            raise SMPInvalidPayloadError("scan_id must be a positive integer.")
         try:
             from tools.db_manager import get_findings_for_scan
             findings = get_findings_for_scan(scan_id)
             return {"findings": list(findings), "scan_id": scan_id, "count": len(list(findings))}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Failed to fetch findings: {e}")
 
     @app.get("/api/v6/cve/stats", tags=["Intelligence"])
     def cve_stats(user: str = Depends(_get_current_user)):
@@ -218,7 +253,8 @@ if _FASTAPI_AVAILABLE:
             stats = get_cve_stats()
             return stats
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Failed to fetch stats: {e}")
 
     @app.get("/api/v6/risk/score", tags=["Risk"])
     def risk_scores(user: str = Depends(_get_current_user)):

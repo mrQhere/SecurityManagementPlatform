@@ -7,7 +7,7 @@ logger = logging.getLogger("smp")
 
 def get_active_bans(log_path="/var/log/fail2ban.log"):
     """
-    V9.3.3 — Parses the fail2ban log file to extract actively banned IPs.
+    V9.4.2 — Parses the fail2ban log file to extract actively banned IPs.
     
     If the file is inaccessible, returns an empty list with an
     'unavailable' indicator — NO MOCK DATA (would mislead analysts).

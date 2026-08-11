@@ -22,19 +22,18 @@ Auto-generated scanner plugin.
 import logging
 import subprocess
 import json
+from scanners.core.registry import register_scanner
 
 logger = logging.getLogger("smp.scan")
 
-# V9.4.2 Zero-Friction Plugin Registration
-PLUGIN_META = {{
-    "name": "{name}",
-    "binary": "{binary}",
-    "severity": "{severity}",
-    "step_name": "Running {name} Scan",
-    "confidence": 75,
-    "depends_on": []  # e.g., ["Nmap"] if you need Nmap to run first
-}}
-
+@register_scanner(
+    name="{name}",
+    binary="{binary}",
+    severity="{severity}",
+    step_name="Running {name} Scan",
+    confidence=75,
+    depends_on=[]
+)
 def scan(target_url: str, scan_id: int = 0, settings: dict = None) -> dict:
     settings = settings or {}
     from tools.narrative_logger import emit_scanner_start, emit_finding

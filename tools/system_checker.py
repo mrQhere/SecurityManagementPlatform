@@ -1,5 +1,5 @@
 """
-System Resource Pre-Scan Checker V9.3.3
+System Resource Pre-Scan Checker V9.4.2
 ======================================
 Checks CPU, RAM, disk space, and network before a scan starts.
 If any threshold is exceeded, the caller gets a structured warning
@@ -55,7 +55,11 @@ def _get_cpu_percent() -> float:
         d_idle = idle2 - idle1
         d_total = total2 - total1
         return round((1.0 - d_idle / max(d_total, 1)) * 100, 1)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return 0.0  # Cannot determine — assume ok
 
 
@@ -77,7 +81,11 @@ def _get_free_ram_mb() -> float:
                 mem[parts[0].rstrip(":")] = int(parts[1])
         available_kb = mem.get("MemAvailable", mem.get("MemFree", 0))
         return available_kb / 1024
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return 9999  # Cannot determine — assume ok
 
 
@@ -86,7 +94,11 @@ def _get_free_disk_gb(path: str = "/") -> float:
     try:
         usage = shutil.disk_usage(path)
         return usage.free / (1024 ** 3)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return 9999  # Cannot determine — assume ok
 
 
@@ -96,12 +108,20 @@ def _check_network(host: str = _NET_HOST, port: int = _NET_PORT) -> bool:
         sock = socket.create_connection((host, port), timeout=_NET_TIMEOUT)
         sock.close()
         return True
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         # Try fallback: DNS resolution
         try:
             socket.gethostbyname("scanme.nmap.org")
             return True
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             return False
 
 

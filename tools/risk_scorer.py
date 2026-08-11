@@ -1,5 +1,5 @@
 """
-Risk Scoring Engine V9.3.3 — calibrated against real CVE data.
+Risk Scoring Engine V9.4.2 — calibrated against real CVE data.
 
 V9.4.2 Improvements:
 - Reads cvss_score column directly from the findings table (no regex parsing needed)
@@ -127,7 +127,7 @@ def calculate_and_store_risk_score(scan_id, findings):
         title = f.get("title", "") or ""
         desc  = f.get("description", "") or ""
 
-        # V9.3.3: Read CVSS/EPSS directly from the findings row columns
+        # V9.4.2: Read CVSS/EPSS directly from the findings row columns
         cvss  = f.get("cvss_score")     # stored as float by add_finding()
         epss  = f.get("epss_score")     # stored as float by add_finding()
 
@@ -255,7 +255,7 @@ def calculate_and_store_risk_score(scan_id, findings):
         logger.error(f"Failed to store risk score: {e}")
 
     logger.info(
-        f"Risk Score V9.3.3: {score}/100 ({rating}) — "
+        f"Risk Score V9.4.2: {score}/100 ({rating}) — "
         f"CVE confirmed: {breakdown['cve_confirmed_count']}, "
         f"CISA KEV: {breakdown['cisa_kev_count']}, "
         f"skipped low-conf: {breakdown['low_confidence_skipped']}"

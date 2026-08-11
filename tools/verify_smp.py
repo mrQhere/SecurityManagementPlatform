@@ -272,7 +272,11 @@ class TestSMPComponents(unittest.TestCase):
         try:
             os.remove(html_path)
             os.remove(pdf_path)
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
     def test_06_cve_stats(self):
@@ -426,6 +430,14 @@ class TestSMPComponents(unittest.TestCase):
                         {"severity": "Info", "title": "HTTP Service",
                          "description": "HTTP running on port 80"}
                     ])
+                elif name == "Prototype Pollution Scanner":
+                    mock_func = Mock(return_value=[{"title": "Prototype Pollution Found", "severity": "High"}])
+                elif name == "WebSocket Scanner":
+                    mock_func = Mock(return_value=[{"title": "Open WebSocket", "severity": "Medium"}])
+                elif name == "Race-the-Web Scanner":
+                    mock_func = Mock(return_value=[{"title": "TOCTOU Vulnerability", "severity": "Critical"}])
+                elif name == "IDOR Scanner":
+                    mock_func = Mock(return_value=[{"title": "AuthMatrix Bypass", "severity": "High"}])
                 else:
                     mock_func = Mock(return_value=[])
 
@@ -478,5 +490,47 @@ class TestSMPComponents(unittest.TestCase):
             for p in patches:
                 p.stop()
 
+    def test_11_fastapi_endpoints(self):
+        """Test API endpoints including JWT auth, health check, targets, and risk scores."""
+        from fastapi.testclient import TestClient
+        from api.server import app
+
+        client = TestClient(app)
+
+        # 1. Unauthenticated health check
+        resp = client.get("/api/v6/health")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json().get("status"), "ok")
+
+        # 2. Unauthenticated endpoint access fails (401)
+        resp = client.get("/api/v6/target")
+        self.assertEqual(resp.status_code, 401)
+
+        # 3. Request JWT token using test password ("TestPassword123@")
+        resp = client.post("/api/v6/auth/token", json={"username": "testuser", "password": "TestPassword123@"})
+        self.assertEqual(resp.status_code, 200)
+        token = resp.json().get("access_token")
+        self.assertIsNotNone(token)
+
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 4. Authenticated target creation
+        resp = client.post("/api/v6/target", json={"url": "https://api-verify.example.com", "company_name": "Test Co"}, headers=headers)
+        self.assertEqual(resp.status_code, 200)
+
+        # 5. Authenticated target list
+        resp = client.get("/api/v6/target", headers=headers)
+        self.assertEqual(resp.status_code, 200)
+        targets = resp.json().get("targets", [])
+        urls = [t["url"] for t in targets]
+        self.assertIn("https://api-verify.example.com", urls)
+
+        # 6. Authenticated risk scores
+        resp = client.get("/api/v6/risk/score", headers=headers)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("risk_scores", resp.json())
+
+
 if __name__ == "__main__":
     unittest.main()
+

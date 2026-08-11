@@ -16,7 +16,7 @@ def run_crlf_scan(url):
     for payload in CRLF_PAYLOADS:
         try:
             test = f"{base}/{payload}"
-            req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.3.2"})
+            req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.2"})
             with urllib.request.urlopen(req, timeout=6) as resp:
                 headers = dict(resp.headers)
                 if "X-Injected" in headers or "crlf" in str(headers).lower():
@@ -33,6 +33,10 @@ def run_crlf_scan(url):
                         "remediation_code": "# Strip \\r\\n from all user-controlled values before using in headers\nvalue = value.replace('\\r','').replace('\\n','')",
                         "references_json": ["https://owasp.org/www-community/attacks/CRLF_Injection", "https://cwe.mitre.org/data/definitions/93.html"]
                     })
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
     return findings

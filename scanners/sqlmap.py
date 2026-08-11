@@ -154,7 +154,11 @@ def _parse_sqlmap_output(output_dir, stdout, url):
                                 "description": f"SQLMap extracted data from {url}:\n{json.dumps(entry, indent=2)[:500]}",
                                 "template_id": "SQLI-DATA-EXTRACT",
                             })
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     pass
 
     # Fallback: check stdout for confirmation

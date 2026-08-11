@@ -52,7 +52,10 @@ jobs:
             libcairo2 \
             libgdk-pixbuf2.0-0 \
             libffi-dev \
-            shared-mime-info
+            shared-mime-info \
+            nodejs \
+            npm \
+            golang
 
       - name: Create venv & install Python deps
         run: |
@@ -78,6 +81,10 @@ jobs:
           import intelligence.epss
           import intelligence.greynoise
           import intelligence.nvd
+          import scanners.ppmap
+          import scanners.wscat_scanner
+          import scanners.race_the_web
+          import scanners.idor_scanner
           print('All core imports OK')
           "
         env:
@@ -99,3 +106,4 @@ jobs:
         env:
           SMP_CI: "1"
           PYTHONPATH: ${{ github.workspace }}
+

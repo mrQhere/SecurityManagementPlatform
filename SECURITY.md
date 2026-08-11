@@ -22,6 +22,9 @@ SMP is designed to handle highly sensitive vulnerability data.
 * **API Security**: The REST API is secured with JWT Bearer tokens.
 * **Single-Instance Lock**: A file-based lock (`/tmp/smp.lock`) prevents
   multiple simultaneous SMP processes from corrupting the database.
+* **Air-Gapped & Zero-Exfiltration Brain**: The Neural Correlation Engine and V10 Local LLM adapter operate exclusively on local heuristics and local models (e.g. Ollama). All target findings remain 100% local with zero synthetic data forging or external telemetry.
+* **Authentic Findings Integrity**: Scan findings process real tool outputs directly. No simulated or synthetic CVE IDs are generated.
+* **Multi-Session Auth Isolation**: IDOR/BOLA session testing utilizes explicit secondary token parameters (`secondary_auth_token`) within isolated scan contexts, ensuring credential boundaries are strictly maintained.
 
 > [!WARNING]
 > **Project Disclaimer**

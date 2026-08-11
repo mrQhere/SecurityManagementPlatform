@@ -18,7 +18,7 @@ def run_xxe_scan(url):
             req = urllib.request.Request(
                 base + ep,
                 data=XXE_PAYLOAD.encode(),
-                headers={"Content-Type": "application/xml", "User-Agent": "SMP/9.3.2"},
+                headers={"Content-Type": "application/xml", "User-Agent": "SMP/9.4.2"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=6) as resp:
@@ -38,6 +38,10 @@ def run_xxe_scan(url):
                         "remediation_code": "# Disable external entity processing:\n# Java: factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)\n# Python lxml: etree.XMLParser(resolve_entities=False)",
                         "references_json": ["https://owasp.org/www-project-top-ten/2021/A05_2021-Security_Misconfiguration", "https://portswigger.net/web-security/xxe"]
                     })
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
     return findings

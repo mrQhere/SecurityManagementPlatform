@@ -15,7 +15,11 @@ class RecreatingFileHandler(logging.handlers.RotatingFileHandler):
             if not os.path.exists(self.baseFilename):
                 os.makedirs(os.path.dirname(self.baseFilename), exist_ok=True)
                 self.stream = self._open()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         super().emit(record)
 

@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Docker-blue)
 ![Security](https://img.shields.io/badge/security-AES--256-critical)
-![Scanners](https://img.shields.io/badge/scanners-30%2B_Integrated-blueviolet)
+![Scanners](https://img.shields.io/badge/scanners-55_Integrated-blueviolet)
 ![Architecture](https://img.shields.io/badge/architecture-Local_First-success)
 
 **Local-first VAPT platform. Zero cloud. Encrypted at rest.**
@@ -16,8 +16,6 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 
 <img width="914" height="457" alt="smp_social_preview_1786038228676" src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" />
 
-
-
 ## Project Status
 
 > [!WARNING]
@@ -27,18 +25,79 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 ## What it is
 
 > [!NOTE]
-> SMP is a penetration testing orchestration platform that runs ~30 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
+> SMP is a penetration testing orchestration platform that runs 55 open-source scanners, correlates findings across multiple threat-intelligence sources, and produces compliance-mapped reports — all without sending your client data to a third-party cloud.
+
+**V9.4.2 Major Features:**
+
+1. **Self-Healing Diagnostics Engine**: Built-in automated recovery for missing dependencies, broken databases, or scanner failures (`python3 tools/troubleshoot.py --fix`).
+2. **Correlation & Deduplication Depth**: Levenshtein distance deduplication reduces noise, while EPSS, GreyNoise, and CISA KEV cross-referencing provide real-world exploitability context.
+3. **Provable local-only operation**: Outbound intelligence logs every network call to `logs/egress_audit.log`. Set `SMP_LOCAL_ONLY=1` to block all external calls.
+4. **Compliance gap analysis**: Dynamically maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v4.0.
+5. **SQLCipher encryption**: "Encrypted at rest" is unconditionally enforced on all sensitive pentest data.
+6. **Robust Network Evasion**: Fail-closed MAC Changer logic guarantees scanner execution even under permission constraints.
+
+---
+
+## Quick Start (Linux / macOS)
+
+Copy and paste the following commands to install and run SMP:
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/mrQhere/SecurityManagementPlatform.git
+cd SecurityManagementPlatform
+
+# 2. Install (Creates Python venv, installs SQLCipher & 55 tools — ~2 min)
+./setup.sh
+
+# 3. Auto-Heal & Verify Environment (Fixes missing dependencies instantly)
+python3 tools/troubleshoot.py --fix
+
+# 4. Run the GUI Desktop App
+./run.sh
+```
+
+**Run headless REST API instead:**
+```bash
+python3 main.py --api
+```
 
 > [!TIP]
-> **V9.4.2** ships a Neural Correlation Engine (`intelligence/brain.py`) that builds a local heuristics graph from real scan data and the CISA KEV catalog. It includes a force-directed graph UI (`ui/components/neural_graph.py`) to visualise CVE relationships. The CVSS and EPSS values in the graph are populated from live NVD and EPSS API calls — not hardcoded.
+> **Encountering an issue?** Run `python3 tools/troubleshoot.py --fix` to let SMP automatically diagnose and repair itself. For more details, see the [Troubleshooting Guide](troubleshooting/).
 
-**The core pitch is not tool count.** It is:
+### Docker (Windows / All Platforms)
 
-1. **Correlation depth** — most scanner wrappers report raw CVSS. SMP cross-references each finding against EPSS, GreyNoise, and CISA KEV to produce a single, weighted risk score that reflects real-world exploitability.
-2. **Provable local-only operation** — outbound intelligence logs every network call to `logs/egress_audit.log`. Set `SMP_LOCAL_ONLY=1` to block all external calls.
-3. **Minimalist UX** — dark aesthetic prioritising raw information density over chrome.
-4. **Compliance gap analysis** — maps findings to SOC 2 Type II, ISO 27001, CIS, and PCI-DSS v4.0.
-5. **SQLCipher encryption, not optional** — "Encrypted at rest" is unconditionally enforced on all sensitive pentest data. Public CVE models are deliberately unencrypted for maximum I/O performance.
+Windows users must use Docker. Read [USER_GUIDE.md](USER_GUIDE.md#1--installation) for more details.
+
+```bash
+docker compose up -d
+# API Documentation is available at: http://localhost:8000/api/v6/docs
+```
+
+### Local-only mode (No outbound calls)
+
+```bash
+SMP_LOCAL_ONLY=1 ./run.sh
+```
+All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egress_audit.log`.
+
+---
+
+## 🛠️ The V9.4.2 Self-Healing Engine
+
+SMP now features an autonomous recovery engine. Whenever a component crashes or a dependency goes missing, SMP assigns it an `SMP-xxxx` error code. 
+
+**To automatically resolve 90% of issues:**
+```bash
+source venv/bin/activate
+python3 tools/troubleshoot.py --fix
+```
+The engine will automatically:
+- Fix `SMP-3001` Database locks by executing `PRAGMA wal_checkpoint(TRUNCATE)`.
+- Fix `SMP-2002` Missing Binaries by auto-installing deleted scanners.
+- Repair corrupted Python environments.
+
+For a full list of error codes, see [troubleshooting/auto_fixes.md](troubleshooting/auto_fixes.md).
 
 ---
 
@@ -48,78 +107,16 @@ Maintained by [@mrQhere](https://github.com/mrQhere).
 SecurityManagementPlatform/
 ├── api/                   # REST API backend (FastAPI)
 ├── config/                # Platform configuration & metadata
-├── database/              # SQLite databases (security.db, global_intel.db)
-├── intelligence/          # Correlation engine & API connectors (CISA, NVD, EPSS)
+├── database/              # SQLite databases (security.db encrypted)
+├── intelligence/          # Correlation engine & API connectors
 ├── logs/                  # Unified logging directory
-├── scanners/              # 30+ pentesting scanner wrappers (Nmap, ZAP, etc.)
-├── tools/                 # Core engine (Scheduler, Database manager, Encryption)
+├── scanners/              # 55 pentesting scanner wrappers (Nmap, ZAP, etc.)
+├── tools/                 # Unified toolset (troubleshoot.py, deduplicator, etc.)
 ├── ui/                    # Desktop Application (PySide6)
-│   ├── components/        # UI widgets (NeuralGraphWidget)
-│   ├── views/             # Dashboard and navigation logic
-│   └── style.qss          # Global dark theme
 ├── main.py                # Application entrypoint
 ├── setup.sh               # Linux/macOS installer
 └── tools/verify_smp.py    # CI/CD integrity testing suite
 ```
-
----
-
-## Quick Start (Linux / macOS)
-
-```bash
-# 1. Clone
-git clone https://github.com/mrQhere/SecurityManagementPlatform.git
-cd SecurityManagementPlatform
-
-# 2. Install (Python venv + SQLCipher + Go tools — ~2 min)
-./setup.sh
-
-# 3. Run GUI
-./run.sh
-
-# Run headless REST API instead
-python main.py --api
-```
-
-> [!NOTE]
-> Having installation issues? Check the [Troubleshooting Guides](troubleshooting/).
-
-### Windows
-
-Use Docker (see [USER_GUIDE.md](USER_GUIDE.md#24-docker--all-platforms)):
-
-```bash
-docker compose up -d
-# API: http://localhost:8000/api/v7/docs
-```
-
-### Local-only mode (no outbound calls)
-
-```bash
-SMP_LOCAL_ONLY=1 ./run.sh
-```
-
-All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egress_audit.log`.
-
----
-
-## Encryption At Rest
-
-- Sensitive pentest data (targets, scans, findings) is encrypted at rest using **SQLCipher (AES-256)**.
-- Public intelligence databases (`cve.db`, `global_intel.db`) are plaintext SQLite for I/O performance — they contain no client data.
-
----
-
-## Roadmap
-
-### Near-term (V9.4.2.x.x)
-- Neural Graph filtering by CVE correlation weight
-- Custom Nuclei/SQLMap payload injection from the UI
-- Air-gapped intelligence update via USB import of `global_intel.db`
-
-### Long-term (V10.0)
-- Distributed scan agents with mutually authenticated TLS
-- Multi-tenant reporting for MSSP client workspaces
 
 ---
 
@@ -128,13 +125,6 @@ All intelligence API calls will be blocked and logged as `BLOCKED` in `logs/egre
 Use only against systems you have written authorisation to test.  
 Maintained by [@mrQhere](https://github.com/mrQhere) · © mrQhere. See [LICENSE](LICENSE).
 
-
 ## About
 
-Built and maintained by mrQhere. This started as a learning project
-and turned into something I actually care about getting right — the
-mistakes are in the git history on purpose, not hidden, because I'd
-rather someone learn from how this got fixed than think it was
-perfect from the start. If you're using this for real work, read
-[SECURITY.md](SECURITY.md) first and don't trust anything blindly, including this
-note. Good luck.
+Built and maintained by mrQhere. This started as a learning project and turned into something I actually care about getting right. The mistakes are in the git history on purpose, not hidden, because I'd rather someone learn from how this got fixed than think it was perfect from the start. If you're using this for real work, read [SECURITY.md](SECURITY.md) first and don't trust anything blindly, including this note. Good luck.

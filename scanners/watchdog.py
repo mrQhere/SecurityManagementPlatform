@@ -49,7 +49,11 @@ def _page_hash(url: str) -> tuple[Optional[int], Optional[str]]:
                             verify=verify_tls, headers={"User-Agent": "SMP-Watchdog/1.0"})
         body_hash = hashlib.md5(resp.content).hexdigest()
         return resp.status_code, body_hash
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None, None
 
 
@@ -60,7 +64,11 @@ def _headers_hash(url: str) -> Optional[str]:
                              verify=verify_tls, headers={"User-Agent": "SMP-Watchdog/1.0"})
         header_str = json.dumps(dict(sorted(resp.headers.items())), sort_keys=True)
         return hashlib.md5(header_str.encode()).hexdigest()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 
@@ -70,7 +78,11 @@ def _dns_ip(hostname: str) -> Optional[str]:
         # Strip scheme
         h = hostname.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
         return socket.gethostbyname(h)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 
@@ -88,7 +100,11 @@ def _ssl_info(hostname: str) -> tuple[Optional[str], Optional[str]]:
             cert = s.getpeercert()
             expiry_str = cert.get("notAfter", "")
             return fingerprint, expiry_str
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None, None
 
 
@@ -112,7 +128,11 @@ def _port_hash(hostname: str) -> Optional[str]:
                         open_ports.append(part.split("/")[0])
         port_str = ",".join(sorted(open_ports))
         return hashlib.md5(port_str.encode()).hexdigest()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 
@@ -147,7 +167,11 @@ def get_baseline(target_id: int) -> Optional[dict]:
         ).fetchone()
         conn.close()
         return dict(row) if row else None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 
@@ -196,7 +220,11 @@ def _days_until_expiry(expiry_str: str) -> Optional[int]:
             expiry_dt = datetime.strptime(expiry_str, fmt).replace(tzinfo=timezone.utc)
             now = datetime.now(timezone.utc)
             return (expiry_dt - now).days
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
     return None
 

@@ -110,7 +110,11 @@ def run_gitleaks_scan(url):
                         "template_id": "VULN-SECRET-FILE",
                     })
                     logger.warning(f"Gitleaks: Secret file at {check_url}")
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
     logger.info(f"Gitleaks Completed: {len(findings)} findings")

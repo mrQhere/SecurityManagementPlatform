@@ -38,7 +38,7 @@ class ScannerPlugin:
 
 class GenericPlugin(ScannerPlugin):
     """A generic wrapper to adapt existing scanner functions into the DAG framework."""
-    def __init__(self, target_url, scan_id, name, step_name, depends_on, scan_func, binary_name, process_func, needs_binary=True, precondition=None, resume_status=None):
+    def __init__(self, target_url, scan_id, name, step_name, depends_on, scan_func, binary_name, process_func, needs_binary=True, precondition=None, resume_status=None, brain_insights=None):
         super().__init__(target_url, scan_id)
         self.name = name
         self.step_name = step_name
@@ -49,6 +49,7 @@ class GenericPlugin(ScannerPlugin):
         self.needs_binary = needs_binary
         self.precondition = precondition
         self.resume_status = resume_status
+        self.brain_insights = brain_insights
 
     def execute(self):
         from scanners.scan_runner import run_with_resilience, _log_raw, _should_run_step
@@ -70,7 +71,7 @@ class GenericPlugin(ScannerPlugin):
         # Route through scan_runner module namespace to respect unit test patches
         func_to_run = getattr(sr, self.scan_func.__name__, self.scan_func)
 
-        res, success = run_with_resilience(self.scan_id, self.step_name, func_to_run, self.target_url, self.binary_name, self.needs_binary)
+        res, success = run_with_resilience(self.scan_id, self.step_name, func_to_run, self.target_url, self.binary_name, self.needs_binary, attempt=1, brain_insights=self.brain_insights)
         if success:
             _log_raw(self.scan_id, self.name, res)
             return res

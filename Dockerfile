@@ -66,9 +66,10 @@ RUN apt-get update && \
         perl \
         # MAC changer (for OPSEC scanning)
         macchanger \
-        # Text utilities
         jq \
         ripgrep \
+        nodejs \
+        npm \
     && apt-get autoremove -y \
     && apt-get autoclean \
     && rm -rf /var/lib/apt/lists/*
@@ -94,6 +95,16 @@ RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
     go install -v github.com/hahwul/dalfox/v2@latest && \
     go install -v github.com/zricethezav/gitleaks/v8@latest && \
     go install -v github.com/s0md3v/smap/cmd/smap@latest
+
+RUN wget -q https://github.com/The-Z-Labs/race-the-web/releases/download/v1.0.3/race-the-web-linux-amd64 -O /usr/local/bin/race-the-web && \
+    chmod +x /usr/local/bin/race-the-web
+
+# ── 4. Node.js Tools ──────────────────────────────────────────────────────────
+
+RUN npm install -g wscat@5.2.1 && \
+    git clone https://github.com/kleiton0x00/ppmap.git /usr/local/share/ppmap && \
+    chmod +x /usr/local/share/ppmap/ppmap.sh && \
+    ln -s /usr/local/share/ppmap/ppmap.sh /usr/local/bin/ppmap
 
 # ── 4. Ruby tools ─────────────────────────────────────────────────────────────
 
