@@ -5,12 +5,8 @@
   
   **The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine**
   
-  <br>
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge)](https://github.com/mrQhere/SecurityManagementPlatform/actions) [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE) [![Security](https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock)](SECURITY.md)
 
-  [![Build Status](https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge)](https://github.com/mrQhere/SecurityManagementPlatform/actions)
-  [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org)
-  [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-  [![Security](https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock)](SECURITY.md)
   
   <br><br>
   
