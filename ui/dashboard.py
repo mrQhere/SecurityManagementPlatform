@@ -52,7 +52,11 @@ def get_latest_risk_score_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return dict(row) if row else None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
     finally:
         conn.close()
@@ -68,7 +72,11 @@ def get_latest_scan_operator_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return "N/A"
     finally:
         conn.close()
@@ -95,7 +103,11 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
                 version = metadata.get("version", "V9.4.2")
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         self.setWindowTitle(f"Security Management Platform • {version}")
         self.version = version
@@ -127,7 +139,11 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                 self.dashboard_splitter.restoreState(QByteArray(base64.b64decode(s['dashboard_splitter'])))
             if hasattr(self, 'targets_splitter') and 'targets_splitter' in s:
                 self.targets_splitter.restoreState(QByteArray(base64.b64decode(s['targets_splitter'])))
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         self.load_smtp_fields()
@@ -168,7 +184,11 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
                     )
                     msg.setStandardButtons(QMessageBox.Ok)
                     msg.exec()
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 pass
 
         QTimer.singleShot(800, _check_resume_on_startup)
@@ -228,10 +248,14 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         try:
             import scanners.scan_runner as _sr
             _sr.signal_app_shutdown()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
-        # ── V9.3.3 — Save Splitter States ──
+        # ── V9.4.2 — Save Splitter States ──
         try:
             from tools.config_manager import load_settings, save_settings
             import base64
@@ -241,19 +265,31 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             if hasattr(self, 'targets_splitter'):
                 s['targets_splitter'] = base64.b64encode(self.targets_splitter.saveState().data()).decode('utf-8')
             save_settings(s)
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         # 2. Stop UI timers so no further DB reads race with shutdown
         try:
             self.timer.stop()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         # Cleanly stop the IPC UDP listener thread
         try:
             self.ipc_listener.stop()
             self.ipc_listener.wait(1000)  # wait up to 1 second
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         # 3. Mark in-flight scans as "Paused" (recoverable) instead of "Failed"
@@ -261,7 +297,11 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             for scan in active:
                 try:
                     update_scan_status(scan.get("scan_id", scan.get("id")), "Paused")
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     pass
 
         # 4. Brief "Closing safely…" overlay so the user sees feedback

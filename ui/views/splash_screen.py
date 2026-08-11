@@ -44,7 +44,11 @@ class StartupWorker(QThread):
         try:
             from tools.tool_installer import TOOLS
             tool_count = len(TOOLS)
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             tool_count = 34
         self.progress.emit(50, f"Running Verifier Checker on all {tool_count} tools...")
         try:
@@ -60,7 +64,11 @@ class StartupWorker(QThread):
         try:
             from scanners.scan_runner import resume_interrupted_scans
             resume_interrupted_scans()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         # 4. Starting background schedulers
@@ -68,7 +76,11 @@ class StartupWorker(QThread):
         try:
             from tools.scheduler import start_scheduler
             start_scheduler()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
         time.sleep(0.5)
 
@@ -101,7 +113,11 @@ class SplashScreen(QWidget):
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
                 version = metadata.get("version", "V9.4.2")
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
         self.final_subtitle = f"SECURITY PLATFORM • {version}"

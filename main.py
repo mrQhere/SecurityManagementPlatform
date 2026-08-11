@@ -42,7 +42,11 @@ def release_lock():
         try:
             fcntl.flock(lock_file_fd, fcntl.LOCK_UN)
             lock_file_fd.close()
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
 def handle_system_signals(signum, frame):
@@ -56,7 +60,11 @@ def handle_system_signals(signum, frame):
     try:
         import scanners.scan_runner as _sr
         _sr.signal_app_shutdown()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
 
     release_lock()
@@ -68,12 +76,20 @@ def handle_system_signals(signum, frame):
         print(f"  ⚠️   Database save error: {e}")
     try:
         shutdown_scheduler()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
     # Quit Qt cleanly (triggers on_quit via aboutToQuit)
     try:
         QApplication.quit()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
     os._exit(0)
 
@@ -89,7 +105,7 @@ def main():
         print("[*] Starting SMP V9.4.2 in Headless API Mode...")
         enforce_single_instance()
         init_directories()
-        # ── V9.3.3 P0 FIX: Decrypt before DB access ─────────────────────────
+        # ── V9.4.2 P0 FIX: Decrypt before DB access ─────────────────────────
         from tools.encryption_manager import decrypt_databases
         decrypt_databases()
         init_db()

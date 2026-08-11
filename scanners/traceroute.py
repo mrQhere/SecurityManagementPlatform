@@ -12,7 +12,11 @@ def _get_sudo_password():
     try:
         from scanners.scan_runner import get_sudo_password
         return get_sudo_password()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 def extract_host_from_url(url):

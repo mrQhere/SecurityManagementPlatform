@@ -65,14 +65,14 @@ DEFAULT_SETTINGS = {
     "github_token": "",
     # Report identity
     "tester_name": "Security Auditor",
-    # ── V9.3.3 — Scan Profiles ──────────────────────────────────────────────────
+    # ── V9.4.2 — Scan Profiles ──────────────────────────────────────────────────
     # Options: "fast", "standard", "full"
     "scan_profile": "standard",
-    # ── V9.3.3 — Authenticated Scanning ──────────────────────────────────────────
+    # ── V9.4.2 — Authenticated Scanning ──────────────────────────────────────────
     # Dict of custom HTTP headers to inject into supported scanners
     # e.g. {"Cookie": "session=abc123", "Authorization": "Bearer eyJ..."}
     "auth_headers": {},
-    # ── V9.3.3 — New Scanner Binary Paths ──────────────────────────────────────
+    # ── V9.4.2 — New Scanner Binary Paths ──────────────────────────────────────
     "dalfox_path": "dalfox",
     "arjun_path": "arjun",
     "dnsx_path": "dnsx",
@@ -84,13 +84,13 @@ DEFAULT_SETTINGS = {
     "masscan_path": "masscan",
     "paramspider_path": "paramspider",
     "cloud_enum_path": "cloud_enum",
-    # ── V9.3.3 — Proxies & Keys & Features ─────────────────────────────────────
+    # ── V9.4.2 — Proxies & Keys & Features ─────────────────────────────────────
     "http_proxy": "",
     "https_proxy": "",
     "shodan_api_key": "",
     "censys_api_key": "",
     "cloud_enum_keywords": "",
-    # ── V9.3.3 — New Security Features ──────────────────────────────────────────
+    # ── V9.4.2 — New Security Features ──────────────────────────────────────────
     # MAC Changer — enhanced: show result in dashboard
     "mac_changer_enabled": True,
     "mac_display_result": True,   # Show changed MAC in dashboard status bar
@@ -140,8 +140,14 @@ def load_settings():
             merged = DEFAULT_SETTINGS.copy()
             merged.update(settings)
             return merged
-    except Exception:
-        return DEFAULT_SETTINGS.copy()
+    except json.JSONDecodeError as e:
+        from tools.errors import SMPConfigError
+        raise SMPConfigError(f"Configuration file {path} is malformed: {e}")
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
 
 def save_settings(settings):
     """Save settings to config/settings.json."""
@@ -151,5 +157,9 @@ def save_settings(settings):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=4)
         return True
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return False

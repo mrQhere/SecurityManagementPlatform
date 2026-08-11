@@ -68,7 +68,11 @@ def _version_is_below(version_str, threshold):
         def parse(v):
             return [int(x) for x in v.split(".")]
         return parse(version_str) < parse(threshold)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return False
 
 
@@ -94,7 +98,7 @@ def run_cms_scan(url):
     base_url = f"{parsed.scheme}://{parsed.netloc}"
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SMP/9.3.2 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.4.2 (Security Audit)"
 
     detected_cms = set()
     detected_versions = {}

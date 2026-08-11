@@ -91,7 +91,7 @@ def run_headers_scan(url):
 
         session = requests.Session()
         session.headers.update({
-            "User-Agent": "SMP/9.3.2 (Security Audit)",
+            "User-Agent": "SMP/9.4.2 (Security Audit)",
         })
 
         try:
@@ -153,7 +153,11 @@ def run_headers_scan(url):
                             ),
                             "confidence": 90,
                         })
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     pass
 
         # ── Check CSP quality if present ────────────────────────────────────

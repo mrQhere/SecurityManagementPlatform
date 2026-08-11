@@ -42,7 +42,7 @@ def run_ssrf_scan(url):
         for payload in SSRF_PAYLOADS:  # Test all cloud metadata payloads
             test_url = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.3.2"})
+                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.4.2"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if any(sig in body for sig in _SSRF_SIGNATURES):
@@ -60,6 +60,10 @@ def run_ssrf_scan(url):
                             "remediation_code": "# Validate/whitelist URLs before fetching\nimport urllib.parse\nallowed = ['example.com']\nu = urllib.parse.urlparse(user_url)\nassert u.hostname in allowed",
                             "references_json": ["https://owasp.org/www-project-top-ten/2021/A10_2021-Server-Side_Request_Forgery_(SSRF)", "https://portswigger.net/web-security/ssrf"]
                         })
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 continue
     return findings

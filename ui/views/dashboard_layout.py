@@ -53,7 +53,11 @@ def get_latest_risk_score_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return dict(row) if row else None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
     finally:
         conn.close()
@@ -69,7 +73,11 @@ def get_latest_scan_operator_for_target(target_id):
             ORDER BY s.id DESC LIMIT 1
         """, (target_id,)).fetchone()
         return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return "N/A"
     finally:
         conn.close()
@@ -1177,7 +1185,7 @@ class DashboardLayoutMixin:
         zap_layout.addWidget(zap_desc)
         scroll_layout.addWidget(zap_card)
 
-        # ── V9.3.3 — API Keys & Proxies ──
+        # ── V9.4.2 — API Keys & Proxies ──
         api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.4.2')}")
         api_layout = api_card.layout()
 
@@ -1421,7 +1429,7 @@ class DashboardLayoutMixin:
 
         return page
 
-    # ─── Page: Reports (V9.3.3) ──────────────────────────────────────────────────
+    # ─── Page: Reports (V9.4.2) ──────────────────────────────────────────────────
 
     def _build_reports_page(self):
         """Reports Viewer — lists all generated HTML/PDF reports on disk."""
@@ -1572,7 +1580,11 @@ class DashboardLayoutMixin:
                         sha256.update(_chunk)
                 file_hash_display = sha256.hexdigest()[:16] + "…"
                 full_hash = sha256.hexdigest()
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 file_hash_display = "N/A"
                 full_hash = ""
             hash_item = QTableWidgetItem(f"SHA256: {file_hash_display}")

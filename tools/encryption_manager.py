@@ -81,7 +81,7 @@ def has_password_set() -> bool:
     return os.path.exists(AUTH_FILE)
 
 def setup_password(password: str):
-    """V9.3.3 — Establish master password with complexity check and generate encryption keys."""
+    """V9.4.2 — Establish master password with complexity check and generate encryption keys."""
     # Complexity check on first setup
     is_valid, error_msg = validate_password_complexity(password)
     if not is_valid:
@@ -130,7 +130,11 @@ def verify_password(password: str) -> bool:
             ).derive(password.encode())
             ACTIVE_KEY = ACTIVE_KEY.hex()
             return True
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
     return False
 

@@ -63,7 +63,7 @@ done
 
 if $HEADLESS; then
     echo -e "${YELLOW}  ⚠  No display detected — starting in API-only mode (headless)${RESET}"
-    echo -e "     Dashboard: ${BOLD}http://localhost:8000/api/v7/docs${RESET}\n"
+    echo -e "     Dashboard: ${BOLD}http://localhost:8000/api/v6/docs${RESET}\n"
 export PYTHONPATH="$SCRIPT_DIR"
     # Strip any existing --api to avoid duplicates, then force it
     FILTERED_ARGS=()

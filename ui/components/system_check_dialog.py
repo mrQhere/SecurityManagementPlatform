@@ -1,5 +1,5 @@
 """
-System Check Dialog V9.3.3
+System Check Dialog V9.4.2
 =========================
 Shows a pre-scan warning dialog when system resources are low.
 Gives the analyst a "Continue Anyway" or "Cancel" choice.
@@ -133,7 +133,11 @@ def run_system_check_if_needed(settings: dict = None, parent=None) -> bool:
         try:
             dialog = SystemCheckDialog(result, parent=parent)
             return dialog.exec() == QDialog.Accepted
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             # If dialog fails, default to allowing the scan
             return True
 

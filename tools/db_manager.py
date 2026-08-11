@@ -471,14 +471,14 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
 
-    # V9.3.3 seamless upgrade: Add company_name and submitted_to to targets
+    # V9.4.2 seamless upgrade: Add company_name and submitted_to to targets
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
-    # V9.3.3 seamless upgrade: Soft delete
+    # V9.4.2 seamless upgrade: Soft delete
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
@@ -491,7 +491,7 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         pass
 
-    # Enterprise V9.3.3 — enriched findings columns (idempotent migrations)
+    # Enterprise V9.4.2 — enriched findings columns (idempotent migrations)
     _enterprise_columns = [
         ("url",                 "TEXT"),
         ("evidence",            "TEXT"),
@@ -1300,7 +1300,7 @@ def get_scans_for_target(target_id, limit=10):
 
 def add_finding(scan_id, severity, title, description, source_tool,
                 confidence=50, mitre_id="Unknown",
-                # Enterprise V9.3.3 enriched fields
+                # Enterprise V9.4.2 enriched fields
                 url=None, evidence=None, recommendation=None,
                 cvss_score=None, cve_id=None,
                 affected_component=None, owasp_category=None,
@@ -1536,7 +1536,11 @@ def add_cve(cve, severity, description, published_date, source, epss_score=None,
         conn.commit()
         return True
 
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             conn.execute("DELETE FROM cves WHERE cve = ?", (cve,))
@@ -1870,6 +1874,27 @@ def get_risk_score(scan_id):
             conn.close()
 
 
+def get_risk_scores_all_targets():
+    """Return latest risk scores for all targets."""
+    conn = get_db_connection()
+    try:
+        query = """
+            SELECT r.*, t.url AS target_url, t.company_name
+            FROM risk_scores r
+            JOIN scans s ON r.scan_id = s.id
+            JOIN targets t ON s.target_id = t.id
+            WHERE t.is_deleted = 0 OR t.is_deleted IS NULL
+            ORDER BY r.calculated_at DESC
+        """
+        rows = conn.execute(query).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.error(f"get_risk_scores_all_targets error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
 # ----------------- Raw Scan Output -----------------
 
 def save_raw_scan_output(scan_id, tool_name, stdout, stderr):
@@ -2016,7 +2041,11 @@ def backup_scan_to_raw(scan_id, target_url):
 
         conn.close()
         return True
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return False
 
 

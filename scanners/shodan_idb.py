@@ -12,7 +12,11 @@ def get_ip_from_url(url):
     try:
         domain = urlparse(url).hostname or url
         return socket.gethostbyname(domain)
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 @register_scanner(name="Shodan", step_name="Running Shodan", depends_on=['SQLMap'], binary_name="", needs_binary=False, confidence=90)

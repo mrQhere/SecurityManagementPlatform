@@ -1,63 +1,85 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
 wheels/
+share/python-wheels/
 *.egg-info/
+.installed.cfg
 *.egg
+MANIFEST
 
-# Virtual Environment
-venv/
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
 .env
 .venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDEs
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# SMP — Runtime artifacts (never commit these)
-config/settings.json
-config/auth.json
-config/license.key
-setup.log
+# Logs and databases
 logs/
 *.log
+*.sqlite
+*.sqlite3
+
+# Cache and scratch files
+scratch/
 cache/
 
-# Databases — keep global_intel.db (ships with repo), exclude all others
+# User configurations
+config/auth.json
+config/settings.json
+
+# IDEs
+.vscode/
+.idea/
+
 database/*.db
-database/*.db.enc
-database/*.db-wal
-database/*.db-shm
 database/backup/
-database/raw_outputs/
-*.db
-*.db.enc
-*.db-wal
-*.db-shm
-!database/global_intel.db
-
-# Reports (generated output — not source)
-reports/pdf/
-reports/html/
-reports/sbom/
-reports/evidence/
-
-# Binaries (installed by setup.sh — not source)
 bin/
 
-# CI/Dev
-test.db
-.codegraph/
-.gemini/

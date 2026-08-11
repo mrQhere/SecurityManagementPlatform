@@ -11,8 +11,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [V9.4.2] - 2026-08-08
+## [V9.4.2] - 2026-08-11
 
+- Implemented 3-Phase Parallel Scanner Architecture with intermediate Brain Intelligence Interleaving (Phase 1 Recon, Phase 2 Active Vuln Testers, Phase 3 Deep Exploitation).
+- Added 4 modern web vulnerability scanners with strict semver dependency pinning:
+  - `ppmap` (v1.0.0): Prototype Pollution vulnerability tester.
+  - `wscat` (v5.2.1): WebSocket endpoint discovery and connection probing.
+  - `race-the-web` (v1.0.3): Go binary for TOCTOU and Race Condition vulnerability testing.
+  - `idor-scanner`: IDOR/BOLA scanner with optional dual-token (AuthMatrix) session testing capabilities.
+- Upgraded Neural Correlation Engine (`intelligence/brain.py`):
+  - Enforced authentic findings processing with zero synthetic data or forged CVEs.
+  - Built V10 Local LLM foundation (`_query_local_llm()` adapter stub for Ollama/Llama.cpp, falling back safely to TF-IDF heuristics).
+- Updated `setup.sh` with Node.js package management (`npm`, `wscat`, `ppmap`) and Go binary releases (`race-the-web`).
+- Profile-gated scanner execution (`osint` mode runs purely passive tools, while `standard` and `full` modes run multi-phase parallel scanning with brain interleaving).
 - Fixed `scan_id` kwarg crash in `scan_runner.py` that caused scanner plugins to fail.
 - Added Scheduler UI integration (Scan schedules and Intel syncs) to the Dashboard Settings.
 - Documentation and Troubleshooting updates.

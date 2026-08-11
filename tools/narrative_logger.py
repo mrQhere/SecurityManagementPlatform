@@ -193,7 +193,11 @@ def get_narrative(scan_id: int) -> list[str]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             return [line.rstrip("\n") for line in f if line.strip()]
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return []
 
 
@@ -216,6 +220,10 @@ def _ipc_send(scan_id: int, scanner: str, message: str, level: str) -> None:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.sendto(payload, ("127.0.0.1", 5005))
         sock.close()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass  # IPC failure is non-fatal; narrative still written to file
 # Made by mrQhere

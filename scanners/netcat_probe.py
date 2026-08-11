@@ -38,9 +38,17 @@ def _tcp_banner(host: str, port: int, timeout: float = 4.0) -> str | None:
             try:
                 data = sock.recv(1024)
                 return data.decode("utf-8", errors="replace").strip()
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 return None
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return None
 
 
@@ -59,7 +67,11 @@ def _get_open_ports_from_nmap(scan_id: int) -> list[int]:
                 if 1 <= p <= 65535:
                     ports.append(p)
         return list(set(ports)) if ports else _DEFAULT_PROBE_PORTS
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return _DEFAULT_PROBE_PORTS
 
 
@@ -81,7 +93,11 @@ def run_scan(target_url: str, scan_id: int = 0):
     try:
         from urllib.parse import urlparse
         host = urlparse(target_url).hostname or target_url
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         host = target_url
 
     # Use ports already found by Nmap or fall back to defaults

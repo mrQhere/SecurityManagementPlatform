@@ -408,8 +408,12 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.3.4"
-    except Exception:
+        _smp_ver = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.4.2"
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         _smp_ver = "V9.4.2"
 
     content_hash = derive_content_hash(
@@ -509,7 +513,11 @@ def generate_scan_reports(scan_id, target, current_findings, previous_scan=None)
             f"{egress_summary['blocked']} blocked. "
             f"Services contacted: {', '.join(egress_summary['external_services']) or 'none'}"
         )
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
 
     return html_path, pdf_path, sbom_path
@@ -603,8 +611,12 @@ def _generate_vapt_pdf(filepath, ctx):
     try:
         import json as _json
         _meta_path = os.path.join(BASE_DIR, "config", "metadata.json")
-        _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.3.4"
-    except Exception:
+        _smp_version = _json.load(open(_meta_path, encoding="utf-8")).get("version", "V9.4.2") if os.path.exists(_meta_path) else "V9.4.2"
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         _smp_version = "--help"
 
     cover_meta = [
@@ -937,17 +949,29 @@ def _generate_vapt_pdf(filepath, ctx):
     ], st))
     story.append(_spacer(10))
 
-    story.append(Paragraph("Assessment Framework Compliance", st["h3"]))
-    framework_rows = [
-        ["OWASP WSTG v9.3.3", "Web Security Testing Guide — primary methodology"],
-        ["NIST SP 800-115", "Technical Guide to Information Security Testing"],
-        ["PTES",            "Penetration Testing Execution Standard"],
-        ["CVSS v3.1",       "Common Vulnerability Scoring System for all severity ratings"],
-        ["CWE",             "Common Weakness Enumeration taxonomy for all findings"],
-        ["PCI-DSS v9.4.2",    "Sections 6.4 and 11.3 — penetration testing compliance"],
-    ]
+    story.append(Paragraph("Assessment Framework Compliance Coverage", st["h3"]))
+    try:
+        from tools.compliance_mapper import get_compliance_summary
+        c_summary = get_compliance_summary(c["findings"])
+        framework_rows = [
+            ["OWASP Top 10 (2021)", f"{c_summary['owasp_top10_coverage']}% Coverage ({len(c_summary['owasp_categories_hit'])}/10 categories hit)"],
+            ["CIS Controls v8",      f"{c_summary['cis_controls_coverage']}% Coverage ({len(c_summary['cis_categories_hit'])}/11 controls hit)"],
+            ["ISO 27001:2022",      f"{c_summary['iso27001_coverage']}% Coverage ({len(c_summary['iso_categories_hit'])}/11 controls hit)"],
+            ["SOC 2 Type II",       f"{c_summary['soc2_coverage']}% Coverage ({len(c_summary['soc2_controls_hit'])}/11 controls hit)"],
+            ["PCI-DSS v4.0",        f"{c_summary['pci_dss_coverage']}% Coverage ({len(c_summary['pci_dss_controls_hit'])}/12 requirements hit)"],
+            ["NIST SP 800-115",     "Technical Guide to Information Security Testing — primary methodology"],
+        ]
+    except Exception:
+        framework_rows = [
+            ["OWASP WSTG v9.4.2", "Web Security Testing Guide — primary methodology"],
+            ["NIST SP 800-115",   "Technical Guide to Information Security Testing"],
+            ["PTES",              "Penetration Testing Execution Standard"],
+            ["CVSS v3.1",         "Common Vulnerability Scoring System for all severity ratings"],
+            ["CWE Taxonomy",      "Common Weakness Enumeration taxonomy for all findings"],
+            ["PCI-DSS v4.0",      "Sections 6.4 and 11.3 — penetration testing compliance"],
+        ]
     story.append(_data_table(
-        ["Framework / Standard", "Application Scope"],
+        ["Framework / Standard", "Calculated Coverage & Scope"],
         framework_rows,
         [BW * 0.38, BW * 0.62],
         st
@@ -1179,7 +1203,11 @@ def _generate_vapt_pdf(filepath, ctx):
                         story.append(Paragraph("References", st["h4"]))
                         for link in ref_links:
                             story.append(Paragraph(f"&bull; <a href='{link}'><font color='#10B981'>{_esc(link)}</font></a>", st["body"]))
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     pass
 
             story += [_spacer(10), _hr(_P["border"]), _spacer(6)]
@@ -1310,7 +1338,7 @@ def _generate_vapt_pdf(filepath, ctx):
         f"<b>{c['scan_time'][:10]}</b> in accordance with the following professional and ethical standards:<br/><br/>"
         f"• The engagement was performed under explicit written authorization from the asset owner.<br/>"
         f"• All testing was conducted within the declared scope boundaries. No out-of-scope assets were accessed.<br/>"
-        f"• Assessment methodologies comply with OWASP WSTG v9.3.3 and NIST SP 800-115.<br/>"
+        f"• Assessment methodologies comply with OWASP WSTG v9.4.2 and NIST SP 800-115.<br/>"
         f"• All test artefacts and injected payloads have been removed from the target environment.<br/>"
         f"• No production data was exfiltrated, stored, or retained by the testing team.<br/>"
         f"• This document contains confidential information and is classified for INTERNAL USE ONLY.<br/><br/>"
@@ -1361,7 +1389,11 @@ def _generate_vapt_pdf(filepath, ctx):
         s.connect(("8.8.8.8", 80))
         scanner_ip = s.getsockname()[0]
         s.close()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         scanner_ip = "127.0.0.1"
 
     stamp_data = [
@@ -2111,7 +2143,11 @@ a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
                         for link in ref_links[:8]:
                             lines.append(f"<li><a href='{_esc(str(link))}' target='_blank'>{_esc(str(link)[:100])}</a></li>")
                         lines.append("</ul>")
-                except Exception:
+                except Exception as e:
+                    from tools.errors import SMPUnclassifiedError
+                    import traceback, logging
+                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                    raise SMPUnclassifiedError(str(e))
                     pass
 
             lines += ["</div>", "</div>"]  # finding-body, finding-card

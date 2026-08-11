@@ -19,7 +19,7 @@ def run_graphql_scanner(url):
         try:
             req = urllib.request.Request(
                 target, data=INTROSPECTION_QUERY.encode(),
-                headers={"Content-Type": "application/json", "User-Agent": "SMP/9.3.2"},
+                headers={"Content-Type": "application/json", "User-Agent": "SMP/9.4.2"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=GRAPHQL_TIMEOUT) as resp:
@@ -38,6 +38,10 @@ def run_graphql_scanner(url):
                         "remediation_code": "# Disable introspection in production:\n# Apollo Server: introspection: process.env.NODE_ENV !== \"production\"\n# graphql-php: Validation::DISABLE_INTROSPECTION",
                         "references_json": ["https://owasp.org/www-project-web-security-testing-guide/", "https://graphql.org/learn/introspection/"]
                     })
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
     return findings

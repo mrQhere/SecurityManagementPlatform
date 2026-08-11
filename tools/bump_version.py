@@ -4,7 +4,7 @@ SMP Version Bumper — updates version everywhere it matters.
 
 Usage:
   python3 tools/bump_version.py V9.4.2          # set explicit version
-  python3 tools/bump_version.py --patch          # auto-bump patch (V9.4.2 → V9.3.4)
+  python3 tools/bump_version.py --patch          # auto-bump patch (V9.4.2 → V9.4.2)
   python3 tools/bump_version.py --minor          # auto-bump minor (V9.4.2 → V9.4.0)
   python3 tools/bump_version.py --major          # auto-bump major (V9.4.2 → V10.0.0)
   python3 tools/bump_version.py --dry-run V9.4.2 # preview without writing

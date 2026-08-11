@@ -1,6 +1,27 @@
-# 🛠️ SMP — Troubleshooting Index
+# 🛠️ SMP V9.4.2 — Troubleshooting Index
 
-Quick-find guide. Click the topic that matches your error.
+## Step 1: Automated Self-Healing (Do this first)
+
+In V9.4.2, the vast majority of platform errors (missing binaries, locked databases, corrupted Python environments) can be repaired automatically by the SMP Self-Healing Engine. 
+
+Whenever you encounter an error (or a red `SMP-xxxx` code), run the following commands:
+
+```bash
+# 1. Activate the Python virtual environment
+source venv/bin/activate
+
+# 2. Run the Self-Healing diagnostics and auto-fix script
+python3 tools/troubleshoot.py --fix
+```
+
+For a detailed breakdown of the `SMP-xxxx` error taxonomy and what actions the `--fix` script takes, read:
+👉 **[Auto-Fixes & Error Taxonomy](auto_fixes.md)**
+
+---
+
+## Step 2: Manual Diagnostics
+
+If the automated `--fix` script cannot resolve your issue, consult the manual edge-case guides below. Click the topic that matches your error.
 
 | Category | File | Common errors covered |
 |----------|------|-----------------------|
@@ -12,39 +33,12 @@ Quick-find guide. Click the topic that matches your error.
 
 ---
 
-## Quick diagnostics
+## Quick Verification
+
+To ensure all 55 components are healthy and the Directed Acyclic Graph (DAG) has no deadlocks:
 
 ```bash
-# 1. Check SQLCipher is available
-python3 -c "from pysqlcipher3 import dbapi2; print('SQLCipher OK')"
-
-# 2. Check Qt xcb dependency (GUI only)
-dpkg-query -W -f='${Status}' libxcb-cursor0 2>/dev/null | grep -q "install ok installed" \
-  && echo "libxcb-cursor0 OK" || echo "MISSING — run: sudo apt install libxcb-cursor0"
-
-# 3. Check SQLCipher package (Ubuntu 24.04+ uses libsqlcipher0t64)
-lsb_release -rs
-dpkg -l | grep -E 'libsqlcipher'
-
-# 4. Check all binaries in bin/
-ls -la bin/
-
-# 5. Check database health
-python3 -c "
-from tools.db_manager import get_db_connection
-conn = get_db_connection()
-tables = conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()
-conn.close()
-print(f'Tables: {[t[0] for t in tables]}')
-"
-
-# 6. Check last 50 lines of scan log
-tail -50 logs/scan.log
-
-# 7. Check egress audit log
-tail -20 logs/egress_audit.log 2>/dev/null || echo "No egress audit log yet"
-
-# 8. Run the built-in verifier
 source venv/bin/activate
-python3 tools/verify_smp.py -v
+python3 tools/verify_smp.py
 ```
+*(This script runs the full 11-suite testing pipeline and takes ~5 minutes to complete).*

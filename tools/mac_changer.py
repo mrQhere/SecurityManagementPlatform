@@ -48,15 +48,16 @@ _ETHERNET_OUIS = [
 def _get_primary_interface():
     """Detect the primary active network interface (default route)."""
     try:
-        with open("/proc/net/route", "", encoding="utf-8") as f:
-            for line in f.readlines()[1:]:
-                parts = line.strip().split()
-                if len(parts) >= 2 and parts[1] == "00000000":
-                    iface = parts[0]
-                    if iface and iface != "lo":
-                        return iface
-    except Exception:
-        pass
+        if os.path.exists("/proc/net/route"):
+            with open("/proc/net/route", "r", encoding="utf-8") as f:
+                for line in f.readlines()[1:]:
+                    parts = line.strip().split()
+                    if len(parts) >= 2 and parts[1] == "00000000":
+                        iface = parts[0]
+                        if iface and iface != "lo":
+                            return iface
+    except Exception as e:
+        logger.debug(f"[MacChanger] /proc/net/route check failed: {e}")
 
     try:
         result = subprocess.run(
@@ -69,8 +70,8 @@ def _get_primary_interface():
                 iface = m.group(1).rstrip(":")
                 if iface not in ("lo", "loopback"):
                     return iface
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[MacChanger] ip link show check failed: {e}")
 
     return None
 
@@ -79,10 +80,14 @@ def _get_current_mac(iface):
     """Read the current MAC address of an interface."""
     try:
         path = f"/sys/class/net/{iface}/address"
-        with open(path, "", encoding="utf-8") as f:
-            return f.read().strip()
-    except Exception:
-        pass
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                addr = f.read().strip()
+                if addr:
+                    return addr
+    except Exception as e:
+        logger.debug(f"[MacChanger] Sysfs MAC check failed for {iface}: {e}")
+
     try:
         result = subprocess.run(
             ["ip", "link", "show", iface],
@@ -91,8 +96,9 @@ def _get_current_mac(iface):
         m = re.search(r"link/ether\s+([0-9a-f:]{17})", result.stdout)
         if m:
             return m.group(1)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[MacChanger] ip link show MAC check failed for {iface}: {e}")
+
     return None
 
 
@@ -202,7 +208,7 @@ def _strategy_ip_link_down_up(iface, new_mac, sudo_password=None):
 
 def change_mac_address(sudo_password=None):
     """
-    V9.3.3 — Assign a same-vendor-class random MAC to the primary interface.
+    V9.4.2 — Assign a same-vendor-class random MAC to the primary interface.
     Called at scan start with the sudo_password from thread-local storage.
 
     Returns (success: bool, message: str, new_mac: str).
@@ -254,21 +260,21 @@ def change_mac_address(sudo_password=None):
 
 def _emit_mac_change(iface: str, new_mac: str, message: str):
     """
-    V9.3.3 — Emit the MAC change result to:
+    V9.4.2 — Emit the MAC change result to:
       1. Audit log (DB)
       2. In-process event bus (for dashboard status bar)
     """
     try:
         from tools.db_manager import add_log_entry
         add_log_entry("INFO", f"MAC Changed: {iface} → {new_mac}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[MacChanger] Could not log MAC change to DB: {e}")
 
     try:
         from tools import event_bus
         event_bus.emit("mac_changed", {"iface": iface, "new_mac": new_mac, "message": message})
-    except Exception:
-        pass  # Event bus optional — non-fatal
+    except Exception as e:
+        logger.warning(f"[MacChanger] Could not emit event bus MAC change: {e}")
 
 
 def get_current_mac(iface: str = None) -> str:

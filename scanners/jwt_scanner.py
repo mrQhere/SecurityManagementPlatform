@@ -38,7 +38,11 @@ def _extract_jwts_from_response(url):
             tokens.extend(_JWT_RE.findall(header_val))
         # Check body
         tokens.extend(_JWT_RE.findall(resp.text))
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         pass
     return list(set(tokens))
 

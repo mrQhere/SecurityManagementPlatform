@@ -83,7 +83,11 @@ def _extract_text_from_pdf(path: str) -> str:
             return chunk
         # Fallback: decode whole file as latin-1 and search
         return data.decode("latin-1", errors="replace")
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return ""
 
 
@@ -91,7 +95,11 @@ def _extract_text_from_html(path: str) -> str:
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             return f.read()
-    except Exception:
+    except Exception as e:
+        from tools.errors import SMPUnclassifiedError
+        import traceback, logging
+        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+        raise SMPUnclassifiedError(str(e))
         return ""
 
 
@@ -143,7 +151,11 @@ def extract_metadata_from_report(report_path: str) -> dict:
     if meta_match:
         try:
             meta = json.loads(meta_match.group(1).strip())
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
     return meta

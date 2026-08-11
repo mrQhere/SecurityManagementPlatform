@@ -22,11 +22,15 @@ def run_hydra_scanner(url):
         target = base + path
         # Check if login path exists
         try:
-            req = urllib.request.Request(target, headers={"User-Agent": "SMP/9.3.2"})
+            req = urllib.request.Request(target, headers={"User-Agent": "SMP/9.4.2"})
             with urllib.request.urlopen(req, timeout=5) as resp:
                 if resp.status != 200:
                     continue
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
 
         # Try weak credentials against the login form
@@ -37,7 +41,7 @@ def run_hydra_scanner(url):
                     target, data=data,
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
-                        "User-Agent": "SMP/9.3.2",
+                        "User-Agent": "SMP/9.4.2",
                     },
                     method="POST",
                 )
@@ -58,7 +62,11 @@ def run_hydra_scanner(url):
                             "remediation_code": "# Enforce strong passwords\n# Add account lockout after 5 failed attempts\n# Enable MFA for all admin accounts",
                             "references_json": ["https://owasp.org/www-project-top-ten/2021/A07_2021-Identification_and_Authentication_Failures"]
                         })
-            except Exception:
+            except Exception as e:
+                from tools.errors import SMPUnclassifiedError
+                import traceback, logging
+                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+                raise SMPUnclassifiedError(str(e))
                 continue
 
     return findings

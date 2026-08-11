@@ -17,7 +17,7 @@ def run_api_fuzzer(url):
     for path in OPENAPI_PATHS:
         target = url.rstrip("/") + path
         try:
-            req = urllib.request.Request(target, headers={"User-Agent": "SMP/9.3.2"})
+            req = urllib.request.Request(target, headers={"User-Agent": "SMP/9.4.2"})
             with urllib.request.urlopen(req, timeout=8) as resp:
                 body = resp.read().decode(errors="replace")
                 if "swagger" in body.lower() or "openapi" in body.lower() or "paths" in body:
@@ -35,6 +35,10 @@ def run_api_fuzzer(url):
                         "remediation_code": "# Restrict Swagger UI to authenticated users only\n# Or disable in production: springfox.documentation.enabled=false",
                         "references_json": ["https://owasp.org/www-project-api-security/", "https://github.com/nicowillis/api-testing"]
                     })
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             continue
     return findings

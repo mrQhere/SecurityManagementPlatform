@@ -44,7 +44,7 @@ def run_cors_scan(url):
         url = "https://" + url
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SMP/9.3.2 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.4.2 (Security Audit)"
 
     # Build origin list, including target-specific subdomain injection
     parsed = urllib.parse.urlparse(url)
@@ -145,7 +145,11 @@ def run_cors_scan(url):
                     ),
                     "template_id": "CORS-GET-REFLECTED",
                 })
-        except Exception:
+        except Exception as e:
+            from tools.errors import SMPUnclassifiedError
+            import traceback, logging
+            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
+            raise SMPUnclassifiedError(str(e))
             pass
 
     except Exception as e:

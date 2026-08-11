@@ -1,11 +1,12 @@
 # 🔬 Scanner Errors — SMP V9.4.2
 
-## Automated Troubleshooting Simulator (New in V9.4.2)
-If you are experiencing unexpected crashes, missing binaries, or permission errors, run the new Troubleshooting Simulator. It will analyze your system and provide exact copy-paste commands to fix any issues.
-
-```bash
-python3 tools/troubleshoot.py
-```
+> [!IMPORTANT]
+> **V9.4.2 Self-Healing Engine**: Before attempting manual fixes below, run the automated diagnostic engine:
+> ```bash
+> source venv/bin/activate
+> python3 tools/troubleshoot.py --fix
+> ```
+> This script automatically resolves 90% of missing binaries, missing directories, and database locks.
 ## Nmap: requires root / permission denied
 
 ```

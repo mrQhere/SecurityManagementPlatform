@@ -25,6 +25,11 @@
 #   ffuf      v2.1.0    ffuf/ffuf
 #   gitleaks  v8.30.1   gitleaks/gitleaks
 #   dalfox    v2.10.0   hahwul/dalfox
+#   race-the-web v1.0.3  The-Z-Labs/race-the-web
+#
+# Node.js tools pinned:
+#   ppmap     v1.0.0
+#   wscat     v5.2.1
 # =============================================================================
 set -euo pipefail
 
@@ -234,7 +239,7 @@ fi
 
 CANONICAL_PKGS=(python3 python3-pip python3-venv python3-dev
                 libsqlcipher-dev libsqlcipher0 build-essential
-                nmap nikto ruby perl git)
+                nmap nikto ruby perl git nodejs npm)
 
 PKGS_TO_INSTALL=()
 for cpkg in "${CANONICAL_PKGS[@]}"; do
@@ -425,7 +430,11 @@ else
     T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"
     T_GO[dalfox]="github.com/hahwul/dalfox/v2@v2.10.0"
 
-    for name in nuclei subfinder httpx katana dnsx ffuf gitleaks dalfox; do
+    T_AMD[race-the-web]="https://github.com/The-Z-Labs/race-the-web/releases/download/v1.0.3/race-the-web-linux-amd64"
+    T_ARM[race-the-web]="https://github.com/The-Z-Labs/race-the-web/releases/download/v1.0.3/race-the-web-linux-arm64"
+    T_GO[race-the-web]="github.com/The-Z-Labs/race-the-web@v1.0.3"
+
+    for name in nuclei subfinder httpx katana dnsx ffuf gitleaks dalfox race-the-web; do
         if have "$name"; then ok "$name installed"; continue; fi
         if spin "Downloading $name" \
            download_binary "$name" "${T_AMD[$name]}" "${T_ARM[$name]}"; then
@@ -446,6 +455,31 @@ else
 
     have prowler    || pip install prowler    -q >> "$LOG_FILE" 2>&1 && ok "Prowler installed"    || true
     have nxc 2>/dev/null || pip install netexec -q >> "$LOG_FILE" 2>&1 || true
+
+    # ── Node.js Vulnerability Tools ──────────────────────────────────────────
+    if have npm; then
+        spin "Installing wscat (WebSocket tool)" sudo npm install -g wscat@5.2.1 >> "$LOG_FILE" 2>&1 || true
+        
+        # ppmap installation
+        if ! have ppmap; then
+            _ppmap_tmp=$(mktemp -d)
+            if spin "Installing ppmap (Prototype Pollution)" bash -c "
+                git clone https://github.com/kleiton0x00/ppmap.git '$_ppmap_tmp' &&
+                cd '$_ppmap_tmp' &&
+                chmod +x ppmap.sh &&
+                cp -r . /usr/local/share/ppmap &&
+                ln -sf /usr/local/share/ppmap/ppmap.sh /usr/local/bin/ppmap"; then
+                ok "ppmap installed"
+            else
+                warn "ppmap installation failed"
+            fi
+            rm -rf "$_ppmap_tmp"
+        else
+            ok "ppmap installed"
+        fi
+    else
+        warn "npm not found. Node.js tools (wscat, ppmap) will be skipped."
+    fi
 fi
 
 # ── WPScan ─────────────────────────────────────────────────────────────────────
@@ -473,4 +507,4 @@ now=$(date +%s)
 echo -e "\n${GREEN}${BOLD}✔ Setup complete in $((now - SCRIPT_START))s${RESET}"
 $SKIP_TOOLS && warn "Go tools were skipped. Add binaries to: $BIN_DIR/"
 echo -e "  ▶ Launch GUI:  ${BOLD}./run.sh${RESET}"
-echo -e "  ▶ Launch API:  ${BOLD}python main.py --api${RESET}\n"
+echo -e "  ▶ Launch API:  ${BOLD}./run.sh --api${RESET}\n"

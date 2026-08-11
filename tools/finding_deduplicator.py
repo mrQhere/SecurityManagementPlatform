@@ -1,5 +1,5 @@
 """
-Finding Deduplicator V9.3.4
+Finding Deduplicator V9.4.2
 ==========================
 Merges structurally identical findings from multiple scanners into a single
 finding with all source scanners cited.
