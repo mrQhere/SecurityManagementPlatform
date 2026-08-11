@@ -1,15 +1,18 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" style="border-radius: 8px; margin-bottom: 20px;" />
-  
-  # Security Management Platform (SMP)
-  
-  **The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine**
-  
-  [![Build Status](https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge)](https://github.com/mrQhere/SecurityManagementPlatform/actions) [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE) [![Security](https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock)](SECURITY.md)
+  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" />
 
-  
-  <br><br>
-  
+  <br />
+
+  <h1>Security Management Platform (SMP)</h1>
+  <p><b>The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine</b></p>
+
+  <p>
+    <a href="https://github.com/mrQhere/SecurityManagementPlatform/actions"><img src="https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge" alt="Build Status" /></a>
+    <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" /></a>
+    <a href="SECURITY.md"><img src="https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock" alt="Security" /></a>
+  </p>
+
   <p>
     <a href="#key-features"><b>Key Features</b></a> •
     <a href="#quick-start"><b>Quick Start</b></a> •
