@@ -732,3 +732,74 @@ Instead of relying on fixed weights for scanner confidence scores, threat severi
 © mrQhere · [GitHub](https://github.com/mrQhere/SecurityManagementPlatform)
 
 </div>
+
+# Appendix A: Comprehensive API Reference (REST V6)
+The Security Management Platform provides a robust, headless REST API intended for Continuous Integration/Continuous Deployment (CI/CD) orchestration, custom dashboarding, and raw data extraction.
+
+## A.1 Authentication Endpoints
+
+### `POST /api/v6/auth/token`
+Authenticates a user and returns a JSON Web Token (JWT) valid for 60 minutes.
+- **Request Body**: `{"username": "admin", "password": "SuperSecretPassword!"}`
+- **Response**: `{"access_token": "eyJhb...", "token_type": "bearer"}`
+- **Error Codes**:
+  - `401 Unauthorized`: Invalid credentials.
+  - `429 Too Many Requests`: Rate limit exceeded (fail2ban active).
+
+## A.2 Target Management
+
+### `POST /api/v6/target`
+Registers a new target for scanning.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**: `{"url": "https://example.com", "company_name": "Example Corp"}`
+- **Response**: `{"id": 42, "url": "https://example.com", "status": "Ready"}`
+
+### `GET /api/v6/target/{id}`
+Retrieves target metadata and historical scan runs.
+
+## A.3 Scan Orchestration
+
+### `POST /api/v6/scan/start`
+Initiates a new DAG orchestration sequence for a target.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**: `{"target_id": 42, "profile": "full_audit", "stealth": false}`
+- **Response**: `{"scan_id": 108, "status": "Running"}`
+
+## A.4 Vulnerability Data Extraction
+
+### `GET /api/v6/scan/{scan_id}/findings`
+Retrieves all vulnerabilities discovered during a specific scan, including deduplicated items.
+- **Query Parameters**: `?severity=Critical,High&include_raw=false`
+- **Response**:
+```json
+{
+  "scan_id": 108,
+  "findings": [
+    {
+      "id": 1005,
+      "title": "SQL Injection in Login Form",
+      "severity": "Critical",
+      "cvss_score": 9.8,
+      "cve_refs": ["CVE-2023-XXXX"],
+      "compliance": ["OWASP A03:2021", "PCI-DSS Req 6.5.1"]
+    }
+  ]
+}
+```
+
+# Appendix B: The Genetic Heuristic Breeding Strategy (Advanced)
+
+As outlined in Section 17, the V10 roadmap for the Neural Brain introduces Genetic Algorithms (GA) to evolve the scoring weights of the platform dynamically.
+
+## B.1 The Chromosome Representation
+In the context of SMP, a "chromosome" is an array of floating-point weights applied to different heuristic parameters. For example:
+`[TFIDF_WEIGHT=0.45, CENTRALITY_WEIGHT=0.88, CVE_AGE_PENALTY=0.12, CONFIDENCE_BOOST=1.2]`
+
+## B.2 The Fitness Function
+The platform will simulate an "evolution" cycle by running historical scan datasets through 100 randomly generated chromosomes. The Fitness Function evaluates how closely the resulting Risk Score matches the manually verified "Ground Truth" established by human analysts during previous pentests.
+
+## B.3 Crossover and Mutation
+Top-performing chromosomes are selected for reproduction. The algorithm performs a uniform crossover, swapping weights between two parent chromosomes. A 5% mutation rate randomly introduces a completely new weight variable, preventing the algorithm from getting stuck in local optima.
+
+---
+End of User Guide.
