@@ -1,20 +1,24 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Logo" width="200" />
+  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" style="border-radius: 8px; margin-bottom: 20px;" />
   
   # Security Management Platform (SMP)
   
   **The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine**
   
+  <br>
+
   [![Build Status](https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge)](https://github.com/mrQhere/SecurityManagementPlatform/actions)
   [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org)
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
   [![Security](https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock)](SECURITY.md)
   
+  <br><br>
+  
   <p>
-    <a href="#key-features">Key Features</a> •
-    <a href="#quick-start">Quick Start</a> •
-    <a href="#documentation">Documentation</a> •
-    <a href="#architecture">Architecture</a>
+    <a href="#key-features"><b>Key Features</b></a> •
+    <a href="#quick-start"><b>Quick Start</b></a> •
+    <a href="#documentation"><b>Documentation</b></a> •
+    <a href="#architecture"><b>Architecture</b></a>
   </p>
 </div>
 

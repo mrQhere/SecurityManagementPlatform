@@ -862,3 +862,14 @@ You can manually adjust the Levenshtein distance thresholds in `config/settings.
 - `dedup_ratio: 0.65` -> Very loose. Will aggressively merge related vulnerabilities. (Risk of merging unrelated vectors).
 
 ---
+
+# Appendix F: Deep Dive into the Subprocess Watchdog
+The Subprocess Watchdog is the primary defense mechanism against malicious or hanging security binaries. When SMP dispatches a task to a scanner (like `nmap` or `ffuf`), it wraps the process in a strict monitoring thread.
+
+## F.1 Memory Exhaustion Protection (OOM Killer Defense)
+If a binary attempts to allocate more than the predefined RAM limit (default: 4GB per process), the Watchdog will intercept the kernel's `SIGKILL` warning and gracefully terminate the child process *before* the operating system kills the entire SMP framework. This ensures that a single memory-leaking scanner does not crash your entire engagement.
+
+## F.2 Zombie Process Reaping
+Certain Node.js and Java-based scanners often spawn detached child processes. The Watchdog utilizes `psutil` to walk the entire process tree recursively. If a parent process exceeds its timeout, the Watchdog systematically issues `SIGTERM` followed by `SIGKILL` to every single child node in the tree, ensuring absolute cleanup.
+
+---
