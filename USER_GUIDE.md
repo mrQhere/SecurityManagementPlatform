@@ -834,3 +834,31 @@ For complete memory dumps of the orchestrator state, researchers can attach `pdb
 
 ---
 End of User Guide.
+
+# Appendix D: Distributed Kubernetes Deployment (Theoretical)
+For organizations exceeding the limitations of a single localized workstation, SMP is designed for distributed microservice scaling. 
+
+## D.1 The Hub-and-Spoke Architecture
+By wrapping the 55 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
+- **The Brain Node**: Handles PostgreSQL (replacing SQLite) and TF-IDF clustering.
+- **The Worker Nodes**: Deployed across segmented VPNs or VLANs. They pull execution tasks via an internal Redis queue.
+
+### Example `docker-compose.prod.yml` Snippet
+```yaml
+version: '3.8'
+services:
+  smp-core:
+    image: smp/core:v9.4
+    environment:
+      - DISTRIBUTED_MODE=1
+      - REDIS_URL=redis://smp-cache:6379
+    volumes:
+      - ./data:/app/database
+```
+
+# Appendix E: Custom Deduplication Tuning
+You can manually adjust the Levenshtein distance thresholds in `config/settings.json` to alter how aggressively SMP merges findings.
+- `dedup_ratio: 0.95` -> Extremely strict. Only merges exactly identical strings. (Results in higher noise).
+- `dedup_ratio: 0.65` -> Very loose. Will aggressively merge related vulnerabilities. (Risk of merging unrelated vectors).
+
+---
