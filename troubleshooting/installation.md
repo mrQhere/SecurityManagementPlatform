@@ -28,7 +28,7 @@ sudo apt-get install golang-go
 # Case 3: NPM Proxy Timeout (Scenario 3)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -68,7 +68,7 @@ sudo apt-get install golang-go
 # Case 8: NPM Proxy Timeout (Scenario 8)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -108,7 +108,7 @@ sudo apt-get install golang-go
 # Case 13: NPM Proxy Timeout (Scenario 13)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -148,7 +148,7 @@ sudo apt-get install golang-go
 # Case 18: NPM Proxy Timeout (Scenario 18)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -188,7 +188,7 @@ sudo apt-get install golang-go
 # Case 23: NPM Proxy Timeout (Scenario 23)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -228,7 +228,7 @@ sudo apt-get install golang-go
 # Case 28: NPM Proxy Timeout (Scenario 28)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -268,7 +268,7 @@ sudo apt-get install golang-go
 # Case 33: NPM Proxy Timeout (Scenario 33)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -308,7 +308,7 @@ sudo apt-get install golang-go
 # Case 38: NPM Proxy Timeout (Scenario 38)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -348,7 +348,7 @@ sudo apt-get install golang-go
 # Case 43: NPM Proxy Timeout (Scenario 43)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
@@ -388,7 +388,7 @@ sudo apt-get install golang-go
 # Case 48: NPM Proxy Timeout (Scenario 48)
 
 ```bash
-npm config set proxy http://proxy.company.com:8080 && sudo npm install -g wscat@5.2.1
+npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
 ```
 
 ---
