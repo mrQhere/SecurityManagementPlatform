@@ -1950,6 +1950,54 @@ class DashboardLogicMixin:
         self.export_worker.finished_signal.connect(_done)
         self.export_worker.start()
 
+    def _export_all_data(self):
+        """Export target data to a ZIP file for enterprise ticketing systems."""
+        from tools.db_manager import get_targets
+        from PySide6.QtWidgets import QInputDialog
+        
+        targets = get_targets()
+        if not targets:
+            QMessageBox.information(self, "No Targets", "There are no targets available to export.")
+            return
+            
+        target_urls = [t["url"] for t in targets]
+        selected_url, ok = QInputDialog.getItem(
+            self, "Select Target to Export",
+            "Select the target website to export data for:",
+            target_urls, 0, False
+        )
+        
+        if not ok or not selected_url:
+            return
+            
+        reply = QMessageBox.question(self, "Export Data",
+            f"The data for {selected_url} will leave the system and we are no longer responsible for the loss of data after it is left.\n\nAre you sure you want to proceed?",
+            QMessageBox.Yes | QMessageBox.No)
+            
+        if reply == QMessageBox.No:
+            return
+            
+        from tools.exporter import export_target_data
+        
+        self.statusBar().showMessage(f"Exporting data for {selected_url}...") if hasattr(self, 'statusBar') else None
+        
+        self.enterprise_export_worker = WorkerThread(export_target_data, selected_url)
+        
+        def _done(result_tuple):
+            worker_success, payload = result_tuple
+            self.statusBar().clearMessage() if hasattr(self, 'statusBar') else None
+            
+            if worker_success and isinstance(payload, tuple) and payload[0]:
+                _, zip_path = payload
+                QMessageBox.information(self, "Export Complete",
+                    f"All data for {selected_url} has been exported successfully to:\n{zip_path}\n\nYou may now upload this to your ticketing system.")
+            else:
+                err = payload[1] if (isinstance(payload, tuple) and len(payload)>1) else str(payload)
+                QMessageBox.warning(self, "Export Failed", f"Failed to export data: {err}")
+
+        self.enterprise_export_worker.finished_signal.connect(_done)
+        self.enterprise_export_worker.start()
+
 
     def _on_ipc_event(self, event_type, data):
         if event_type == "scan_status":

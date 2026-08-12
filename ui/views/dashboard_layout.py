@@ -694,6 +694,12 @@ class DashboardLayoutMixin:
         btn_scan_all.clicked.connect(self._scan_all_targets)
         hrow.addWidget(btn_scan_all)
         
+        btn_export = QPushButton("📦  Export All Data")
+        btn_export.setObjectName("btn_warning")
+        btn_export.setToolTip("Export all raw DB data, reports, and logs to a ZIP file")
+        btn_export.clicked.connect(self._export_all_data)
+        hrow.addWidget(btn_export)
+        
         layout.addLayout(hrow)
 
         # KPI Row
