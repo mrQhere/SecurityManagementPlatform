@@ -497,6 +497,22 @@ else
 
     have prowler    || spin "Installing Prowler" pip install prowler -q || true
     have nxc 2>/dev/null || spin "Installing NetExec" pip install git+https://github.com/Pennyw0rth/NetExec.git -q || true
+    
+    # ── V9.4.3 Expansion Tools ────────────────────────────────────────────────
+    spin "Installing Expansion Python Tools" pip install wafw00f semgrep checkov sslyze cloudsplaining kube-hunter droopescan git-dumper -q || true
+    
+    if ! have hakrawler; then
+        spin "Installing Hakrawler" go install github.com/hakluke/hakrawler@latest >> "$LOG_FILE" 2>&1 || true
+    fi
+    if ! have gau; then
+        spin "Installing Gau" go install github.com/lc/gau/v2/cmd/gau@latest >> "$LOG_FILE" 2>&1 || true
+    fi
+    if ! have naabu; then
+        spin "Installing Naabu" go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >> "$LOG_FILE" 2>&1 || true
+    fi
+    if ! have trufflehog; then
+        spin "Installing TruffleHog" curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || true
+    fi
 
     # ── Node.js Vulnerability Tools ──────────────────────────────────────────
     if have npm; then

@@ -206,6 +206,26 @@ SMP runs all scanners as a **Directed Acyclic Graph (DAG)** — parallel within 
 | Hydra | full only | 5 | Auth surface | Credential brute-force |
 | Commix | full only | 5 | Arjun | OS command injection |
 | ZAP Active | full only | 5 | HTTPx | Full active OWASP ZAP scan |
+| WafW00f | standard+ | 1 | HTTPx | Web Application Firewall fingerprinting |
+| Hakrawler | standard+ | 1 | HTTPx | High-speed golang web crawler |
+| Gau | standard+ | 1 | HTTPx | URL extraction from AlienVault/Wayback |
+| Naabu | standard+ | 2 | HTTPx | Ultra-fast SYN/CONNECT port scanner |
+| SSLyze | standard+ | 2 | HTTPx | TLS/SSL cryptographic analysis |
+| CMSeeK | standard+ | 2 | WhatWeb | Advanced multi-CMS vulnerability detection |
+| CORScanner | standard+ | 2 | HTTPx | CORS misconfiguration scanner |
+| TruffleHog | standard+ | 3 | Gitleaks | Deep entropy-based secrets scanning |
+| Semgrep | standard+ | 3 | HTTPx | Static Analysis (SAST) for exposed code/configs |
+| Checkov | standard+ | 3 | HTTPx | Scans for IaC misconfigurations |
+| NoSQLMap | full only | 3 | HTTPx | MongoDB/NoSQL injection flaws |
+| KubeHunter | full only | 3 | Nmap | Kubernetes cluster penetration testing |
+| Cloudsplaining | full only | 3 | Cloud Enum | AWS IAM privilege escalation analysis |
+| JoomScan | standard+ | 3 | CMS Scanner | Dedicated Joomla vulnerability scanner |
+| Droopescan | standard+ | 3 | CMS Scanner | Dedicated Drupal/SilverStripe scanner |
+| XSStrike | full only | 4 | Wapiti | Advanced contextual XSS payload fuzzing |
+| SSRFmapExt | full only | 4 | Arjun | Exploits SSRF flaws to scan internal networks |
+| Tplmap | full only | 4 | Arjun | Server-Side Template Injection (SSTI) detection |
+| LFISuite | full only | 4 | HTTPx | Local File Inclusion (LFI) exploitation |
+| GitDumper | full only | 4 | HTTPx | Extracts and analyzes exposed .git directories |
 
 > [!WARNING]
 > **full** profile scanners send attack payloads. Use only with written authorisation.

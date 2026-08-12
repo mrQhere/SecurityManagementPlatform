@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented cryptographic SHA-256 binary validation in `setup.sh` to secure all dynamically downloaded external dependencies against supply-chain attacks.
 - Updated Academic Thesis to explicitly document the DAG (Directed Acyclic Graph) architecture with instructions for Markdown to PDF generation.
 - Added full system wipe/factory reset instructions to the User Guide for recovering from lost master passwords.
+- Massively expanded offensive capabilities by adding 20 new vulnerability scanners to the DAG orchestration pipeline (including TruffleHog, Semgrep, Checkov, KubeHunter, XSStrike, Naabu, Hakrawler, SSLyze, CORScanner, and more).
 
 ## [V9.4.1] - 2026-08-08
 
