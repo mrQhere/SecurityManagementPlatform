@@ -26,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Profile-gated scanner execution (`osint` mode runs purely passive tools, while `standard` and `full` modes run multi-phase parallel scanning with brain interleaving).
 - Fixed `scan_id` kwarg crash in `scan_runner.py` that caused scanner plugins to fail.
 - Added Scheduler UI integration (Scan schedules and Intel syncs) to the Dashboard Settings.
-- Documentation and Troubleshooting updates.
+- Massively expanded Troubleshooting documentation with 300+ copy-paste auto-fix scenarios across API, Database, Installation, Reports, Scanners, and Auto-Fixes.
+- Implemented cryptographic SHA-256 binary validation in `setup.sh` to secure all dynamically downloaded external dependencies against supply-chain attacks.
+- Updated Academic Thesis to explicitly document the DAG (Directed Acyclic Graph) architecture with instructions for Markdown to PDF generation.
 
 ## [V9.4.1] - 2026-08-08
 

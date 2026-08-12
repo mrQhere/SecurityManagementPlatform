@@ -381,13 +381,29 @@ else
     # ── download_binary <name> <url_amd64> <url_arm64> ──────────────────────
     download_binary() {
         local name="$1" url_amd="$2" url_arm="$3"
-        local url; is_arm && url="$url_arm" || url="$url_amd"
+        local url expected_sha
+        if is_arm; then
+            url="$url_arm"
+            expected_sha="${T_SHA_ARM[$name]}"
+        else
+            url="$url_amd"
+            expected_sha="${T_SHA_AMD[$name]}"
+        fi
         info "Downloading $name from: $url"
         local tmp; tmp="$(mktemp -d)"
         local archive="$tmp/archive"
         if ! curl -fL --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
             rm -rf "$tmp"; warn "$name: download failed"; return 1
         fi
+
+        # Cryptographic SHA-256 Verification
+        if [[ -n "$expected_sha" ]]; then
+            if ! echo "$expected_sha  $archive" | sha256sum -c - >/dev/null 2>&1; then
+                warn "$name: SHA-256 mismatch! Supply-chain attack or corrupted download."
+                rm -rf "$tmp"; return 1
+            fi
+        fi
+
         if [[ "$url" == *.zip ]]; then
             unzip -q "$archive" -d "$tmp" >> "$LOG_FILE" 2>&1
         elif [[ "$url" == *.tar.gz || "$url" == *.tgz ]]; then
@@ -406,19 +422,21 @@ else
 
     # ── Pinned versions (update these when new releases ship) ────────────────
     # Format: name | url_amd64 | url_arm64
-    declare -A T_AMD T_ARM T_GO
+    declare -A T_AMD T_ARM T_GO T_SHA_AMD T_SHA_ARM
     BASE_PD="https://github.com/projectdiscovery"
     BASE_FF="https://github.com/ffuf/ffuf/releases/download"
     BASE_GL="https://github.com/gitleaks/gitleaks/releases/download"
     BASE_DX="https://github.com/hahwul/dalfox/releases/download"
 
-    T_AMD[nuclei]="$BASE_PD/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip"
-    T_ARM[nuclei]="$BASE_PD/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_arm64.zip"
+    T_AMD[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip"
+    T_ARM[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_arm64.zip"
     T_GO[nuclei]="github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.9"
+    T_SHA_AMD[nuclei]="d346332ecae03c622a5ec2ef02e0ee3e877478673322bf25b6a715694a5bd008"
 
-    T_AMD[subfinder]="$BASE_PD/subfinder/releases/download/v2.7.0/subfinder_2.7.0_linux_amd64.zip"
-    T_ARM[subfinder]="$BASE_PD/subfinder/releases/download/v2.7.0/subfinder_2.7.0_linux_arm64.zip"
-    T_GO[subfinder]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.7.0"
+    T_AMD[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_amd64.zip"
+    T_ARM[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_arm64.zip"
+    T_GO[subfinder]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.8"
+    T_SHA_AMD[subfinder]="ec4a1a361bc4a6750da782e4f0163351f041ff91a58641a9eb538c8c50e04b4c"
 
     T_AMD[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_amd64.zip"
     T_ARM[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_arm64.zip"
