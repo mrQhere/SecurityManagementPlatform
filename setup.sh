@@ -124,6 +124,9 @@ $SKIP_TOOLS && warn "--skip-tools: Go binary downloads will be skipped"
 pkg_update() {
     case "$PKG_MGR" in
         apt)
+            # Cleanup broken Trivy repo list from previous faulty installations
+            sudo rm -f /etc/apt/sources.list.d/trivy.list
+            
             local retries=5
             while (( retries > 0 )); do
                 if sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq; then return 0; fi
