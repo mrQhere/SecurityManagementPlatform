@@ -36,7 +36,7 @@ If the automated `--fix` script cannot resolve your issue, consult the manual ed
 
 ## Quick Verification
 
-To ensure all 75 components are healthy and the Directed Acyclic Graph (DAG) has no deadlocks:
+To ensure all 90 components are healthy and the Directed Acyclic Graph (DAG) has no deadlocks:
 
 ```bash
 source venv/bin/activate

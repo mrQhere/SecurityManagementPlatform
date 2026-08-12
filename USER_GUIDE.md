@@ -8,7 +8,7 @@
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
-║    Local-first  ·  75 Scanners  ·  AES-256  ·  Zero Cloud            ║
+║    Local-first  ·  90 Scanners  ·  AES-256  ·  Zero Cloud            ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -33,7 +33,7 @@
 
 ## What is SMP?
 
-SMP runs 75 security scanners against a target, correlates every finding against live threat intelligence (NVD, EPSS, CISA KEV, GreyNoise), and produces a compliance-mapped PDF report — without sending a single byte of client data to any cloud service.
+SMP runs 90 security scanners against a target, correlates every finding against live threat intelligence (NVD, EPSS, CISA KEV, GreyNoise), and produces a compliance-mapped PDF report — without sending a single byte of client data to any cloud service.
 
 **You get:** Raw scanner power + real exploitability context (not just CVSS) + a report an auditor will accept.
 
@@ -474,7 +474,7 @@ SecurityManagementPlatform/
 ├── config/            Settings, metadata, hardening rules
 ├── database/          SQLite databases
 ├── intelligence/      brain.py, nvd.py, epss.py, cisa.py, greynoise.py
-├── scanners/          75 scanner wrappers + core/ (DAG, registry, pipeline)
+├── scanners/          90 scanner wrappers + core/ (DAG, registry, pipeline)
 ├── tools/             db_manager, encryption_manager, risk_scorer,
 │                      report_generator, compliance_mapper, scheduler…
 ├── ui/                PySide6 GUI (dashboard, components, views, style.qss)
@@ -881,7 +881,7 @@ End of User Guide.
 For organizations exceeding the limitations of a single localized workstation, SMP is designed for distributed microservice scaling. 
 
 ## D.1 The Hub-and-Spoke Architecture
-By wrapping the 75 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
+By wrapping the 90 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
 - **The Brain Node**: Handles PostgreSQL (replacing SQLite) and TF-IDF clustering.
 - **The Worker Nodes**: Deployed across segmented VPNs or VLANs. They pull execution tasks via an internal Redis queue.
 

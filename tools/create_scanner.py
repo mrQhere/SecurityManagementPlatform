@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
-"""
-SMP Custom Scanner Generator
-=============================
-Scaffolds a new scanner plugin for the Security Management Platform.
-This removes the boilerplate and registers your tool automatically.
-
-Usage:
-  python3 tools/create_scanner.py --name "MyTool" --binary "mytool" --severity Medium
-"""
-
 import os
 import sys
 import argparse
 
-TEMPLATE = '''"""
-{name} Scanner — SMP V9.4.3
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", required=True)
+    parser.add_argument("--binary", required=True)
+    parser.add_argument("--severity", default="Medium")
+    args = parser.parse_args()
+    
+    filename = args.binary.lower().replace("-", "_") + ".py"
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    filepath = os.path.join(root, "scanners", filename)
+    
+    if os.path.exists(filepath):
+        sys.exit(0)
+        
+    content = f'''"""
+{args.name} Scanner — SMP V9.4.3
 =========================
-Auto-generated scanner plugin.
 """
-
 import logging
 import subprocess
 import json
@@ -27,118 +29,26 @@ from scanners.core.registry import register_scanner
 logger = logging.getLogger("smp.scan")
 
 @register_scanner(
-    name="{name}",
-    binary="{binary}",
-    severity="{severity}",
-    step_name="Running {name} Scan",
+    name="{args.name}",
+    binary="{args.binary}",
+    severity="{args.severity}",
+    step_name="Running {args.name} Scan",
     confidence=75,
     depends_on=[]
 )
 def scan(target_url: str, scan_id: int = 0, settings: dict = None) -> dict:
-    settings = settings or {}
-    from tools.narrative_logger import emit_scanner_start, emit_finding
-    emit_scanner_start(scan_id, "{binary}")
-
-    # 1. Define your command
-    cmd = ["{binary}", "-u", target_url, "--json"]
-    
-    logger.info(f"[{binary}] Running: {{' '.join(cmd)}}")
-    findings = []
-    raw_output = ""
-
+    cmd = ["{args.binary}", "-u", target_url]
     try:
-        # 2. Execute the tool
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        raw_output = result.stdout + result.stderr
-
-        # 3. Parse the output
-        if result.returncode == 0 and result.stdout:
-            try:
-                # Assuming JSON output. Modify this to match your tool's actual output format!
-                data = json.loads(result.stdout)
-                
-                # TODO: Iterate over your tool's results
-                # for item in data:
-                #     title = item.get("title", "Found issue")
-                #     desc = item.get("description", "")
-                #
-                #     # 4. Save finding to Database
-                #     from tools.db_manager import add_finding
-                #     add_finding(
-                #         scan_id=scan_id,
-                #         source_tool="{name}",
-                #         severity="{severity}",
-                #         title=title,
-                #         description=desc,
-                #         evidence=raw_output[:1000],
-                #         # Enterprise Fields (Optional but recommended)
-                #         cve_id=item.get("cve_id"),
-                #         cvss_score=item.get("cvss_score"),
-                #         epss_score=item.get("epss_score"),
-                #         epss_percentile=item.get("epss_percentile"),
-                #         affected_component=item.get("affected_component")
-                #     )
-                #     
-                #     findings.append({{"title": title, "severity": "{severity}"}})
-                #
-                pass
-
-            except json.JSONDecodeError:
-                logger.error("[{binary}] Failed to parse JSON output.")
-                # You can use regex here instead if your tool outputs plain text
-
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        return {{"success": True, "data": [], "raw_output": r.stdout}}
     except FileNotFoundError:
-        logger.error(f"[{binary}] Binary not found. Is it installed and in PATH?")
+        return {{"success": False, "data": [], "raw_output": "Binary not found"}}
     except Exception as e:
-        logger.error(f"[{binary}] Error: {{e}}")
-        raw_output = str(e)
-
-    # 5. Return results to the pipeline orchestrator
-    return {{
-        "success": len(findings) > 0,
-        "data": findings,
-        "raw_output": raw_output,
-    }}
+        return {{"success": False, "data": [], "raw_output": str(e)}}
 '''
-
-def main():
-    parser = argparse.ArgumentParser(description="SMP Custom Scanner Generator")
-    parser.add_argument("--name", required=True, help="Display name of the scanner (e.g., 'MyTool')")
-    parser.add_argument("--binary", required=True, help="Binary command to execute (e.g., 'mytool')")
-    parser.add_argument("--severity", default="Medium", help="Default severity (Info, Low, Medium, High, Critical)")
-    
-    args = parser.parse_args()
-    
-    filename = args.binary.lower().replace("-", "_") + ".py"
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    scanners_dir = os.path.join(root, "scanners")
-    
-    if not os.path.exists(scanners_dir):
-        print(f"[✗] Scanners directory not found at {scanners_dir}")
-        sys.exit(1)
-        
-    filepath = os.path.join(scanners_dir, filename)
-    if os.path.exists(filepath):
-        print(f"[✗] Scanner file {filename} already exists!")
-        sys.exit(1)
-        
-    content = TEMPLATE.format(
-        name=args.name,
-        binary=args.binary,
-        severity=args.severity
-    )
-    
-    with open(filepath, "w", encoding="utf-8") as f:
+    with open(filepath, "w") as f:
         f.write(content)
-        
-    # Make script executable
     os.chmod(filepath, 0o755)
-        
-    print(f"\n[✓] Scaffolded custom scanner: {filepath}")
-    print(f"    1. Open {filepath}")
-    print("    2. Update the `cmd` arguments for your tool.")
-    print("    3. Update the output parsing logic in step 3.")
-    print("    4. That's it! SMP will auto-discover it on the next run.\n")
 
 if __name__ == "__main__":
     main()
