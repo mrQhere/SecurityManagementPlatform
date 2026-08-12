@@ -69,9 +69,11 @@ def _encrypt_and_compress_data(data_str: str) -> str:
     active_key = get_active_key()
     if active_key:
         try:
-            fernet = Fernet(active_key)
+            import base64
+            fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
+            fernet = Fernet(fernet_key)
             final_data = fernet.encrypt(compressed)
-        except sqlite3.Error as e:
+        except Exception as e:
             sys.stderr.write(f"Database error: {e}\n")
             final_data = compressed
     else:
@@ -108,9 +110,11 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
         active_key = get_active_key()
         if active_key:
             try:
-                fernet = Fernet(active_key)
+                import base64
+                fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
+                fernet = Fernet(fernet_key)
                 compressed = fernet.decrypt(encrypted_data)
-            except sqlite3.Error as e:
+            except Exception as e:
                 sys.stderr.write(f"Database error: {e}\n")
                 compressed = encrypted_data
         else:

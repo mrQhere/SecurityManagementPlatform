@@ -430,9 +430,9 @@ else
     T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"
     T_GO[dalfox]="github.com/hahwul/dalfox/v2@v2.10.0"
 
-    T_AMD[race-the-web]="https://github.com/The-Z-Labs/race-the-web/releases/download/v1.0.3/race-the-web-linux-amd64"
-    T_ARM[race-the-web]="https://github.com/The-Z-Labs/race-the-web/releases/download/v1.0.3/race-the-web-linux-arm64"
-    T_GO[race-the-web]="github.com/The-Z-Labs/race-the-web@v1.0.3"
+    T_AMD[race-the-web]="https://github.com/TheHackerDev/race-the-web/releases/download/2.0.1/race-the-web_2.0.1_lin64.bin"
+    T_ARM[race-the-web]="https://github.com/TheHackerDev/race-the-web/releases/download/2.0.1/race-the-web_2.0.1_lin64.bin"
+    T_GO[race-the-web]="github.com/TheHackerDev/race-the-web@v2.0.1"
 
     for name in nuclei subfinder httpx katana dnsx ffuf gitleaks dalfox race-the-web; do
         if have "$name"; then ok "$name installed"; continue; fi
