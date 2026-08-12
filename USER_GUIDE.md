@@ -252,6 +252,14 @@ Key derivation: **PBKDF2-HMAC-SHA256**.
 
 Lost your password? There is no recovery path — this is by design. Back up `database/security.db` before changing passwords.
 
+**If you are completely locked out and need a full system wipe:**
+*(Warning: This deletes all historical scans and targets!)*
+```bash
+rm -f .smp_keystore
+rm -f database/*.db
+./run.sh  # Will prompt to create a new admin password
+```
+
 ---
 
 ## 6 · Reports
