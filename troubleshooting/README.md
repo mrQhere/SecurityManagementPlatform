@@ -23,14 +23,14 @@ For a detailed breakdown of the `SMP-xxxx` error taxonomy and what actions the `
 
 If the automated `--fix` script cannot resolve your issue, consult the manual edge-case guides below. Click the topic that matches your error.
 
-| Category | Directory | Common errors covered |
+| Category | File | Common errors covered |
 |----------|------|-----------------------|
-| 📦 [Installation](installation/) | `installation/` | pysqlcipher3, libxcb-cursor0 / Qt xcb crash, binary download, Go PATH, WPScan wrapper |
-| 🗄️ [Database](database/) | `database/` | DB locked, SQLCipher key mismatch, migration errors, CVE sync |
-| 🔬 [Scanner Errors](scanners/) | `scanners/` | Nmap root, Nuclei templates, ffuf false positives, timeouts |
-| 🔌 [API Errors](api/) | `api/` | 401/403/429, FastAPI startup, CORS, JWT secrets |
-| 📄 [Reports & SBOM](reports/) | `reports/` | PDF generation, SBOM empty, report verification, SMTP |
-| 🤖 [Auto Fixes](auto_fixes/) | `auto_fixes/` | Stale locks, temp files cleanup, reset services, flush cache |
+| 📦 [Installation](installation.md) | `installation.md` | pysqlcipher3, libxcb-cursor0 / Qt xcb crash, binary download, Go PATH, WPScan wrapper |
+| 🗄️ [Database](database.md) | `database.md` | DB locked, SQLCipher key mismatch, migration errors, CVE sync |
+| 🔬 [Scanner Errors](scanners.md) | `scanners.md` | Nmap root, Nuclei templates, ffuf false positives, timeouts |
+| 🔌 [API Errors](api.md) | `api.md` | 401/403/429, FastAPI startup, CORS, JWT secrets |
+| 📄 [Reports & SBOM](reports.md) | `reports.md` | PDF generation, SBOM empty, report verification, SMTP |
+| 🤖 [Auto Fixes](auto_fixes.md) | `auto_fixes.md` | Stale locks, temp files cleanup, reset services, flush cache |
 
 ---
 
