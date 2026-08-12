@@ -463,31 +463,34 @@ else
     done
 
     # ── Optional enterprise tools ─────────────────────────────────────────────
-    have trivy || \
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-        | sh -s -- -b "$BIN_DIR" v0.55.0 >> "$LOG_FILE" 2>&1 && ok "Trivy installed" || true
+    have trivy || spin "Installing Trivy" bash -c "curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b \"$BIN_DIR\" v0.55.0" || true
 
-    have prowler    || pip install prowler    -q >> "$LOG_FILE" 2>&1 && ok "Prowler installed"    || true
-    have nxc 2>/dev/null || pip install netexec -q >> "$LOG_FILE" 2>&1 || true
+    have prowler    || spin "Installing Prowler" pip install prowler -q || true
+    have nxc 2>/dev/null || spin "Installing NetExec" pip install netexec -q || true
 
     # ── Node.js Vulnerability Tools ──────────────────────────────────────────
     if have npm; then
-        spin "Installing wscat (WebSocket tool)" sudo npm install -g wscat@5.2.1 >> "$LOG_FILE" 2>&1 || true
+        spin "Installing wscat (WebSocket tool)" sudo npm install -g wscat@5.2.1 || true
         
         # ppmap installation
         if ! have ppmap; then
-            _ppmap_tmp=$(mktemp -d)
-            if spin "Installing ppmap (Prototype Pollution)" bash -c "
-                git clone https://github.com/kleiton0x00/ppmap.git '$_ppmap_tmp' &&
-                cd '$_ppmap_tmp' &&
-                chmod +x ppmap.sh &&
-                cp -r . /usr/local/share/ppmap &&
-                ln -sf /usr/local/share/ppmap/ppmap.sh /usr/local/bin/ppmap"; then
-                ok "ppmap installed"
+            if have go; then
+                _ppmap_tmp=$(mktemp -d)
+                if spin "Installing ppmap (Prototype Pollution)" bash -c "
+                    git clone https://github.com/kleiton0x00/ppmap.git '$_ppmap_tmp' &&
+                    cd '$_ppmap_tmp' &&
+                    go mod init ppmap &&
+                    go get github.com/chromedp/chromedp &&
+                    go build -o ppmap ppmap.go &&
+                    install -m 0755 ppmap '$BIN_DIR/ppmap'"; then
+                    ok "ppmap installed"
+                else
+                    warn "ppmap installation failed"
+                fi
+                rm -rf "$_ppmap_tmp"
             else
-                warn "ppmap installation failed"
+                warn "ppmap requires Go which is not installed. Skipping."
             fi
-            rm -rf "$_ppmap_tmp"
         else
             ok "ppmap installed"
         fi
