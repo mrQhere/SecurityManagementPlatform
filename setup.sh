@@ -463,10 +463,12 @@ else
     done
 
     # ── Optional enterprise tools ─────────────────────────────────────────────
-    have trivy || spin "Installing Trivy" bash -c "curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b \"$BIN_DIR\" v0.55.0" || true
+    have trivy || spin "Installing Trivy" download_binary "trivy" \
+        "https://github.com/aquasecurity/trivy/releases/download/v0.55.0/trivy_0.55.0_Linux-64bit.tar.gz" \
+        "https://github.com/aquasecurity/trivy/releases/download/v0.55.0/trivy_0.55.0_Linux-ARM64.tar.gz" || true
 
     have prowler    || spin "Installing Prowler" pip install prowler -q || true
-    have nxc 2>/dev/null || spin "Installing NetExec" pip install netexec -q || true
+    have nxc 2>/dev/null || spin "Installing NetExec" pip install git+https://github.com/Pennyw0rth/NetExec.git -q || true
 
     # ── Node.js Vulnerability Tools ──────────────────────────────────────────
     if have npm; then
@@ -480,7 +482,7 @@ else
                     git clone https://github.com/kleiton0x00/ppmap.git '$_ppmap_tmp' &&
                     cd '$_ppmap_tmp' &&
                     go mod init ppmap &&
-                    go get github.com/chromedp/chromedp &&
+                    go get github.com/chromedp/chromedp@v0.10.0 &&
                     go build -o ppmap ppmap.go &&
                     install -m 0755 ppmap '$BIN_DIR/ppmap'"; then
                     ok "ppmap installed"
