@@ -15,10 +15,13 @@ class SMPError(Exception):
         super().__init__(self.message)
 
     def to_dict(self):
+        msg = self.message
+        if self.code.startswith("SMP-9"):
+            msg = "An unexpected internal error occurred."
         return {
             "code": self.code,
             "slug": self.slug,
-            "message": self.message,
+            "message": msg,
             "remediation": self.remediation or "Check troubleshooting guide."
         }
 

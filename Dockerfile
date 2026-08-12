@@ -17,6 +17,7 @@ LABEL version="9.4.0"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV SMP_API_HOST=0.0.0.0
 
 # ── 1. System dependencies ────────────────────────────────────────────────────
 

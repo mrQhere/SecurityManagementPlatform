@@ -1,5 +1,5 @@
 """
-Secrets Scanner V9.4.2
+Secrets Scanner V9.4.3
 =====================
 Real pattern-based secrets detection in HTTP responses, HTML, JS files,
 and raw scanner output. Replaces the empty stubs (trufflehog/gitleaks).
@@ -175,7 +175,7 @@ def run_secrets_scan(url: str) -> list:
     try:
         import requests
         session = requests.Session()
-        session.headers["User-Agent"] = "SMP/9.4.2 (Secrets)"
+        session.headers["User-Agent"] = "SMP/9.4.3 (Secrets)"
 
         # Scan main page
         resp = session.get(url, timeout=TIMEOUT, verify=verify_tls)

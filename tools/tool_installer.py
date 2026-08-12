@@ -72,11 +72,11 @@ TOOLS = [
     ("jwt_tool",      "jwt_tool",      "binary", ""),
     ("WPScan",        "wpscan",        "binary", ""),
 
-    # New V9.4.2 Enterprise pip packages
+    # New V9.4.3 Enterprise pip packages
     ("semgrep",           "semgrep",     "pip",    "semgrep"),
     ("SpiderFoot OSINT",  "sf",          "manual", "Download from https://github.com/smicallef/spiderfoot"),
 
-    # New V9.4.2 Enterprise binaries
+    # New V9.4.3 Enterprise binaries
     ("Amass",             "amass",       "binary", ""),
     ("Feroxbuster",       "feroxbuster", "binary", ""),
     ("TruffleHog",        "trufflehog",  "binary", ""),
@@ -448,19 +448,19 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.2/gitleaks_8.18.2_linux_x64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.3/gitleaks_8.18.2_linux_x64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_amd64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz",
-        "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/heads/master.zip",
+        "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/tags/1.3.2.zip",
         # Source-based tools
-        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/heads/master.zip",
-        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/heads/master.zip",
-        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/heads/master.zip",
-        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/heads/master.zip",
-        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
+        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.4.2 Enterprise binaries
+        # New V9.4.3 Enterprise binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/x86_64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz",
@@ -472,18 +472,18 @@ def _download_missing_tools_locally(missing):
         "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.2/gitleaks_8.18.2_linux_arm64.tar.gz",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.3/gitleaks_8.18.2_linux_arm64.tar.gz",
         "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_arm64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip",
         "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz",
-        "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/heads/master.zip",
-        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/heads/master.zip",
-        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/heads/master.zip",
-        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/heads/master.zip",
-        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/heads/master.zip",
-        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/heads/master.zip",
+        "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/tags/1.3.2.zip",
+        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.4.2 Enterprise binaries
+        # New V9.4.3 Enterprise binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_arm64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/aarch64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_arm64.tar.gz",
@@ -491,12 +491,18 @@ def _download_missing_tools_locally(missing):
     }
     urls = urls_arm64 if is_arm64 else urls_amd64
 
-    # ── V9.4.2 — Security: Download SHA256 Checksums ────────────────────────────
+    # ── V9.4.3 — Security: Download SHA256 Checksums ────────────────────────────
     # Add checksums to verify integrity before extraction
     checksums = {
         "Nuclei": "235f264d32e47e1ccf58d534e2eb4d0d4eeb47f1cae1ebb30a584b8b52565202",
         "Subfinder": "6fda32fe1f5750e63fa07c112b1b615d033e425c6dc6659ed8ec61035eb8eba2",
         "HTTPx": "d069a6bbcc0d6b3c5bedc0322f7b996b2587481ae69162b17941b67d7e42cd2d",
+        "Masscan": "527ef2043429e7d2f1bc7453a8d73944d07beb1a414e6ffb26e2cbffcdbc41d7",
+        "cloud-enum": "734136665c0b1200d8702b8bc74e011e51ae87b4c66781a3c50a8a9784cf1cdc",
+        "ParamSpider": "30396ab75b70a771da1774a209cc3a8315914f15aa68a54f1c7456a224fc4fdb",
+        "theHarvester": "a9a29b993a92380c55abca12b122cc1e20e9bcb2d2f78b62508219ea93d9f923",
+        "jwt_tool": "0a61f2029c98b17e2cc017b2a5c7df13f71272591cf211b435b44adf8d517d07",
+        "WPScan": "f733f46bc9c630d1c7013f90fd739c0c035d048056c9b63052058fb5869e30e2",
     }
     
     downloaded_any = False
@@ -519,7 +525,7 @@ def _download_missing_tools_locally(missing):
                 for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     
-            # ── V9.4.2 — Security Check: SHA256 ────────────────────────────
+            # ── V9.4.3 — Security Check: SHA256 ────────────────────────────
             if name in checksums:
                 import hashlib
                 h = hashlib.sha256()
@@ -533,13 +539,27 @@ def _download_missing_tools_locally(missing):
                 else:
                     logger.info(f"[Installer] SHA256 verified for {name}.")
 
-            # Extract
+            # Extract securely
+            from pathlib import Path
+            from tools.errors import SMPError
+            destination = Path(temp_extract_dir).resolve()
+
             if url.endswith(".zip") or "zip" in url.lower():
                 with zipfile.ZipFile(temp_file, "r") as zr:
-                    zr.extractall(temp_extract_dir)
+                    for member in zr.namelist():
+                        target = (destination / member).resolve()
+                        if not target.is_relative_to(destination):
+                            raise SMPError(f"Archive path traversal detected: {member}")
+                        zr.extract(member, temp_extract_dir)
             elif url.endswith(".tar.gz") or "tar.gz" in url.lower():
                 with tarfile.open(temp_file, "r:gz") as tr:
-                    tr.extractall(temp_extract_dir)
+                    for member in tr.getmembers():
+                        target = (destination / member.name).resolve()
+                        if not target.is_relative_to(destination):
+                            raise SMPError(f"Archive path traversal detected: {member.name}")
+                        if member.issym() or member.islnk():
+                            continue
+                        tr.extract(member, temp_extract_dir)
 
             # ── Per-tool install logic ────────────────────────────────────────
 

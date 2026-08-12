@@ -1,5 +1,5 @@
 """
-SMP API V9.4.2 — Secured FastAPI Backend with JWT Authentication
+SMP API V9.4.3 — Secured FastAPI Backend with JWT Authentication
 ==============================================================
 Full REST API with:
   - JWT Bearer token authentication on all endpoints
@@ -46,9 +46,9 @@ from tools.db_manager import (
 app = None
 if _FASTAPI_AVAILABLE:
     app = FastAPI(
-        title="SMP API V9.4.2",
+        title="SMP API V9.4.3",
         description=(
-            "Security Management Platform V9.4.2 — Secured REST API\n\n"
+            "Security Management Platform V9.4.3 — Secured REST API\n\n"
             "All endpoints except `/api/v6/health` and `/api/v6/auth/token` "
             "require a valid JWT Bearer token.\n\n"
             "**@mrQhere — Internal Use Only**"
@@ -151,7 +151,7 @@ if _FASTAPI_AVAILABLE:
         """Health check endpoint — no authentication required."""
         return {
             "status": "ok",
-            "version": "V9.4.2",
+            "version": "V9.4.3",
             "platform": "Security Management Platform",
             "organization": "mrQhere",
             "timestamp": datetime.now().isoformat(),
@@ -173,7 +173,7 @@ if _FASTAPI_AVAILABLE:
             import logging
             logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
             raise SMPUnclassifiedError(str(e))
-            return {"version": "V9.4.2", "platform": "SMP"}
+            return {"version": "V9.4.3", "platform": "SMP"}
 
     @app.post("/api/v6/auth/token", tags=["Authentication"])
     def get_token(request: TokenRequest):
@@ -266,17 +266,19 @@ if _FASTAPI_AVAILABLE:
             return {"risk_scores": scores}
         except Exception as e:
             logger.warning(f"[API] risk_scores: {e}")
-            return {"risk_scores": [], "error": str(e)}
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Failed to fetch risk scores: {e}")
 
 
 def start_server(host: str = "127.0.0.1", port: int = 8000):
     """Start the FastAPI server."""
+    host = os.environ.get("SMP_API_HOST", host)
     if not _FASTAPI_AVAILABLE:
         logger.error("[API] Cannot start — FastAPI not installed. Run: pip install fastapi uvicorn slowapi")
         return
     try:
         import uvicorn
-        logger.info(f"[API] Starting SMP API V9.4.2 on http://{host}:{port}/api/v6/docs")
+        logger.info(f"[API] Starting SMP API V9.4.3 on http://{host}:{port}/api/v6/docs")
         uvicorn.run(app, host=host, port=port, log_level="warning")
     except ImportError:
         logger.error("[API] uvicorn not installed. Run: pip install uvicorn")

@@ -91,7 +91,7 @@ def run_headers_scan(url):
 
         session = requests.Session()
         session.headers.update({
-            "User-Agent": "SMP/9.4.2 (Security Audit)",
+            "User-Agent": "SMP/9.4.3 (Security Audit)",
         })
 
         try:

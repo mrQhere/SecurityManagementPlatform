@@ -68,7 +68,7 @@ class DAGOrchestrator:
                     q.put((plugin.name, None, False, "Cancelled"))
                     return
                 
-                # ── V9.4.2 — Inter-Request Delay (Rate Limiting) ────────────────
+                # ── V9.4.3 — Inter-Request Delay (Rate Limiting) ────────────────
                 # Stagger concurrent tool launches to avoid hammering the target.
                 # Skip in CI to prevent test timeouts.
                 if not _CI_MODE:

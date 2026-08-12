@@ -44,7 +44,7 @@ def run_cors_scan(url):
         url = "https://" + url
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SMP/9.4.2 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.4.3 (Security Audit)"
 
     # Build origin list, including target-specific subdomain injection
     parsed = urllib.parse.urlparse(url)

@@ -99,12 +99,12 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
     def __init__(self):
         super().__init__()
         import json
-        version = "V9.4.2"
+        version = "V9.4.3"
         try:
             metadata_path = os.path.join(os.path.dirname(__file__), "..", "config", "metadata.json")
             with open(metadata_path, 'r') as f:
                 metadata = json.load(f)
-                version = metadata.get("version", "V9.4.2")
+                version = metadata.get("version", "V9.4.3")
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
             import traceback
@@ -132,7 +132,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
         apply_theme(self)
         self._setup_ui()
         
-        # ── V9.4.2 — Restore Splitter States ──
+        # ── V9.4.3 — Restore Splitter States ──
         try:
             from tools.config_manager import load_settings
             import base64
@@ -261,7 +261,7 @@ class DashboardWindow(QMainWindow, DashboardLayoutMixin, DashboardLogicMixin):
             raise SMPUnclassifiedError(str(e))
             pass
 
-        # ── V9.4.2 — Save Splitter States ──
+        # ── V9.4.3 — Save Splitter States ──
         try:
             from tools.config_manager import load_settings, save_settings
             import base64

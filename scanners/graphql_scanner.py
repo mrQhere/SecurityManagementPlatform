@@ -19,7 +19,7 @@ def run_graphql_scanner(url):
         try:
             req = urllib.request.Request(
                 target, data=INTROSPECTION_QUERY.encode(),
-                headers={"Content-Type": "application/json", "User-Agent": "SMP/9.4.2"},
+                headers={"Content-Type": "application/json", "User-Agent": "SMP/9.4.3"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=GRAPHQL_TIMEOUT) as resp:

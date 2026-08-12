@@ -42,7 +42,7 @@ def run_ssrf_scan(url):
         for payload in SSRF_PAYLOADS:  # Test all cloud metadata payloads
             test_url = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.4.2"})
+                req = urllib.request.Request(test_url, headers={"User-Agent": "SMP/9.4.3"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if any(sig in body for sig in _SSRF_SIGNATURES):

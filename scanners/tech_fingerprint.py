@@ -69,7 +69,7 @@ def run_tech_fingerprint(url):
         url = "https://" + url
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SMP/9.4.2 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.4.3 (Security Audit)"
 
     try:
         try:

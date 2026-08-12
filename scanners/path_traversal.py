@@ -32,7 +32,7 @@ def run_path_traversal(url):
         for payload in TRAVERSAL_PAYLOADS:  # test all payloads
             test = f"{base}?{param}={urllib.parse.quote(payload)}"
             try:
-                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.2"})
+                req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.3"})
                 with urllib.request.urlopen(req, timeout=6) as resp:
                     body = resp.read(512).decode(errors="replace")
                     if any(sig in body for sig in [

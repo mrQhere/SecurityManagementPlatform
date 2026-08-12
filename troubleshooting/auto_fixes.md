@@ -1,6 +1,6 @@
 # 🛡️ Auto-Fixes & Error Taxonomy
 
-The V9.4.2 architecture introduces the **Unified Self-Healing Engine**. This engine standardizes all platform crashes, database locks, and dependency failures into a strict `SMP-xxxx` taxonomy.
+The V9.4.3 architecture introduces the **Unified Self-Healing Engine**. This engine standardizes all platform crashes, database locks, and dependency failures into a strict `SMP-xxxx` taxonomy.
 
 Most errors can be resolved instantly by running:
 ```bash

@@ -14,7 +14,7 @@ import sys
 import argparse
 
 TEMPLATE = '''"""
-{name} Scanner — SMP V9.4.2
+{name} Scanner — SMP V9.4.3
 =========================
 Auto-generated scanner plugin.
 """

@@ -1,11 +1,12 @@
 # =============================================================================
-# Security Management Platform (SMP) V9.4.2
+# Security Management Platform (SMP) V9.4.3
 # mrQhere — Authorised Personnel Only
 # =============================================================================
 import sys
 import os
 import signal
-import fcntl
+if os.name != "nt":
+    import fcntl
 
 if os.environ.get("XDG_SESSION_TYPE") == "wayland":
     os.environ["QT_QPA_PLATFORM"] = "xcb"
@@ -31,7 +32,11 @@ def enforce_single_instance():
     lock_file_path = os.path.join(os.path.expanduser("~"), ".smp_runtime.lock")
     try:
         lock_file_fd = open(lock_file_path, "w")
-        fcntl.flock(lock_file_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(lock_file_fd.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(lock_file_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError:
         print("[❌ FATAL] SMP is already running. Core initialization aborted.")
         sys.exit(1)
@@ -40,7 +45,12 @@ def release_lock():
     global lock_file_fd
     if lock_file_fd:
         try:
-            fcntl.flock(lock_file_fd, fcntl.LOCK_UN)
+            if os.name == "nt":
+                import msvcrt
+                lock_file_fd.seek(0)
+                msvcrt.locking(lock_file_fd.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock_file_fd, fcntl.LOCK_UN)
             lock_file_fd.close()
         except Exception as e:
             from tools.errors import SMPUnclassifiedError
@@ -106,10 +116,10 @@ def main():
     args, unknown = parser.parse_known_args()
     
     if args.api:
-        print("[*] Starting SMP V9.4.2 in Headless API Mode...")
+        print("[*] Starting SMP V9.4.3 in Headless API Mode...")
         enforce_single_instance()
         init_directories()
-        # ── V9.4.2 P0 FIX: Decrypt before DB access ─────────────────────────
+        # ── V9.4.3 P0 FIX: Decrypt before DB access ─────────────────────────
         from tools.encryption_manager import decrypt_databases
         decrypt_databases()
         init_db()

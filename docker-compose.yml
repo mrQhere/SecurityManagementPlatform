@@ -25,6 +25,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - SMP_HEADLESS=1
+      - SMP_API_HOST=0.0.0.0
     stdin_open: false
     tty: false
     restart: unless-stopped

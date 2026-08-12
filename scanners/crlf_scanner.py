@@ -16,7 +16,7 @@ def run_crlf_scan(url):
     for payload in CRLF_PAYLOADS:
         try:
             test = f"{base}/{payload}"
-            req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.2"})
+            req = urllib.request.Request(test, headers={"User-Agent": "SMP/9.4.3"})
             with urllib.request.urlopen(req, timeout=6) as resp:
                 headers = dict(resp.headers)
                 if "X-Injected" in headers or "crlf" in str(headers).lower():

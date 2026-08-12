@@ -99,7 +99,7 @@ def run_cms_scan(url):
     base_url = f"{parsed.scheme}://{parsed.netloc}"
 
     session = requests.Session()
-    session.headers["User-Agent"] = "SMP/9.4.2 (Security Audit)"
+    session.headers["User-Agent"] = "SMP/9.4.3 (Security Audit)"
 
     detected_cms = set()
     detected_versions = {}

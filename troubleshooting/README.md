@@ -1,8 +1,8 @@
-# 🛠️ SMP V9.4.2 — Troubleshooting Index
+# 🛠️ SMP V9.4.3 — Troubleshooting Index
 
 ## Step 1: Automated Self-Healing (Do this first)
 
-In V9.4.2, the vast majority of platform errors (missing binaries, locked databases, corrupted Python environments) can be repaired automatically by the SMP Self-Healing Engine. 
+In V9.4.3, the vast majority of platform errors (missing binaries, locked databases, corrupted Python environments) can be repaired automatically by the SMP Self-Healing Engine. 
 
 Whenever you encounter an error (or a red `SMP-xxxx` code), run the following commands:
 

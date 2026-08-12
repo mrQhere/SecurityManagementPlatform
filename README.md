@@ -29,7 +29,7 @@ The **Security Management Platform (SMP)** is an enterprise-grade Vulnerability 
 
 Unlike cloud-based SIEMs that require exfiltrating sensitive topological intelligence and unpatched zero-day telemetry to third-party servers, **SMP executes 55+ distinct security binaries locally**, correlating the results through advanced mathematical heuristics, and securing the data at rest via SQLCipher (AES-256).
 
-> **Current Status**: `V9.4.2` — Featuring the new autonomous self-healing diagnostics engine and strict fail-closed operations.
+> **Current Status**: `V9.4.3` — Featuring the new autonomous self-healing diagnostics engine and strict fail-closed operations.
 
 ## ✨ Key Features
 

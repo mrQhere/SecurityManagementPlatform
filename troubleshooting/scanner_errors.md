@@ -1,7 +1,7 @@
-# 🔬 Scanner Errors — SMP V9.4.2
+# 🔬 Scanner Errors — SMP V9.4.3
 
 > [!IMPORTANT]
-> **V9.4.2 Self-Healing Engine**: Before attempting manual fixes below, run the automated diagnostic engine:
+> **V9.4.3 Self-Healing Engine**: Before attempting manual fixes below, run the automated diagnostic engine:
 > ```bash
 > source venv/bin/activate
 > python3 tools/troubleshoot.py --fix
@@ -40,7 +40,7 @@ sudo setcap cap_net_raw,cap_net_admin+eip $(which nmap)
 
 If you see this error for Nmap, Nuclei, or other scanners, you are experiencing a known bug where the orchestrator improperly passes the `scan_id` argument to plugins that don't support it.
 
-**Fix:** Upgrade to **SMP V9.4.2** which resolves this issue dynamically.
+**Fix:** Upgrade to **SMP V9.4.3** which resolves this issue dynamically.
 
 ---
 

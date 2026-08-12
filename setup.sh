@@ -62,13 +62,23 @@ info() { printf "\r\033[K${CYAN}ℹ${RESET} %s\n" "$*"; }
 
 spin() {
     local msg="$1"; shift
-    local pid; "$@" >> "$LOG_FILE" 2>&1 & pid=$!
-    local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") i=0
-    while kill -0 $pid 2>/dev/null; do
-        printf "\r\033[K${CYAN}%s${RESET} %s" "${sp[$((i%10))]}" "$msg"
-        ((i++)) || true; sleep 0.1
-    done
-    wait $pid && { ok "$msg"; return 0; } || { warn "$msg — see setup.log"; return 1; }
+    (
+        local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") i=0
+        while true; do
+            printf "\r\033[K${CYAN}%s${RESET} %s" "${sp[$((i%10))]}" "$msg"
+            ((i++)) || true; sleep 0.1
+        done
+    ) & local spin_pid=$!
+
+    if "$@" >> "$LOG_FILE" 2>&1; then
+        kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
+        ok "$msg"
+        return 0
+    else
+        kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
+        warn "$msg — see setup.log"
+        return 1
+    fi
 }
 
 ARCH="$(uname -m)"
@@ -378,9 +388,13 @@ else
         if ! curl -fL --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
             rm -rf "$tmp"; warn "$name: download failed"; return 1
         fi
-        [[ "$url" == *.zip ]] && \
-            unzip -q "$archive" -d "$tmp" >> "$LOG_FILE" 2>&1 || \
+        if [[ "$url" == *.zip ]]; then
+            unzip -q "$archive" -d "$tmp" >> "$LOG_FILE" 2>&1
+        elif [[ "$url" == *.tar.gz || "$url" == *.tgz ]]; then
             tar -xzf "$archive" -C "$tmp" >> "$LOG_FILE" 2>&1
+        else
+            cp "$archive" "$tmp/${name,,}"
+        fi
         local bin; bin=$(find "$tmp" -type f -name "${name,,}" 2>/dev/null | head -1)
         [[ -z "$bin" ]] && bin=$(find "$tmp" -type f -iname "$name" 2>/dev/null | head -1)
         if [[ -n "$bin" ]]; then

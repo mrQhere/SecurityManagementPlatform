@@ -4,7 +4,7 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.2 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.3 · Stable                      ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
@@ -387,9 +387,9 @@ controls = map_finding_to_controls("SQL Injection", "CWE-89")
 
 ---
 
-## 10 · Self-Healing & Troubleshooting (V9.4.2)
+## 10 · Self-Healing & Troubleshooting (V9.4.3)
 
-The V9.4.2 architecture introduces an **Autonomous Self-Healing Engine** (`tools/troubleshoot.py`) and a standardized `SMP-xxxx` error taxonomy. 
+The V9.4.3 architecture introduces an **Autonomous Self-Healing Engine** (`tools/troubleshoot.py`) and a standardized `SMP-xxxx` error taxonomy. 
 
 Instead of manual debugging, run the auto-fix script:
 
@@ -468,7 +468,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
 
 ```text
-       [ V9.4.2 ]  Base Standardization
+       [ V9.4.3 ]  Base Standardization
           │      (Unified execution scripts and basic GUI)
           ╰───────────╮
                       │
@@ -476,7 +476,7 @@ The platform has undergone a massive architectural evolution from a simple scrip
                       │      (Seed data purged, SQLCipher AES-256 fixed)
           ╭───────────╯
           │
-       [ V9.4.2 ]  Scanner Overhaul & UI Fixes
+       [ V9.4.3 ]  Scanner Overhaul & UI Fixes
           │        (F821 crashes patched in 24 tools, UI styling hardened)
           ╰───────────╮
                       │
@@ -488,21 +488,21 @@ The platform has undergone a massive architectural evolution from a simple scrip
           │        (SSRF, LFI, and OSINT capabilities restored)
           ╰───────────╮
                       │
-         CISA KEV  [ V9.4.2 ]
+         CISA KEV  [ V9.4.3 ]
                       │      (Regenerated intelligence from live KEV catalog)
           ╭───────────╯
           │
-       [ V9.4.2 ]  Architecture & Tooling Hardening
+       [ V9.4.3 ]  Architecture & Tooling Hardening
           │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
           ╰───────────╮
                       │
-     Neural Graph  [ V9.4.2 ]  (CURRENT)
+     Neural Graph  [ V9.4.3 ]  (CURRENT)
      & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
                       │       Air-gapped sync, V10 API Client foundation)
                       V
 ```
 
-### V9.4.2 (current)
+### V9.4.3 (current)
 - **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
@@ -515,11 +515,11 @@ The platform has undergone a massive architectural evolution from a simple scrip
 - **Neural Graph Filtering**: Analysts can now dynamically filter the Force-Directed Graph by AI Centrality Score using a new UI slider, instantly isolating "Linchpin" vulnerabilities by dissolving low-impact noise.
 - **V10.0 API Client Foundation**: Prepared the application for distributed decoupling by establishing `ui/api_client.py`, which provides a robust HTTP/JWT interface for the UI to speak directly with the backend FastAPI engine.
 - **CI/CD Reliability**: Eradicated legacy linting errors (E701, E702, E402) and resolved GitHub Dependency Graph parsing failures caused by unpinned `git+https` pip dependencies, ensuring the automated CodeQL and SMP CI pipelines pass 100%.
-- Fixed scattered semantic versioning (V7 and V9.4.2 discrepancies) globally.
+- Fixed scattered semantic versioning (V7 and V9.4.3 discrepancies) globally.
 
-**V9.4.2 (past)**
+**V9.4.3 (past)**
 - Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
-- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.4.2, dalfox v2.10.0
+- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.4.3, dalfox v2.10.0
 - --skip-tools flag for Avast-restricted environments
 - Semantic badge colours + QProgressBar/QTabWidget in UI
 - PDF footer © mrQhere, body_left crash fix
@@ -702,7 +702,7 @@ pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf
 
 ## 16 · Scheduler Settings
 
-SMP V9.4.2 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
+SMP V9.4.3 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
 This allows operators to specify exactly when automated daily scans and threat intelligence synchronizations occur.
 
 - **Daily Scan Time**: Set the Hour and Minute for the automated daily vulnerability scan on all active targets.

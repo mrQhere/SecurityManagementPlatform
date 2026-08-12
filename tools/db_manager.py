@@ -65,20 +65,19 @@ def _encrypt_and_compress_data(data_str: str) -> str:
     # 1. Compress
     compressed = gzip.compress(data_str.encode("utf-8"))
     
-    # 2. Encrypt
     active_key = get_active_key()
-    if active_key:
-        try:
-            import base64
-            fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
-            fernet = Fernet(fernet_key)
-            final_data = fernet.encrypt(compressed)
-        except Exception as e:
-            sys.stderr.write(f"Database error: {e}\n")
-            final_data = compressed
-    else:
-        # Fallback to no encryption if key is not loaded yet
-        final_data = compressed
+    if not active_key:
+        from tools.errors import SMPDatabaseError
+        raise SMPDatabaseError("Encryption key unavailable; refusing to persist scan output")
+
+    try:
+        import base64
+        fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
+        fernet = Fernet(fernet_key)
+        final_data = fernet.encrypt(compressed)
+    except Exception as e:
+        from tools.errors import SMPDatabaseError
+        raise SMPDatabaseError(f"Encryption failed: {e}")
         
     # 3. Save to file
     raw_dir = os.path.join(BASE_DIR, "database", "raw_outputs")
@@ -108,17 +107,18 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
             encrypted_data = f.read()
             
         active_key = get_active_key()
-        if active_key:
-            try:
-                import base64
-                fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
-                fernet = Fernet(fernet_key)
-                compressed = fernet.decrypt(encrypted_data)
-            except Exception as e:
-                sys.stderr.write(f"Database error: {e}\n")
-                compressed = encrypted_data
-        else:
-            compressed = encrypted_data
+        if not active_key:
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError("Encryption key unavailable; refusing to read encrypted scan output")
+
+        try:
+            import base64
+            fernet_key = base64.urlsafe_b64encode(bytes.fromhex(active_key))
+            fernet = Fernet(fernet_key)
+            compressed = fernet.decrypt(encrypted_data)
+        except Exception as e:
+            from tools.errors import SMPDatabaseError
+            raise SMPDatabaseError(f"Decryption failed: {e}")
             
         return gzip.decompress(compressed).decode("utf-8")
     except sqlite3.Error as e:
@@ -151,7 +151,7 @@ ALL_ACTIVE_STATUSES = [
     "Running Open Redirect", "Running Tech Fingerprint",
     "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
-    # V9.4.2 New Scanners
+    # V9.4.3 New Scanners
     "Running Dalfox", "Running Arjun", "Running DNSx", "Running Katana",
     "Running Commix", "Running JWT Scanner", "Running WPScan",
     "Running Masscan", "Running ParamSpider", "Running Cloud Enum",
@@ -475,14 +475,14 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
 
-    # V9.4.2 seamless upgrade: Add company_name and submitted_to to targets
+    # V9.4.3 seamless upgrade: Add company_name and submitted_to to targets
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
-    # V9.4.2 seamless upgrade: Soft delete
+    # V9.4.3 seamless upgrade: Soft delete
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
@@ -495,7 +495,7 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         pass
 
-    # Enterprise V9.4.2 — enriched findings columns (idempotent migrations)
+    # Enterprise V9.4.3 — enriched findings columns (idempotent migrations)
     _enterprise_columns = [
         ("url",                 "TEXT"),
         ("evidence",            "TEXT"),
@@ -1304,7 +1304,7 @@ def get_scans_for_target(target_id, limit=10):
 
 def add_finding(scan_id, severity, title, description, source_tool,
                 confidence=50, mitre_id="Unknown",
-                # Enterprise V9.4.2 enriched fields
+                # Enterprise V9.4.3 enriched fields
                 url=None, evidence=None, recommendation=None,
                 cvss_score=None, cve_id=None,
                 affected_component=None, owasp_category=None,

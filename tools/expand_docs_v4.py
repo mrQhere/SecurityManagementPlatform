@@ -14,7 +14,7 @@ Certain Node.js and Java-based scanners often spawn detached child processes. Th
 THESIS_APPEND = """
 # 15. The Mathematical Complexity of the DAG Orchestrator
 
-This chapter provides a formal proof of the time and space complexity of the `DAGManager` implemented in V9.4.2.
+This chapter provides a formal proof of the time and space complexity of the `DAGManager` implemented in V9.4.3.
 
 ## 15.1 Time Complexity of Topological Sorting
 Let $V$ be the number of integrated security scanners (currently $|V| = 55$) and $E$ be the number of dependencies between them.

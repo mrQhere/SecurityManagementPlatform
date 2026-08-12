@@ -38,7 +38,7 @@ For the academic community to reproduce the efficiency metrics established by th
 
 ## 12.1 The CI/CD Verification Pipeline
 
-The stability of the V9.4.2 architecture is mathematically enforced by a Continuous Integration (CI) pipeline consisting of 11 discrete heuristic test suites. This pipeline guarantees that the mathematical assumptions of the DAG (specifically, the absence of cyclic dependencies) remain valid as new plugins are introduced.
+The stability of the V9.4.3 architecture is mathematically enforced by a Continuous Integration (CI) pipeline consisting of 11 discrete heuristic test suites. This pipeline guarantees that the mathematical assumptions of the DAG (specifically, the absence of cyclic dependencies) remain valid as new plugins are introduced.
 
 The pipeline executes the following scenarios:
 1. **DAG Acyclicity Proofs**: Before any processes are spawned, a Depth-First Search (DFS) traversal algorithm mathematically proves that no $A \rightarrow B \rightarrow C \rightarrow A$ loops exist within the module registry.

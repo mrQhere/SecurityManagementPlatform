@@ -39,7 +39,7 @@ def run_feroxbuster_scan(url):
         "-x", "php,asp,aspx,jsp,html,bak,json,xml,sql,zip",
         "--filter-status", "404,429",
         "--no-state",           # don't save .feroxbuster state file
-        "-H", "User-Agent: SMP/9.4.2 (Security Audit)",
+        "-H", "User-Agent: SMP/9.4.3 (Security Audit)",
     ]
     if wordlist:
         cmd += ["-w", wordlist]

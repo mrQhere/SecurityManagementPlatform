@@ -276,7 +276,7 @@ To protect the derived key against offline dictionary attacks, brute-forcing, an
 
 1. **Salting**: The system generates a cryptographically secure, pseudo-random 32-byte salt using the host operating system's entropy pool (`os.urandom(32)`).
 2. **Pseudorandom Function (PRF)**: SMP utilizes HMAC-SHA256 as the underlying hashing algorithm.
-3. **Iteration Count**: As of V9.4.2, the platform enforces a minimum of 600,000 iterations, strictly adhering to the 2024 recommendations set forth by the National Institute of Standards and Technology (NIST).
+3. **Iteration Count**: As of V9.4.3, the platform enforces a minimum of 600,000 iterations, strictly adhering to the 2024 recommendations set forth by the National Institute of Standards and Technology (NIST).
 
 The derivation function is defined as:
 $$ \text{DK} = \text{PBKDF2}(\text{PRF}, \text{Password}, \text{Salt}, 600000, 32) $$
@@ -345,7 +345,7 @@ In the legacy, sequential bash-script architecture (V1), total execution time wa
 $$ T_{linear} = \sum_{i=1}^{n} t_i $$
 This resulted in a baseline execution time of exactly 4 hours and 12 minutes ($252$ minutes).
 
-Under the V9.4.2 DAG architecture, utilizing a `ProcessPoolExecutor` parallelized across 8 logical CPU cores, the execution time is bound only by the critical path of the graph—the longest sequence of dependent tools:
+Under the V9.4.3 DAG architecture, utilizing a `ProcessPoolExecutor` parallelized across 8 logical CPU cores, the execution time is bound only by the critical path of the graph—the longest sequence of dependent tools:
 $$ T_{DAG} = \max_{p \in P} \sum_{i \in p} t_i + \text{overhead} $$
 The DAG execution completed the exact same engagement profile in 1 hour and 8 minutes ($68$ minutes). This represents a **73% reduction in total engagement time**, proving the mathematical efficiency of Kahn’s Algorithm for topological task distribution.
 
@@ -379,7 +379,7 @@ The development of the Security Management Platform (SMP) demonstrates the viabi
 
 ## 7.1 System Limitations
 
-Despite the significant algorithmic optimizations achieved in V9.4.2, the platform is currently constrained by its monolithic physical deployment model. 
+Despite the significant algorithmic optimizations achieved in V9.4.3, the platform is currently constrained by its monolithic physical deployment model. 
 
 Because the Directed Acyclic Graph (DAG) orchestration engine dispatches tasks to a local `ProcessPoolExecutor`, the platform's concurrency limit is strictly bound by the physical CPU cores and RAM available on the analyst's host machine. While a standard workstation (e.g., 8 cores, 16GB RAM) is sufficient for evaluating a /24 subnet (254 hosts), executing a comprehensive penetration test against a global enterprise footprint (e.g., a /16 subnet containing 65,536 hosts) would result in a severe memory exhaustion event (OOM Killer) as hundreds of concurrent `masscan` and `nuclei` processes overwhelm the local kernel scheduler.
 
@@ -1301,7 +1301,7 @@ Upon execution, the standard output of `ZAP` is intercepted by the `SubprocessWa
 
 # Appendix B: Database Schemas and Data Dictionaries
 
-To ensure localized data sovereignty and high-performance querying, the Security Management Platform (SMP) persists state across three discrete SQLite databases. This appendix documents the formal Data Definition Language (DDL) and schema architecture utilized in V9.4.2.
+To ensure localized data sovereignty and high-performance querying, the Security Management Platform (SMP) persists state across three discrete SQLite databases. This appendix documents the formal Data Definition Language (DDL) and schema architecture utilized in V9.4.3.
 
 ## B.1 The Encrypted Pentest Database (`security.db`)
 
@@ -1715,7 +1715,8 @@ To establish the theoretical framework for the upcoming V10 release of the Secur
 ## 10.1 Formalization of the Fitness Function
 
 Let $W$ be the weight vector (chromosome) applied to the heuristic engine, defined as:
-$$ W = \langle w_{tfidf}, w_{cent}, w_{cve}, w_{conf} angle $$
+$$ W = \langle w_{tfidf}, w_{cent}, w_{cve}, w_{conf} 
+angle $$
 
 Let $R_W(S_i)$ be the computed Risk Score for scan instance $S_i$ utilizing weight vector $W$.
 Let $G(S_i)$ be the Ground Truth (human-verified) risk score for the same scan instance.
@@ -1772,10 +1773,13 @@ For the academic community to reproduce the efficiency metrics established by th
 
 ## 12.1 The CI/CD Verification Pipeline
 
-The stability of the V9.4.2 architecture is mathematically enforced by a Continuous Integration (CI) pipeline consisting of 11 discrete heuristic test suites. This pipeline guarantees that the mathematical assumptions of the DAG (specifically, the absence of cyclic dependencies) remain valid as new plugins are introduced.
+The stability of the V9.4.3 architecture is mathematically enforced by a Continuous Integration (CI) pipeline consisting of 11 discrete heuristic test suites. This pipeline guarantees that the mathematical assumptions of the DAG (specifically, the absence of cyclic dependencies) remain valid as new plugins are introduced.
 
 The pipeline executes the following scenarios:
-1. **DAG Acyclicity Proofs**: Before any processes are spawned, a Depth-First Search (DFS) traversal algorithm mathematically proves that no $A ightarrow B ightarrow C ightarrow A$ loops exist within the module registry.
+1. **DAG Acyclicity Proofs**: Before any processes are spawned, a Depth-First Search (DFS) traversal algorithm mathematically proves that no $A 
+ightarrow B 
+ightarrow C 
+ightarrow A$ loops exist within the module registry.
 2. **Subprocess Resilience Injection**: The pipeline intentionally triggers Unix `SIGKILL` (Signal 9) against running worker threads to simulate unexpected binary crashes (e.g., an Out-Of-Memory termination of `nmap`). The orchestrator must successfully detect the `SIGCHLD` interrupt, bypass the failed node, and gracefully degrade the dependency tree without entering a deadlock state.
 3. **Stochastic Timeout Capping**: The orchestrator is fed mock binaries that utilize `time.sleep(\infty)`. The pipeline verifies that the `Concurrent.Futures` executor successfully reaps the hanging thread precisely at the $T_{max}$ threshold (e.g., 14,400 seconds for intense port scans).
 
@@ -1816,7 +1820,7 @@ This ensures that intercepted orchestration traffic remains computationally secu
 
 # 15. The Mathematical Complexity of the DAG Orchestrator
 
-This chapter provides a formal proof of the time and space complexity of the `DAGManager` implemented in V9.4.2.
+This chapter provides a formal proof of the time and space complexity of the `DAGManager` implemented in V9.4.3.
 
 ## 15.1 Time Complexity of Topological Sorting
 Let $V$ be the number of integrated security scanners (currently $|V| = 55$) and $E$ be the number of dependencies between them.

@@ -1,5 +1,5 @@
 """
-Screenshot Capture V9.4.2
+Screenshot Capture V9.4.3
 ========================
 Captures screenshots of vulnerable endpoints as cryptographic evidence
 for reports. Uses playwright (headless Chromium) as primary method
@@ -50,7 +50,7 @@ def _capture_playwright(url: str, output_path: str) -> bool:
             )
             context = browser.new_context(
                 ignore_https_errors=True,
-                user_agent="SMP/9.4.2 (Evidence)"
+                user_agent="SMP/9.4.3 (Evidence)"
             )
             page = context.new_page()
             try:
@@ -76,7 +76,7 @@ def _capture_html_snapshot(url: str, output_path: str) -> bool:
     try:
         import requests
         resp = requests.get(url, timeout=10, verify=verify_tls,
-                            headers={"User-Agent": "SMP/9.4.2 (Evidence)"})
+                            headers={"User-Agent": "SMP/9.4.3 (Evidence)"})
         html_path = output_path.replace(".png", ".html")
         with open(html_path, "w", encoding="utf-8", errors="replace") as f:
             f.write(f"<!-- SMP Evidence Capture — {url} — {datetime.now().isoformat()} -->\n")

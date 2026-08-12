@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SMP V9.4.2 — Unified Self-Healing, Error Resolution & Troubleshooting Engine
+SMP V9.4.3 — Unified Self-Healing, Error Resolution & Troubleshooting Engine
 =============================================================================
 Centralized engine for finding errors, mapping solutions, running system diagnostic
 checks, and performing automated self-healing across the Security Management Platform.
@@ -56,7 +56,7 @@ ERROR_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
         "title": "JWT Token Expired",
         "description": "Bearer JWT token has exceeded its validity window.",
         "cause": "API request made with a token generated >24h ago.",
-        "solution": "Re-authenticate against /api/v9.4.2/auth/token to receive a fresh bearer token.",
+        "solution": "Re-authenticate against /api/v6/auth/token to receive a fresh bearer token.",
         "auto_fixable": False,
     },
     "SMP-2001": {
@@ -65,7 +65,7 @@ ERROR_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
         "title": "Required Security Tool Binary Missing",
         "description": "A required scanner CLI tool (e.g. nmap, nuclei, ffuf, wpscan) is not installed in PATH or bin/.",
         "cause": "Missing system binary or incomplete tool installation.",
-        "solution": "Run 'python3 tools/tool_installer.py' or 'python3 tools/troubleshoot.py --fix' to auto-install missing tools.",
+        "solution": "Run 'bash setup.sh' or 'python3 tools/troubleshoot.py --fix' to auto-install missing tools.",
         "auto_fixable": True,
     },
     "SMP-2002": {
@@ -266,7 +266,7 @@ def print_header(title: str):
 
 
 def run_cli_troubleshoot(auto_fix: bool = False):
-    print(f"{BLD}Security Management Platform (SMP) V9.4.2{RST}")
+    print(f"{BLD}Security Management Platform (SMP) V9.4.3{RST}")
     print("Unified Self-Healing & Troubleshooting Engine\n")
 
     print_header("1. Checking Environment & Directories")

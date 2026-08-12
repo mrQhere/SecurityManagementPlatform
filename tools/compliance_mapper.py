@@ -332,7 +332,7 @@ def format_compliance_table(summary: dict) -> str:
         CIS Controls        45%     5/11
         ISO 27001          55%     6/11
         SOC 2 Type II       40%     4/10
-        PCI-DSS v9.4.2        50%     6/12
+        PCI-DSS v9.4.3        50%     6/12
     """
     lines = [
         "Framework          Coverage   Controls Matched",
