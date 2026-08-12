@@ -1,4 +1,4 @@
-```text
+```
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                                                                      ║
 ║    ███████╗███╗   ███╗██████╗                                        ║
@@ -15,6 +15,7 @@
 
 <div align="center">
 
+
 # Security Management Platform
 
 **Local-first VAPT orchestration. Zero cloud. Encrypted at rest.**
@@ -30,176 +31,845 @@
 
 ---
 
-# Part 1: The Basics
+## What is SMP?
 
-## 1. What is SMP?
-The **Security Management Platform (SMP)** is an automated vulnerability scanner that acts like a robot penetration tester. It points 55 different security tools at a website, analyzes the results using artificial intelligence, and creates a professional PDF report. 
+SMP runs 55 security scanners against a target, correlates every finding against live threat intelligence (NVD, EPSS, CISA KEV, GreyNoise), and produces a compliance-mapped PDF report — without sending a single byte of client data to any cloud service.
 
-> [!TIP]
-> **Why use SMP?** It does not upload any of your data to the cloud. Everything stays on your local machine, and your data is heavily encrypted.
+**You get:** Raw scanner power + real exploitability context (not just CVSS) + a report an auditor will accept.
 
-## 2. Quick Start
-Get up and running in less than two minutes:
+---
+
+## 0 · Quick Start
 
 ```bash
-# 1. Download the platform
+# 1. Clone
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# 2. Install it automatically
+# 2. Install (~2 min)
 ./setup.sh
 
-# 3. Launch the visual dashboard
+# 3. Launch GUI
 ./run.sh
+
+# Or: headless API mode
+python main.py --api
+# → http://localhost:8000/api/v6/docs
 ```
 
-**How to run your first scan:**
-1. Click **Add Target** and enter a website URL.
-2. Select the `standard` profile.
-3. Click **Start Scan** and watch the Live Monitor.
-4. When finished, find your PDF report in the `reports/pdf/` folder.
+**First scan:**
+1. Click **Add Target** → enter a URL you own or have written permission to test
+2. Choose `standard` profile
+3. Click **Start Scan** → watch the Live Monitor
+4. PDF report lands in `reports/pdf/` when done
 
-> [!IMPORTANT]
-> **Antivirus Blocking the Installation?** Run `./setup.sh --skip-tools`. You can then manually download the required tools.
-
-## 3. Detailed Installation
-
-Depending on your operating system, follow these steps:
-
-### Linux & macOS
-The automated script handles almost everything:
-```bash
-./setup.sh
-```
-
-### Windows (Via Docker)
-Because the graphical interface only works natively on Linux/Mac, Windows users must use Docker.
-1. Install [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/).
-2. Run `docker compose up -d` in your terminal.
-3. Open your browser to `http://localhost:8000/api/v6/docs` to use the API.
+> **Antivirus blocking setup.sh?** Run `./setup.sh --skip-tools` to skip Go binary downloads, then install each tool manually from its GitHub Releases page (URLs printed by the script). PySide6 and SQLCipher install via pip/apt — AV does not block those.
 
 ---
 
-# Part 2: Operating the Platform
+## 1 · Installation
 
-## 4. Scan Profiles
-When you start a scan, you must choose a "Profile". Think of this as how aggressive you want the scan to be.
+### Linux / macOS
 
-| Profile | What it does | When to use it |
-|---------|-------------|----------------|
-| **OSINT** | Only looks at public information without sending attack traffic. | When you want a quick, silent overview. |
-| **Standard** | Scans for vulnerabilities actively but does NOT exploit them. | Routine security checks and compliance. |
-| **Full** | Launches intrusive exploits (like trying to guess passwords). | **Only when you have written legal permission.** |
+```bash
+./setup.sh           # full install — everything automated
+./setup.sh --skip-tools  # skip Go binary downloads (for AV-restricted environments)
+```
+
+`setup.sh` installs: Python venv, SQLCipher, `nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`, `race-the-web` (v1.0.3 Go binary), `wscat` (v5.2.1 Node module), `ppmap` (v1.0.0), `nmap`, `nikto`, `whatweb`, WPScan, ClamAV, Trivy, Prowler, NetExec.
+
+Every binary is downloaded with explicit semantic versioning from its official GitHub Releases page or npm registry and verified with SHA-256 before installation. The script prints the full URL before each download.
+
+### SQLCipher (hard requirement — SMP won't start without it)
+
+```bash
+# Ubuntu 24.04+
+sudo apt install libsqlcipher-dev libsqlcipher0t64
+pip install pysqlcipher3
+
+# Ubuntu 22.04 / Debian
+sudo apt install libsqlcipher-dev libsqlcipher0
+pip install pysqlcipher3
+
+# macOS
+brew install sqlcipher && pip install pysqlcipher3
+```
+
+Not sure which Ubuntu? `lsb_release -rs` → 24.04+ use `libsqlcipher0t64`.
+
+### Docker (all platforms, including Windows)
+
+```bash
+docker compose up -d
+
+# Useful commands
+make docker-logs     # live logs
+make docker-shell    # interactive shell
+make docker-stop     # stop
+make docker-clean    # stop + remove volumes
+```
+
+API available at `http://localhost:8000/api/v6/docs`.
+
+> The PySide6 desktop GUI runs on Linux/macOS only. On Windows, use Docker + the REST API.
+
+### Windows (manual path)
+
+1. Install [Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
+2. `docker compose up -d`
+3. Open `http://localhost:8000/api/v6/docs`
+
+---
+
+## 2 · Scan Profiles & 3-Phase Parallel Execution
+
+SMP features a **3-Phase Parallel Execution Framework** with intermediate **Neural Correlation Engine (Brain)** interleaving:
+
+1. **Phase 1 (Recon & OSINT)**: Fast footprinting (subdomains, certificates, headers, technology stacks).
+2. **Brain Interleaving Pass 1**: Synthesizes Phase 1 findings into semantic threat context and injects insights into Phase 2 scanners.
+3. **Phase 2 (Vulnerability Testers)**: Thread-pooled parallel execution of active scanners (`ppmap`, `wscat`, `race-the-web`, `nuclei`, `ffuf`, etc.) enriched with Brain Pass 1 intelligence.
+4. **Brain Interleaving Pass 2**: Aggregates Phase 2 findings with Phase 1 data to generate threat centrality maps.
+5. **Phase 3 (Deep Exploitation)**: Thread-pooled parallel execution of intrusive tools (`idor-scanner`, `SQLMap`, `Dalfox`, `Commix`, `ZAP`, etc.) guided by combined Brain insights.
+
+| Profile | What runs | When to use | Execution Flow |
+|---------|-----------|-------------|----------------|
+| `osint` | Passive recon only — zero target traffic | Scoping, reconnaissance | Phase 1 passive tools only |
+| `standard` | Full recon + active scanning, no intrusive exploits | Standard pentest engagement | 3-Phase Parallel Execution with Brain Interleaving |
+| `full` | Everything including Hydra, Commix, IDOR matrix, ZAP | **Written permission required** | 3-Phase Parallel Execution + Intrusive Exploitation |
+
+> ⚠️ The `full` profile sends attack payloads. Using it without written authorisation from the asset owner is illegal in most jurisdictions.
+
+---
+
+## 3 · Scanner Reference
+
+SMP runs all scanners as a **Directed Acyclic Graph (DAG)** — parallel within each phase, conditional between phases. Every scanner's full timeout is preserved for maximum coverage.
+
+| Scanner | Profile | Phase | Depends on | What it finds |
+|---------|---------|-------|-----------|---------------|
+| Traceroute | osint+ | 0 | — | Network path, hops, latency |
+| HTTPx | osint+ | 1 | Traceroute | HTTP/S alive, status codes, titles, tech |
+| WhatWeb | osint+ | 1 | Traceroute | CMS, frameworks, server software |
+| Subfinder | osint+ | 1 | Traceroute | Subdomains via passive DNS |
+| CRT.sh | osint+ | 1 | Traceroute | Certificate transparency subdomains |
+| Whois | osint+ | 1 | Traceroute | Domain registration, nameservers |
+| Wayback | osint+ | 1 | Traceroute | Historical URLs, exposed paths |
+| theHarvester | osint+ | 1 | Traceroute | Emails, names, IPs, virtual hosts |
+| HackerTarget | osint+ | 1 | Traceroute | Passive recon via HackerTarget API |
+| Nmap | standard+ | 2 | HTTPx | Open ports, service versions, OS |
+| SSL Scanner | standard+ | 2 | Nmap | TLS versions, weak ciphers, cert expiry |
+| Security Headers | standard+ | 2 | SSL | CSP, HSTS, X-Frame-Options gaps |
+| CORS Scanner | standard+ | 2 | HTTPx | CORS misconfigurations |
+| Robots Scanner | standard+ | 2 | HTTPx | Disallowed paths, sitemap |
+| Tech Fingerprint | standard+ | 2 | HTTPx | JS libraries, version detection |
+| Nikto | standard+ | 2 | Nmap | Web server misconfigs, CVEs |
+| CMS Scanner | standard+ | 2 | WhatWeb | WordPress/Joomla/Drupal vulns |
+| Nuclei | standard+ | 3 | Nikto | CVE templates, misconfigs, secrets (2h cap) |
+| ffuf | standard+ | 3 | HTTPx | Directory/file brute-force (2h cap) |
+| SQLMap | standard+ | 3 | HTTPx | SQL injection (forms and params) |
+| Wapiti | standard+ | 3 | HTTPx | XSS, SQLi, SSRF, path traversal |
+| Gitleaks | standard+ | 3 | HTTPx | Secrets in Git repos |
+| Shodan IDB | standard+ | 3 | Nmap | CVEs for open ports from Shodan IntelDB |
+| Retire.js | standard+ | 3 | Tech Fingerprint | Outdated JS library CVEs |
+| Screenshot | standard+ | 3 | HTTPx | Visual evidence (Playwright) |
+| Secrets Scanner | standard+ | 3 | HTTPx | API keys, tokens in source |
+| GraphQL Scanner | standard+ | 3 | HTTPx | Introspection, batching, injection |
+| API Fuzzer | standard+ | 3 | HTTPx | REST API endpoint fuzzing |
+| Katana | standard+ | 4 | HTTPx | JS-aware crawler for deep link discovery |
+| DNSx | standard+ | 4 | Subfinder | DNS record enrichment, takeover check |
+| ParamSpider | standard+ | 4 | Wayback | URL parameter extraction |
+| Arjun | standard+ | 4 | HTTPx | Hidden parameter discovery |
+| JWT Scanner | standard+ | 4 | HTTPx | Weak/none alg, key confusion |
+| SSRF Scanner | standard+ | 4 | Arjun | Server-side request forgery |
+| Path Traversal | standard+ | 4 | Arjun | Directory traversal |
+| CRLF Scanner | standard+ | 4 | HTTPx | Header injection |
+| Open Redirect | standard+ | 4 | HTTPx | Open redirect chains |
+| XXE Scanner | standard+ | 4 | HTTPx | XML external entity injection |
+| Cloud Enum | standard+ | 4 | Subfinder | S3/GCS/Azure blob exposure |
+| NetExec | standard+ | 4 | Nmap | SMB/WinRM enumeration |
+| WPScan | standard+ | 4 | CMS Scanner | WordPress plugins/themes vulns |
+| Dalfox | standard+ | 4 | Wapiti | XSS exploitation validation |
+| Amass | standard+ | 4 | Subfinder | Deep passive subdomain enumeration |
+| DirB | standard+ | 4 | HTTPx | Directory brute-force |
+| Feroxbuster | standard+ | 4 | HTTPx | Recursive directory brute-force |
+| Gobuster | standard+ | 4 | HTTPx | Directory/DNS/vhost brute-force |
+| MobSF | standard+ | 4 | HTTPx | Mobile app API endpoint analysis |
+| Netcat Probe | standard+ | 4 | Nmap | Raw service banner grabbing |
+| Masscan | standard+ | 4 | Traceroute | High-speed port scanning |
+| Smuggler | standard+ | 4 | HTTPx | HTTP request smuggling |
+| Trivy | standard+ | 4 | Tech Fingerprint | Container/OS vulnerability scan |
+| Prowler | standard+ | 4 | Cloud Enum | AWS/GCP/Azure security posture |
+| Prototype Pollution | standard+ | 2 | HTTPx | Client-side & server-side prototype pollution (`ppmap`) |
+| WebSocket Scanner | standard+ | 2 | HTTPx | Open WebSocket endpoints & connection probing (`wscat`) |
+| Race-the-Web | standard+ | 2 | HTTPx | TOCTOU and Race Condition vulnerabilities (`race-the-web`) |
+| IDOR Scanner | full only | 3 | HTTPx | BOLA / IDOR auth bypass (dual-token matrix testing) |
+| Hydra | full only | 5 | Auth surface | Credential brute-force |
+| Commix | full only | 5 | Arjun | OS command injection |
+| ZAP Active | full only | 5 | HTTPx | Full active OWASP ZAP scan |
 
 > [!WARNING]
-> The `full` profile will actively try to hack the target. Using it without explicit written authorization is illegal.
-
-## 5. Reports & Compliance
-Every time a scan finishes, SMP automatically generates three things:
-1. **PDF Report:** A polished document ready to hand to a client or auditor (found in `reports/pdf/`).
-2. **HTML Report:** A web version of the PDF.
-3. **SBOM:** A "Software Bill of Materials" that lists all the underlying technologies found.
-
-**Compliance:** Your findings are automatically mapped to major security frameworks like **OWASP Top 10**, **ISO 27001**, and **PCI-DSS**. This helps you prove to auditors that you are compliant.
-
----
-
-# Part 3: Under the Hood (Technical)
-
-For those wanting to understand the deep technical architecture of SMP, this section breaks down the core engines.
-
-## 6. The Directed Acyclic Graph (DAG) Architecture
-SMP does not run its 55 tools one-by-one. It uses a mathematical structure called a **Directed Acyclic Graph (DAG)** to run them simultaneously in organized phases.
-
-```mermaid
-graph TD
-    %% Phase 1: Reconnaissance
-    subgraph Phase 1: Recon & OSINT
-        A[Traceroute] --> B[HTTPx]
-        A --> C[Subfinder]
-        A --> D[Wayback]
-    end
-
-    %% Phase 2: Neural Interleaving
-    subgraph Phase 2: Active Testers
-        B --> E[Nmap]
-        B --> F[Nikto]
-        C --> G[DNSx]
-    end
-    
-    %% Phase 3: Exploitation
-    subgraph Phase 3: Deep Exploitation
-        F --> H[Nuclei]
-        F --> I[SQLMap]
-        G --> J[IDOR Scanner]
-    end
-```
-
-**What this means for you:** The platform is incredibly fast. Instead of waiting for one tool to finish, it runs multiple tools at the exact same time, only waiting when one tool needs data from another.
-
-## 7. The Intelligence Engine & Risk Scoring
-When a vulnerability is found, SMP doesn't just guess how dangerous it is. It connects to four global threat databases to calculate a highly accurate **Risk Score**.
-
-```mermaid
-pie title Risk Score Composition
-    "CVSSv3 Score (NVD)" : 40
-    "Exploited in the Wild (CISA KEV)" : 30
-    "Probability of Attack (EPSS)" : 20
-    "Attacker IP Threat (GreyNoise)" : 10
-```
+> **full** profile scanners send attack payloads. Use only with written authorisation.
 
 > [!NOTE]
-> If you are on an isolated network (Air-Gapped), you can run SMP in Local-Only mode (`SMP_LOCAL_ONLY=1 ./run.sh`), which stops the system from making outbound internet calls.
-
-## 8. Cryptographic Encryption
-Security platforms hold highly sensitive data (like where your vulnerabilities are). SMP encrypts all client data using **SQLCipher AES-256**. 
-- **The Key:** Your master password is hashed using PBKDF2-HMAC-SHA256. 
-- **Recovery:** There is no "forgot password" button. If you lose your password, your data is cryptographically unrecoverable.
+> **SPA false-positive filter:** ffuf on React/Vue/Angular apps sometimes returns HTTP 200 for every path. SMP auto-detects when ≥80% of results share the same content length and suppresses them.
 
 ---
 
-# Part 4: Advanced Researcher Topics
+## 4 · Intelligence & Risk Scoring
 
-This section is for developers, security engineers, and SIEM administrators integrating SMP into enterprise environments.
+Every finding is cross-referenced against four live sources:
 
-## 9. Automated Troubleshooting & Self-Healing
-If a component crashes, do not manually debug it. V9.4.3 includes an autonomous Self-Healing Engine.
-```bash
-source venv/bin/activate
-python3 tools/troubleshoot.py --fix
+| Source | What it adds |
+|--------|-------------|
+| **NVD** | CVSSv3 score, CWE, affected version matching |
+| **EPSS** | 0–1 probability of exploitation in the wild within 30 days |
+| **CISA KEV** | Boolean: is this CVE on the US gov's confirmed-exploited list? (2× score multiplier) |
+| **GreyNoise** | IP classification: noise / riot / malicious / unknown |
+
+**Risk formula** (`tools/risk_scorer.py`):
+```python
+risk = min(100, (cvss/10) * kev_mult * gn_mult * 100 + epss * 30)
+# kev_mult = 2.0 if CISA KEV, gn_mult = 1.3 if GreyNoise malicious
 ```
-The engine resolves `SMP-xxxx` taxonomy errors automatically (e.g., `SMP-3001` Database Locks, `SMP-2001` Missing Dependencies). For deeper edge cases, see the `troubleshooting/` directory.
 
-## 10. Headless REST API (V6)
-SMP can be orchestrated entirely via headless REST APIs for CI/CD pipelines.
+**Local-only mode** — blocks all outbound intelligence calls:
+```bash
+SMP_LOCAL_ONLY=1 ./run.sh
+# Every blocked call is logged to logs/egress_audit.log
+```
+
+---
+
+## 5 · Encryption
+
+| Data | Encryption |
+|------|-----------|
+| Pentest DB (`security.db`, `redundancy.db`) | SQLCipher AES-256 |
+| Raw scanner output (stored as blobs) | Compressed and stored in SQLCipher |
+| Intelligence DBs (`cve.db`, `global_intel.db`) | Plaintext — no client data |
+
+Key derivation: **PBKDF2-HMAC-SHA256**.
+
+Lost your password? There is no recovery path — this is by design. Back up `database/security.db` before changing passwords.
+
+---
+
+## 6 · Reports
+
+Every completed scan generates:
+- `reports/pdf/SMP_target.com_Report_YYYY-MM-DD_<hash16>.pdf` — compliance-grade VAPT report
+- `reports/html/SMP_target.com_Report_YYYY-MM-DD.html` — always generated (no ReportLab needed)
+- `reports/sbom/SMP_target.com_SBOM_YYYY-MM-DD.json` — CycloneDX SBOM
+
+**Verify a report hasn't been tampered with:**
+```bash
+python3 tools/verify_report.py reports/pdf/SMP_example.com_Report_2026-08-06_a1b2c3d4.pdf
+# ✔  Report is authentic. Content hash verified.
+```
+
+---
+
+## 7 · REST API
+
 Base URL: `http://localhost:8000/api/v6/`
 
 ```bash
-# 1. Get Authentication Token
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v6/auth/token   -H "Content-Type: application/json"   -d '{"username":"admin","password":"your_password"}' | jq -r .access_token)
+# Get token
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v6/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"your_password"}' | jq -r .access_token)
 
-# 2. Trigger a Scan
-curl -X POST http://localhost:8000/api/v6/target   -H "Authorization: Bearer $TOKEN"   -d '{"url":"https://example.com"}'
+# Add target
+curl -X POST http://localhost:8000/api/v6/target \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+
+# List active scans
+curl http://localhost:8000/api/v6/scan -H "Authorization: Bearer $TOKEN"
+
+# Get findings for a scan
+curl "http://localhost:8000/api/v6/findings?scan_id=1" -H "Authorization: Bearer $TOKEN"
 ```
 
-## 11. Creating Custom Scanners (Zero-Config Plugins)
-You can inject custom Python exploit scripts directly into the DAG pipeline without editing the core engine. Generate a template using:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/token` | POST | Get JWT |
+| `/health` | GET | Platform health |
+| `/target` | GET | List targets |
+| `/target` | POST | Add target |
+| `/scan` | GET | List active/recent scans |
+| `/findings` | GET | Get findings (requires `?scan_id=`) |
+| `/cve/stats` | GET | CVE statistics |
+| `/risk/score` | GET | Risk scores |
+| `/version` | GET | Version info |
+
+Interactive docs: `http://localhost:8000/api/v6/docs`
+
+---
+
+## 8 · Adding Custom Scanners
+
+See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the full guide. Quick reference:
+
 ```bash
+# 1. Generate scaffold
 python3 tools/create_scanner.py --name "MyTool" --binary "mytool" --severity High
 ```
-Implement your logic in `scanners/mytool.py` using the `@register_scanner` decorator. The DAG will automatically topological-sort it into the execution pipeline on the next run.
 
-## 12. Evolutionary Brain & Genetic Breeding (Experimental Roadmap)
-SMP lays the groundwork for an **Evolutionary Machine Learning Correlation Engine**. Instead of relying on static TF-IDF heuristic weights, the platform can treat scanner confidence scores and CISA multipliers as "chromosomes." 
+```python
+# 2. Implement — scanners/mytool.py
+from scanners.core.registry import register_scanner
+import subprocess, logging
+from tools.db_manager import add_log_entry
 
-By simulating genetic crossover and mutation against a Ground Truth dataset, local air-gapped instances of SMP will eventually self-optimize and breed highly accurate heuristics without cloud telemetry.
+MYTOOL_TIMEOUT = 300  # set realistic max — do not reduce
+
+@register_scanner(
+    name="MyTool",
+    step_name="Running MyTool",
+    depends_on=["HTTPx"],   # DAG phase — see scanner table above
+    binary_name="mytool",   # checked in PATH and bin/
+    needs_binary=True,
+    confidence=85,          # 0–100 — how reliable are your findings?
+)
+def run_mytool(url: str) -> list | None:
+    add_log_entry("INFO", f"MyTool Started: {url}")
+    try:
+        r = subprocess.run(["mytool", url], capture_output=True,
+                           text=True, timeout=MYTOOL_TIMEOUT)
+    except FileNotFoundError:
+        return None   # binary not installed — skip gracefully
+    except subprocess.TimeoutExpired:
+        return []     # timed out — return empty, not None
+
+    findings = []
+    for line in r.stdout.splitlines():
+        findings.append({
+            "severity":    "High",       # Critical|High|Medium|Low|Info
+            "title":       "Issue title",
+            "description": "Detail …",
+            "confidence":  85,
+            "template_id": "mytool-001", # for deduplication
+        })
+    add_log_entry("INFO", f"MyTool: {len(findings)} findings")
+    return findings
+```
+
+**Profile guard** — restrict to `full` profile only:
+```python
+from tools.config_manager import load_settings
+if load_settings().get("scan_profile", "standard") != "full":
+    return []
+```
+
+SMP auto-discovers the scanner on next run — no further registration needed.
+
+---
+
+## 9 · Compliance Mapping
+
+Findings are automatically mapped to:
+
+| Framework | Key use case |
+|-----------|-------------|
+| OWASP Top 10 2021 | Web application baseline |
+| CIS Controls v8 | Infrastructure hardening |
+| ISO 27001:2022 | ISMS certification |
+| SOC 2 Type II | SaaS/cloud audit readiness |
+| PCI-DSS v4.0 | Payment card compliance |
+
+```python
+from tools.compliance_mapper import map_finding_to_controls
+controls = map_finding_to_controls("SQL Injection", "CWE-89")
+# {"owasp": ["A03:2021"], "pci_dss": ["Req 6.2.4"], ...}
+```
+
+---
+
+## 10 · Self-Healing & Troubleshooting (V9.4.3)
+
+The V9.4.3 architecture introduces an **Autonomous Self-Healing Engine** (`tools/troubleshoot.py`) and a standardized `SMP-xxxx` error taxonomy. 
+
+Instead of manual debugging, run the auto-fix script:
+
+```bash
+# 1. Activate environment
+source venv/bin/activate
+
+# 2. Run the Self-Healing Engine
+python3 tools/troubleshoot.py --fix
+```
+
+### The `SMP-xxxx` Error Taxonomy
+
+The platform assigns consistent error codes to system failures. The `--fix` flag automatically resolves them where possible:
+
+| Error Code | Category | Automated Recovery Action (`--fix`) |
+|------------|----------|---------------------------------------|
+| **SMP-1000** | Auth/Session | Regenerates missing JWT configuration or reports token expiration. |
+| **SMP-2001** | Scanners | Triggers `tool_installer.py` to auto-download and install missing Go/Node/Python dependencies. |
+| **SMP-2003** | Subprocess | Restarts stuck or zombied scanner execution threads. |
+| **SMP-3001** | Database | Executes `PRAGMA wal_checkpoint(TRUNCATE)` to unlock stalled SQLite-WAL lock files. |
+| **SMP-5001** | Configuration | Auto-restores missing directory structures (`logs/`, `reports/`, etc.). |
+| **SMP-9999** | Unclassified | Drops a full stack trace to `logs/scan.log` for developer triage. |
+
+### Network Evasion & MAC Changer Robustness
+The platform features an integrated MAC address randomizer (`tools/mac_changer.py`). If you execute scans without `sudo` or without Linux `setcap` capabilities (e.g., in a locked-down Docker container), the platform gracefully handles the `SMP-5001` network permission denial. 
+
+It triggers a non-destructive fallback (falling back to standard routing) without crashing the active scanner pipeline.
+
+> [!TIP]
+> **Need manual troubleshooting?** Detailed technical breakdowns for Edge Cases are still available in the [troubleshooting/](troubleshooting/README.md) directory.
+
+---
+
+## 11 · Architecture Reference
+
+```
+SecurityManagementPlatform/
+├── api/               FastAPI REST backend (server.py, auth.py)
+├── config/            Settings, metadata, hardening rules
+├── database/          SQLite databases
+├── intelligence/      brain.py, nvd.py, epss.py, cisa.py, greynoise.py
+├── scanners/          55 scanner wrappers + core/ (DAG, registry, pipeline)
+├── tools/             db_manager, encryption_manager, risk_scorer,
+│                      report_generator, compliance_mapper, scheduler…
+├── ui/                PySide6 GUI (dashboard, components, views, style.qss)
+├── main.py            Entrypoint (GUI or --api mode)
+├── setup.sh           Installer
+└── run.sh             Launcher
+```
+
+| Layer | Tech | File |
+|-------|------|------|
+| GUI | PySide6 | `ui/dashboard.py` |
+| API | FastAPI + JWT | `api/server.py` |
+| Database | SQLCipher AES-256 | `tools/db_manager.py` |
+| Pipeline | DAG + multiprocessing | `scanners/scan_runner.py` |
+| Intelligence | REST + local cache | `intelligence/` |
+| Encryption | SQLCipher + PBKDF2 | `tools/encryption_manager.py` |
+
+---
+
+## 12 · Documentation & Troubleshooting
+
+SMP includes extensive standalone documentation for edge cases, architecture, and issue resolution:
+
+* 🔧 **[Troubleshooting Guide](troubleshooting/README.md)**: Master index for resolving installation, database, API, and scanner errors.
+* 🛡️ **[Security Policy](SECURITY.md)**: Architecture details, encryption standards, and the vulnerability reporting policy (**do not open public issues**).
+* 🤝 **[Contributing Guidelines](.github/CONTRIBUTING.md)**: Rules for opening PRs, writing scanners, and code of conduct.
+
+
+---
+
+## 13 · Platform Evolution Timeline
+
+The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
+
+```text
+       [ V9.4.3 ]  Base Standardization
+          │      (Unified execution scripts and basic GUI)
+          ╰───────────╮
+                      │
+      Intel Audit  [ V9.2.4 ]
+                      │      (Seed data purged, SQLCipher AES-256 fixed)
+          ╭───────────╯
+          │
+       [ V9.4.3 ]  Scanner Overhaul & UI Fixes
+          │        (F821 crashes patched in 24 tools, UI styling hardened)
+          ╰───────────╮
+                      │
+   Installer Sync  [ V9.3.1 ]
+                      │      (Debian, Arch, RHEL multi-distro installers)
+          ╭───────────╯
+          │
+       [ V9.3.2 ]  Exploitation Capability Pass
+          │        (SSRF, LFI, and OSINT capabilities restored)
+          ╰───────────╮
+                      │
+         CISA KEV  [ V9.4.3 ]
+                      │      (Regenerated intelligence from live KEV catalog)
+          ╭───────────╯
+          │
+       [ V9.4.3 ]  Architecture & Tooling Hardening
+          │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
+          ╰───────────╮
+                      │
+     Neural Graph  [ V9.4.3 ]  (CURRENT)
+     & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
+                      │       Air-gapped sync, V10 API Client foundation)
+                      V
+```
+
+### V9.4.3 (current)
+- **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
+- Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
+- Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
+- **Event-Driven Reactivity**: Graph now recalculates and visually re-renders in real time via the unified `EventBus`.
+- **Vulnerability Deduplication**: Upgraded `finding_deduplicator.py` with Levenshtein fuzzy matching (≥0.82 similarity) and vulnerability aliasing (e.g., merging "SQLi" and "SQL Injection") to aggressively reduce scanner noise.
+- **Cross-Platform Hardening**: Audited all 28 internal tools and enforced strict `encoding="utf-8"` standard for seamless Windows compatibility.
+- **Tooling Overhauls**: Rebuilt `bump_version.py` into a robust CLI with auto-bumping (`--minor`/`--major`) and `--dry-run` protections, and enabled `system_checker.py` for standalone execution.
+- **Engine Robustness**: Hardened the module registry by implementing a thread-safe `EventBus` class wrapper to prevent plugin ImportErrors, and upgraded the plugin generator (`create_scanner.py`) to enforce the strict `scan(target, scan_id, settings)` signature, eradicating `NameError` crashes in custom scanners.
+- **Air-Gapped Workstation Sync**: The intelligence brain now natively supports exporting and importing the `global_intel.db` via portable `.tar.gz` archives for physically isolated, air-gapped machine synchronization.
+- **Neural Graph Filtering**: Analysts can now dynamically filter the Force-Directed Graph by AI Centrality Score using a new UI slider, instantly isolating "Linchpin" vulnerabilities by dissolving low-impact noise.
+- **V10.0 API Client Foundation**: Prepared the application for distributed decoupling by establishing `ui/api_client.py`, which provides a robust HTTP/JWT interface for the UI to speak directly with the backend FastAPI engine.
+- **CI/CD Reliability**: Eradicated legacy linting errors (E701, E702, E402) and resolved GitHub Dependency Graph parsing failures caused by unpinned `git+https` pip dependencies, ensuring the automated CodeQL and SMP CI pipelines pass 100%.
+- Fixed scattered semantic versioning (V7 and V9.4.3 discrepancies) globally.
+
+**V9.4.3 (past)**
+- Multi-distro installer: Ubuntu/Debian/Fedora/RHEL/Arch/openSUSE/Kali/Parrot
+- Updated tools: nuclei v3.3.9, subfinder v2.7.0, httpx v1.7.0, gitleaks v9.4.3, dalfox v2.10.0
+- --skip-tools flag for Avast-restricted environments
+- Semantic badge colours + QProgressBar/QTabWidget in UI
+- PDF footer © mrQhere, body_left crash fix
+- GitHub issue templates, PR template, CONTRIBUTING.md
+
+**V10.0**
+- Distributed scan agents over mTLS
+- Multi-tenant MSSP workspace separation
+- REST API v2 with webhook callbacks
+
+---
+
+## 14 · Advanced Usage for Researchers
+
+SMP is built as a flexible orchestration layer. Security researchers can leverage its core components for custom engagements:
+
+### Neural Graph Tuning (Centrality & TF-IDF)
+The Neural Intelligence Engine (`intelligence/brain.py`) now runs a custom Degree Centrality algorithm and a TF-IDF Natural Language clustering matrix. You can manipulate the clustering tolerances in `_tf_idf_cluster(findings)` by adjusting the `cosine_sim() > 0.4` threshold, or change the structural emphasis of chokepoints by modifying the `centrality_score` weights inside `compute_centrality()`. Visual rendering forces (Coulomb repulsion and Hooke spring laws) can be tuned in `ui/components/neural_graph.py` to cluster technologies more aggressively.
+
+### Direct SQLCipher Queries
+Pentest data is encrypted at rest using AES-256. If you want to bypass the GUI to run complex analytical queries on the raw findings:
+1. Extract your master key from `.smp_keystore`.
+2. Access the database directly:
+```bash
+sqlite3 database/security.db
+sqlite> PRAGMA key = 'YOUR_MASTER_KEY';
+sqlite> SELECT target_url, severity, tool FROM findings WHERE confidence > 90;
+```
+
+### Developing Zero-Config Plugins
+You can add custom exploit scripts or proprietary scanners to the pipeline instantly. Drop your python script into the `scanners/` directory with a `PLUGIN_META` dictionary, and the `scanners.core.registry` will automatically parse it and include it in the DAG for execution.
+
+```python
+PLUGIN_META = {
+    "name": "Custom0Day",
+    "binary": "exploit_bin",
+    "severity": "Critical",
+    "step_name": "Running Custom Exploit",
+    "confidence": 100,
+    "depends_on": ["Subfinder"] # Optional DAG dependency
+}
+def scan(target_url: str, scan_id: int, settings: dict):
+    from tools.db_manager import emit_finding
+    emit_finding(scan_id, "Custom0Day", "Critical", "Found 0-day!")
+```
+
+### Headless API Automation
+SMP features a headless FastAPI server. To integrate SMP into a CI/CD pipeline or custom red-team orchestration bot:
+```bash
+./run.sh --api-only --port 8000
+```
+
+### Dynamic DAG Pipeline Manipulation
+The `scanners/core/dag.py` engine calculates the execution graph via topological sorting. By default, it runs dependencies sequentially. You can override timeout constraints or inject side-car payloads by monkey-patching the `DAGManager` before execution:
+```python
+from scanners.core.dag import DAGManager
+def custom_execution_hook(node):
+    print(f"Intercepted DAG node: {node.name}")
+    node.timeout = 900 # Force 15m timeout for complex subnets
+    
+DAGManager.pre_execute_hook = custom_execution_hook
+```
+
+### Intelligence Brain Extensibility
+The Neural Correlation Engine (`intelligence/brain.py`) processes raw scanner output through heuristics. You can write custom decay models to depreciate CVSS scores over time:
+```python
+# In intelligence/brain.py:
+def apply_time_decay(cvss_score: float, discovery_date: str) -> float:
+    from datetime import datetime
+    delta = (datetime.now() - datetime.fromisoformat(discovery_date)).days
+    decay_factor = 1.0 - min(0.5, delta * 0.01) # Decay up to 50%
+    return round(cvss_score * decay_factor, 1)
+```
+
+### Advanced REST API Interactions
+The headless FastApi server is robust enough for custom SIEM integrations. To submit scans programmatically via python `requests` and subscribe to Server-Sent Events (SSE):
+```python
+import requests
+import json
+import sseclient # pip install sseclient-py
+
+headers = {"Authorization": "Bearer YOUR_JWT"}
+payload = {"target": "10.0.0.0/24", "profile": "full", "stealth": True}
+
+# Trigger scan
+resp = requests.post("http://127.0.0.1:8000/api/v6/target", json=payload, headers=headers)
+
+# List active scans
+response = requests.get(f"http://127.0.0.1:8000/api/v6/scan", headers=headers, stream=True)
+client = sseclient.SSEClient(response)
+for event in client.events():
+    print(f"Live Finding: {json.loads(event.data)}")
+```
+
+### Extracting Raw JSON for SIEM Ingest (Splunk / ELK)
+By default, SMP generates human-readable PDF reports using PyMuPDF. To bypass the PDF renderer and tap directly into the JSON data model for Splunk or ELK ingestion, modify `tools/report_generator.py`:
+```python
+def export_raw_json(scan_results: dict, filepath: str):
+    import json
+    # Flatten DAG results for SIEM compatibility
+    flat_findings = []
+    for tool, output in scan_results.get("findings", {}).items():
+        flat_findings.extend(output)
+    
+    with open(filepath, "w") as f:
+        json.dump({"scan_meta": scan_results["meta"], "events": flat_findings}, f)
+```
+
+### Offline Forensics & Decryption CLI Tooling
+For incident response, booting the entire platform may be undesirable. You can create an automated bash alias to dump the SQLCipher SQLite databases into a plaintext memory-mapped file for rapid `grep` forensics:
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias smp-dump="sqlite3 /path/to/database/security.db \"PRAGMA key='$(cat /path/to/.smp_keystore)'; .mode json; SELECT * FROM findings;\""
+```
+
+### Bypassing the UI Sandbox (PySide6 Hooks)
+If you require custom context menus within the force-directed graph (e.g., right-clicking a vulnerable host to immediately pass its IP to Metasploit), hook the PySide6 signals in `ui/components/neural_graph.py`:
+```python
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
+
+def contextMenuEvent(self, event):
+    node = self.get_node_at(event.pos())
+    if node and node.type == "VULNERABLE_HOST":
+        menu = QMenu(self)
+        exploit_action = QAction("Send to MSFConsole", self)
+        exploit_action.triggered.connect(lambda: self.launch_msf(node.ip))
+        menu.addAction(exploit_action)
+        menu.exec_(event.globalPos())
+```
+
+### Customising Egress Audit Logs for Compliance
+Highly secure environments often require off-site audit logging. You can tap into `tools/egress_auditor.py` to pipe outbound platform metrics (such as NVD API calls) directly to an external Graylog server:
+```python
+import socket
+import json
+
+def ship_to_graylog(audit_event: dict):
+    # Sends GELF formatted UDP packet to Graylog
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    payload = json.dumps({"version": "1.1", "host": "smp-agent", "short_message": audit_event["action"]})
+    sock.sendto(payload.encode(), ("graylog.internal.lan", 12201))
+```
+
+### Multi-Threading Optimisation for Masscan
+When scanning massive target surfaces (like `/8` subnets), the default `scan_runner` limits concurrent connections to avoid crashing local state. You can override the packet filters and rate limits in `scanners/masscan.py`:
+```python
+# Force BPF packet filtering and aggressive rate limits
+def build_masscan_cmd(target: str) -> list:
+    return [
+        "masscan", target,
+        "-p0-65535",
+        "--max-rate", "100000",
+        "--wait", "0",
+        "--bpf", "tcp and not port 80 and not port 443" # Exclude heavy web ports
+    ]
+```
+
+---
+
+## 15 · Generating the Thesis PDF
+
+The massive 100+ page professional academic thesis detailing the mathematical and technical architecture of SMP is located in `docs/thesis/SMP_Academic_Thesis.md`. 
+
+To convert this markdown file into a beautifully formatted, print-ready PDF (complete with a table of contents, LaTeX styling, and page numbers), use `pandoc`.
+
+**1. Install Required Packages (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install pandoc texlive-xetex texlive-fonts-recommended texlive-plain-generic
+```
+
+**2. Generate the PDF:**
+```bash
+# Run this from the root of the repository
+pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf --pdf-engine=xelatex -V geometry:margin=1in -V mainfont="DejaVu Serif" -V monofont="DejaVu Sans Mono"
+```
+
+---
+
+## 16 · Scheduler Settings
+
+SMP V9.4.3 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
+This allows operators to specify exactly when automated daily scans and threat intelligence synchronizations occur.
+
+- **Daily Scan Time**: Set the Hour and Minute for the automated daily vulnerability scan on all active targets.
+- **Intel Sync Interval**: Control the frequency (in hours) at which the local CVE database updates from NVD, CISA, and GitHub Advisories.
+
+---
+
+## 17 · Future Architecture: Evolutionary Brain & Genetic Heuristic Breeding (Experimental Concept)
+
+As a roadmap concept for future contributors and security researchers, SMP lays the foundation for moving from static TF-IDF heuristic weights to an **Evolutionary Machine Learning Correlation Engine (Genetic Algorithm)**.
+
+### Core Concept
+Instead of relying on fixed weights for scanner confidence scores, threat severity multipliers, and TF-IDF parameters, the Brain can treat these parameters as **chromosomes (genes)**:
+
+1. **Gene Encoding**: Scanner confidence scores (e.g. `nmap=90`, `ppmap=75`), CISA KEV multipliers (`2.0x`), and TF-IDF ngram limits are encoded into a parameter vector.
+2. **Fitness Function**: The population of candidate Brains is evaluated against a curated, local "Ground Truth" benchmark dataset of verified VAPT findings and false positives.
+3. **Crossover & Mutation**: The highest-performing heuristic configurations are "bred" together, with a small probability of random mutations (e.g. randomly altering a tool's confidence weight or parameter threshold).
+4. **Active Learning UI Dashboard**: Real-time visualization in a dedicated PySide6 dashboard tab displaying generation counters, live population fitness scatter plots, and top-performing mutated weights.
+
+> 💡 **Research Goal**: Enable local, air-gapped instances of SMP to autonomously self-optimize over time as real-world scan data accumulates, without sending any training telemetry to external servers.
 
 ---
 
 <div align="center">
 
-**Security Management Platform**  
-Local-first · Zero-cloud · Encrypted at rest  
-© mrQhere · [GitHub Repository](https://github.com/mrQhere/SecurityManagementPlatform)
+**SMP** · Local-first · Zero-cloud · Encrypted at rest  
+© mrQhere · [GitHub](https://github.com/mrQhere/SecurityManagementPlatform)
 
 </div>
+
+# Appendix A: Comprehensive API Reference (REST V6)
+The Security Management Platform provides a robust, headless REST API intended for Continuous Integration/Continuous Deployment (CI/CD) orchestration, custom dashboarding, and raw data extraction.
+
+## A.1 Authentication Endpoints
+
+### `POST /api/v6/auth/token`
+Authenticates a user and returns a JSON Web Token (JWT) valid for 60 minutes.
+- **Request Body**: `{"username": "admin", "password": "SuperSecretPassword!"}`
+- **Response**: `{"access_token": "eyJhb...", "token_type": "bearer"}`
+- **Error Codes**:
+  - `401 Unauthorized`: Invalid credentials.
+  - `429 Too Many Requests`: Rate limit exceeded (fail2ban active).
+
+## A.2 Target Management
+
+### `POST /api/v6/target`
+Registers a new target for scanning.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**: `{"url": "https://example.com", "company_name": "Example Corp"}`
+- **Response**: `{"id": 42, "url": "https://example.com", "status": "Ready"}`
+
+### `GET /api/v6/target/{id}`
+Retrieves target metadata and historical scan runs.
+
+## A.3 Scan Orchestration
+
+### `POST /api/v6/scan/start`
+Initiates a new DAG orchestration sequence for a target.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**: `{"target_id": 42, "profile": "full_audit", "stealth": false}`
+- **Response**: `{"scan_id": 108, "status": "Running"}`
+
+## A.4 Vulnerability Data Extraction
+
+### `GET /api/v6/scan/{scan_id}/findings`
+Retrieves all vulnerabilities discovered during a specific scan, including deduplicated items.
+- **Query Parameters**: `?severity=Critical,High&include_raw=false`
+- **Response**:
+```json
+{
+  "scan_id": 108,
+  "findings": [
+    {
+      "id": 1005,
+      "title": "SQL Injection in Login Form",
+      "severity": "Critical",
+      "cvss_score": 9.8,
+      "cve_refs": ["CVE-2023-XXXX"],
+      "compliance": ["OWASP A03:2021", "PCI-DSS Req 6.5.1"]
+    }
+  ]
+}
+```
+
+# Appendix B: The Genetic Heuristic Breeding Strategy (Advanced)
+
+As outlined in Section 17, the V10 roadmap for the Neural Brain introduces Genetic Algorithms (GA) to evolve the scoring weights of the platform dynamically.
+
+## B.1 The Chromosome Representation
+In the context of SMP, a "chromosome" is an array of floating-point weights applied to different heuristic parameters. For example:
+`[TFIDF_WEIGHT=0.45, CENTRALITY_WEIGHT=0.88, CVE_AGE_PENALTY=0.12, CONFIDENCE_BOOST=1.2]`
+
+## B.2 The Fitness Function
+The platform will simulate an "evolution" cycle by running historical scan datasets through 100 randomly generated chromosomes. The Fitness Function evaluates how closely the resulting Risk Score matches the manually verified "Ground Truth" established by human analysts during previous pentests.
+
+## B.3 Crossover and Mutation
+Top-performing chromosomes are selected for reproduction. The algorithm performs a uniform crossover, swapping weights between two parent chromosomes. A 5% mutation rate randomly introduces a completely new weight variable, preventing the algorithm from getting stuck in local optima.
+
+---
+End of User Guide.
+
+# Appendix C: Researcher Toolkit & Test Scenarios
+
+The SMP framework is heavily utilized by academic and offensive security researchers to validate new heuristics. This section outlines how to utilize the platform for scenario testing.
+
+## C.1 Designing Test Cases
+When developing a new scanner plugin (e.g., `scanners/my_research_scanner.py`), you must validate its behavior within the DAG pipeline. 
+
+Researchers can utilize the `tools/verify_smp.py` unit test suite to run headless scenarios. A scenario is defined by mocking the HTTP responses or binary standard outputs of your target tool.
+
+### Example Mock Scenario
+To simulate a Zero-Day vulnerability detection without firing actual packets:
+1. Open `tools/verify_smp.py`
+2. Inject your mock into `test_10_resilient_scan_sequence`:
+```python
+elif name == "My Research Scanner":
+    mock_func = Mock(return_value=[{"title": "Zero-Day Found", "severity": "Critical"}])
+```
+3. Run the CI pipeline locally:
+`source venv/bin/activate && python3 tools/verify_smp.py`
+
+## C.2 Performance Profiling Scenarios
+To benchmark the efficiency of the DAG orchestrator against legacy linear bash scripts, researchers can toggle the `SMP_CI` environment variable.
+
+- **`export SMP_CI=1`**: Bypasses all rate-limiting and inter-request delays (`time.sleep()`), flooding the CPU pool for maximum throughput benchmarking.
+- **`export SMP_LOCAL_ONLY=1`**: Drops all egress traffic to external APIs (like NVD or EPSS) to measure purely localized processing times.
+
+For complete memory dumps of the orchestrator state, researchers can attach `pdb` or `py-spy` to the `main.py` execution thread.
+
+---
+End of User Guide.
+
+# Appendix D: Distributed Kubernetes Deployment (Theoretical)
+For organizations exceeding the limitations of a single localized workstation, SMP is designed for distributed microservice scaling. 
+
+## D.1 The Hub-and-Spoke Architecture
+By wrapping the 55 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
+- **The Brain Node**: Handles PostgreSQL (replacing SQLite) and TF-IDF clustering.
+- **The Worker Nodes**: Deployed across segmented VPNs or VLANs. They pull execution tasks via an internal Redis queue.
+
+### Example `docker-compose.prod.yml` Snippet
+```yaml
+version: '3.8'
+services:
+  smp-core:
+    image: smp/core:v9.4
+    environment:
+      - DISTRIBUTED_MODE=1
+      - REDIS_URL=redis://smp-cache:6379
+    volumes:
+      - ./data:/app/database
+```
+
+# Appendix E: Custom Deduplication Tuning
+You can manually adjust the Levenshtein distance thresholds in `config/settings.json` to alter how aggressively SMP merges findings.
+- `dedup_ratio: 0.95` -> Extremely strict. Only merges exactly identical strings. (Results in higher noise).
+- `dedup_ratio: 0.65` -> Very loose. Will aggressively merge related vulnerabilities. (Risk of merging unrelated vectors).
+
+---
+
+# Appendix F: Deep Dive into the Subprocess Watchdog
+The Subprocess Watchdog is the primary defense mechanism against malicious or hanging security binaries. When SMP dispatches a task to a scanner (like `nmap` or `ffuf`), it wraps the process in a strict monitoring thread.
+
+## F.1 Memory Exhaustion Protection (OOM Killer Defense)
+If a binary attempts to allocate more than the predefined RAM limit (default: 4GB per process), the Watchdog will intercept the kernel's `SIGKILL` warning and gracefully terminate the child process *before* the operating system kills the entire SMP framework. This ensures that a single memory-leaking scanner does not crash your entire engagement.
+
+## F.2 Zombie Process Reaping
+Certain Node.js and Java-based scanners often spawn detached child processes. The Watchdog utilizes `psutil` to walk the entire process tree recursively. If a parent process exceeds its timeout, the Watchdog systematically issues `SIGTERM` followed by `SIGKILL` to every single child node in the tree, ensuring absolute cleanup.
+
+---
