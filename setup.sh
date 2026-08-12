@@ -514,6 +514,15 @@ else
         spin "Installing TruffleHog" curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || true
     fi
 
+    # ── V9.4.3 Faraday/DefectDojo Additions ──────────────────────────────────
+    spin "Installing Faraday/Dojo Inspired Python Tools" pip install bandit detect-secrets routersploit impacket w3af -q || true
+    if ! have osv-scanner; then
+        spin "Installing OSV-Scanner" go install github.com/google/osv-scanner/cmd/osv-scanner@v1 >> "$LOG_FILE" 2>&1 || true
+    fi
+    if ! have kube-bench; then
+        spin "Installing Kube-Bench" go install github.com/aquasecurity/kube-bench@latest >> "$LOG_FILE" 2>&1 || true
+    fi
+
     # ── Node.js Vulnerability Tools ──────────────────────────────────────────
     if have npm; then
         spin "Installing wscat (WebSocket tool)" sudo npm install -g wscat@5.2.1 || true
