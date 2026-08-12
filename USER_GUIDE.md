@@ -8,7 +8,7 @@
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
-║    Local-first  ·  55 Scanners  ·  AES-256  ·  Zero Cloud            ║
+║    Local-first  ·  75 Scanners  ·  AES-256  ·  Zero Cloud            ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
@@ -33,7 +33,7 @@
 
 ## What is SMP?
 
-SMP runs 55 security scanners against a target, correlates every finding against live threat intelligence (NVD, EPSS, CISA KEV, GreyNoise), and produces a compliance-mapped PDF report — without sending a single byte of client data to any cloud service.
+SMP runs 75 security scanners against a target, correlates every finding against live threat intelligence (NVD, EPSS, CISA KEV, GreyNoise), and produces a compliance-mapped PDF report — without sending a single byte of client data to any cloud service.
 
 **You get:** Raw scanner power + real exploitability context (not just CVSS) + a report an auditor will accept.
 
@@ -393,6 +393,20 @@ if load_settings().get("scan_profile", "standard") != "full":
 
 SMP auto-discovers the scanner on next run — no further registration needed.
 
+### 8.1 · Adding New Scanners Checklist (Simulation)
+When you add a new scanner to the platform, run through this simulation checklist to ensure everything is perfect and the DAG stays stable:
+
+- [ ] **1. Create the Wrapper:** Did you generate the `scanners/mytool.py` wrapper using `create_scanner.py`?
+- [ ] **2. Dependency Injection:** Did you map `depends_on=[]` correctly so the tool waits for Phase 1/2 data if needed?
+- [ ] **3. Profile Gating:** If the tool is intrusive/destructive, did you wrap the execution in `if profile != "full": return []`?
+- [ ] **4. Installation Update:** Did you add the `pip`/`go`/`apt` installation logic to `setup.sh` so other users get the binary?
+- [ ] **5. Graceful Failure:** If the binary isn't found, does the tool return `None` (not an empty list, but `None`) to tell the DAG to skip it gracefully?
+- [ ] **6. Documentation Sync:**
+  - Did you add the tool to the **Scanner Reference** table in this User Guide?
+  - Did you update the global scanner count (e.g., from 75 to 76) in the `USER_GUIDE.md` header?
+  - Did you update the global scanner count in `troubleshooting/README.md`?
+- [ ] **7. Stability Test:** Did you run `python3 tools/verify_smp.py` to prove your new tool hasn't created a circular dependency deadlock?
+
 ---
 
 ## 9 · Compliance Mapping
@@ -460,7 +474,7 @@ SecurityManagementPlatform/
 ├── config/            Settings, metadata, hardening rules
 ├── database/          SQLite databases
 ├── intelligence/      brain.py, nvd.py, epss.py, cisa.py, greynoise.py
-├── scanners/          55 scanner wrappers + core/ (DAG, registry, pipeline)
+├── scanners/          75 scanner wrappers + core/ (DAG, registry, pipeline)
 ├── tools/             db_manager, encryption_manager, risk_scorer,
 │                      report_generator, compliance_mapper, scheduler…
 ├── ui/                PySide6 GUI (dashboard, components, views, style.qss)
@@ -867,7 +881,7 @@ End of User Guide.
 For organizations exceeding the limitations of a single localized workstation, SMP is designed for distributed microservice scaling. 
 
 ## D.1 The Hub-and-Spoke Architecture
-By wrapping the 55 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
+By wrapping the 75 scanners within individual containerized instances, SMP acts as the central orchestration hub. 
 - **The Brain Node**: Handles PostgreSQL (replacing SQLite) and TF-IDF clustering.
 - **The Worker Nodes**: Deployed across segmented VPNs or VLANs. They pull execution tasks via an internal Redis queue.
 
