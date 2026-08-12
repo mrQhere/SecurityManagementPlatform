@@ -482,13 +482,7 @@ else
 
     # ── Optional enterprise tools ─────────────────────────────────────────────
     if ! have trivy; then
-        spin "Installing Trivy" bash -c "
-            sudo apt-get install -y apt-transport-https gnupg lsb-release >/dev/null 2>&1 &&
-            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null &&
-            echo \"deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb \$(lsb_release -sc) main\" | sudo tee /etc/apt/sources.list.d/trivy.list >/dev/null &&
-            sudo apt-get update >/dev/null 2>&1 &&
-            sudo apt-get install -y trivy >/dev/null 2>&1
-        " || warn "Trivy: installation failed"
+        spin "Installing Trivy" curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || warn "Trivy: installation failed"
     fi
     
     if have trivy; then
