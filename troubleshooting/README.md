@@ -1,4 +1,4 @@
-# 🛠️ SMP V9.4.3 — Troubleshooting Index
+# 🛠️ SMP V9.4.4 — Troubleshooting Index
 
 ## Step 1: Automated Self-Healing (Do this first)
 
@@ -31,6 +31,15 @@ If the automated `--fix` script cannot resolve your issue, consult the manual ed
 | 🔌 [API Errors](api.md) | `api.md` | 401/403/429, FastAPI startup, CORS, JWT secrets |
 | 📄 [Reports & SBOM](reports.md) | `reports.md` | PDF generation, SBOM empty, report verification, SMTP |
 | 🤖 [Auto Fixes](auto_fixes.md) | `auto_fixes.md` | Stale locks, temp files cleanup, reset services, flush cache |
+
+## V9.4.4 Exploit Frameworks Troubleshooting
+
+With the introduction of 15 advanced exploit frameworks (inspired by DefectDojo/Faraday), you may encounter new edge cases. Reference these fixes if the DAG encounters deadlocks during Phase 2 or Phase 3:
+
+*   **`SMP-4040` Metasploit/Impacket Timeout**: If `msfconsole` or `impacket-psexec` drops a shell, it will block the DAG. Adjust the `timeout` parameter in their respective scanner wrappers to force an exception.
+*   **`SMP-4041` OSV-Scanner Binary Incompatibility**: If `osv-scanner` fails to run, ensure Golang is properly installed and the binary was compiled natively for your architecture during `setup.sh`.
+*   **`SMP-4042` Responder Port 53 Collision**: `Responder` aggressively binds to UDP port 53. If you run `systemd-resolved` or `dnsmasq`, the scanner will crash. Stop local DNS caching before launching `Responder`.
+*   **OpenVAS Signature Loops**: If `OpenVAS` hangs during initialization, run `greenbone-nvt-sync` manually to resolve the blocking feed update.
 
 ---
 

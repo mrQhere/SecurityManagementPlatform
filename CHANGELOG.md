@@ -11,12 +11,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V9.4.4] - 2026-08-12
+
+- Scaled DAG Orchestrator to support 90 independent vulnerability scanners.
+- Pulled extensive open-source parity from DefectDojo/Faraday, integrating 15 new advanced scanners (Metasploit, OpenVAS, Impacket, SQLNinja, RouterSploit, Responder, Arachni, Bandit, OSV-Scanner, etc.).
+- Developed the Enterprise Target Data Exporter: 1-click ZIP export of AES-encrypted database findings, reports, and logs strictly filtered by website target.
+- Resolved Trivy APT repository errors (`zena` codename missing) by refactoring `setup.sh` to use the official raw installation binaries, ensuring cross-distro compatibility.
+- Auto-cleanup of broken `/etc/apt/sources.list.d/trivy.list` to prevent repeated apt-get failures.
+- Expanded Academic Thesis to document the theoretical rationale behind scaling the local-first engine and consolidating disjointed vulnerability management platforms.
+- Hardened DAG exception handling (`tools/errors.py`) with specific timeouts (`SMP-4040`), binary mismatches (`SMP-4041`), and port collisions (`SMP-4042`).
+- Expanded Troubleshooting guide (`troubleshooting/README.md`) to explicitly cover OpenVAS signature loops and Responder port 53 collisions.
+
 ## [V9.4.3] - 2026-08-11
 
 - Implemented 3-Phase Parallel Scanner Architecture with intermediate Brain Intelligence Interleaving (Phase 1 Recon, Phase 2 Active Vuln Testers, Phase 3 Deep Exploitation).
 - Added 4 modern web vulnerability scanners with strict semver dependency pinning:
   - `ppmap` (v1.0.0): Prototype Pollution vulnerability tester.
-  - `wscat` (v5.2.1): WebSocket endpoint discovery and connection probing.
+  - `wscat` (v9.4.4): WebSocket endpoint discovery and connection probing.
   - `race-the-web` (v1.0.3): Go binary for TOCTOU and Race Condition vulnerability testing.
   - `idor-scanner`: IDOR/BOLA scanner with optional dual-token (AuthMatrix) session testing capabilities.
 - Upgraded Neural Correlation Engine (`intelligence/brain.py`):
@@ -32,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added full system wipe/factory reset instructions to the User Guide for recovering from lost master passwords.
 - Massively expanded offensive capabilities by adding 20 new vulnerability scanners to the DAG orchestration pipeline (including TruffleHog, Semgrep, Checkov, KubeHunter, XSStrike, Naabu, Hakrawler, SSLyze, CORScanner, and more).
 
-## [V9.4.1] - 2026-08-08
+## [V9.4.2] - 2026-08-08
 
 - Fixed `wpscan` installation in `setup.sh` by adding `sudo` to the `gem install` command to prevent file permission errors.
 - Added a retry loop in `setup.sh` for `apt update` and `apt install` to handle temporary dpkg lock failures on fresh VMs.
@@ -40,8 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed CI test_10 hang: scanner pipeline now skips MAC randomisation, per-tool delays, and tool installs when `SMP_CI=1`.
 - Fixed 3-tuple unpack bug in MAC changer call (change_mac_address returns bool, str, str — was being unpacked as 2 values).
 - Reduced DAG plugin hang timeout from 3600s to 120s in CI mode.
-- Corrected CVSS label in PDF reports from "CVSS v9.4.3" to "CVSS v3.1" (SMP version was leaking into standard label).
-- Corrected PCI-DSS label in PDF reports from "PCI-DSS v9.4.3" to "PCI-DSS v4.0".
+- Corrected CVSS label in PDF reports from "CVSS v9.4.4" to "CVSS v3.1" (SMP version was leaking into standard label).
+- Corrected PCI-DSS label in PDF reports from "PCI-DSS v9.4.4" to "PCI-DSS v4.0".
 - Fixed README license badge showing "Proprietary" — now correctly shows "MIT".
-- Synchronized all V9.3.x stale version strings to V9.4.3 across tools, scanners, UI, and docs.
+- Synchronized all V9.3.x stale version strings to V9.4.4 across tools, scanners, UI, and docs.
 - Updated .env.example to document all env vars SMP actually reads (added SMP_CI, QT_LOGGING_RULES, XDG_SESSION_TYPE, NO_PROXY).

@@ -81,6 +81,18 @@ class SMPInvalidPayloadError(SMPValidationError):
     code = "SMP-4002"
     slug = "invalid_payload"
 
+class SMPExploitTimeoutError(SMPValidationError):
+    code = "SMP-4040"
+    slug = "exploit_timeout"
+
+class SMPBinaryIncompatibilityError(SMPValidationError):
+    code = "SMP-4041"
+    slug = "binary_incompatibility"
+
+class SMPPortCollisionError(SMPValidationError):
+    code = "SMP-4042"
+    slug = "port_collision"
+
 # ── 5xxx Config/Intelligence ──────────────────────────────────
 class SMPConfigError(SMPError):
     code = "SMP-5000"
