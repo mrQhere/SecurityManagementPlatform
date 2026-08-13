@@ -305,6 +305,9 @@ def derive_key(password: str, salt: bytes = None) -> (bytes, bytes):
 
 The resulting 32-byte Derived Key (DK) is converted to a hexadecimal format and passed to SQLCipher via the `PRAGMA key` directive. This key is never stored on disk. If the application is terminated, the memory is released, and the database becomes cryptographically inaccessible.
 
+### 5.1.2 The Cryptographic Point of No Return
+A deliberate architectural decision in SMP is the complete absence of a "Password Recovery" or "Forgot Password" mechanism. Because the PBKDF2 function acts as a one-way mathematical trapdoor, losing the master password inherently means the AES-256 decryption key is permanently lost. This design choice guarantees that even if a nation-state adversary acquires the physical workstation, they cannot leverage "recovery questions" or "email reset links" to bypass the encryption. In the event of catastrophic key loss, the only operational recourse for an analyst is to initiate a full, destructive system wipe, permanently destroying all historical topologies and intelligence.
+
 ## 5.2 Unstructured Data Security (Fernet)
 
 While SQLCipher is highly optimized for structured SQL tables, specific security binaries (such as `nuclei` and `ffuf`) emit massive volumes of unstructured JSON or raw text output. Persisting these massive blobs within SQL tables induces severe page fragmentation and drastically reduces database query performance.

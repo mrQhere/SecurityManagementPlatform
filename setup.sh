@@ -214,6 +214,7 @@ get_pkg() {
                 arch) echo "base-devel";;
                 opensuse) echo "gcc make";;
             esac ;;
+        cargo) echo "cargo" ;;
         nmap) echo "nmap" ;;
         nikto)
             case "$DISTRO" in
@@ -251,7 +252,7 @@ if ! spin "Updating package index" pkg_update; then
 fi
 
 CANONICAL_PKGS=(python3 python3-pip python3-venv python3-dev
-                libsqlcipher-dev libsqlcipher0 build-essential
+                libsqlcipher-dev libsqlcipher0 build-essential cargo
                 nmap nikto ruby perl git nodejs npm)
 
 PKGS_TO_INSTALL=()
@@ -511,8 +512,8 @@ else
         spin "Installing TruffleHog" curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || true
     fi
 
-    # ── V9.4.3 Faraday/DefectDojo Additions ──────────────────────────────────
-    spin "Installing Faraday/Dojo Inspired Python Tools" pip install bandit detect-secrets routersploit impacket w3af -q || true
+    # ── V9.4.4 Faraday/DefectDojo Additions ──────────────────────────────────
+    spin "Installing Faraday/Dojo Inspired Python Tools" pip install bandit detect-secrets routersploit impacket -q || true
     if ! have osv-scanner; then
         spin "Installing OSV-Scanner" go install github.com/google/osv-scanner/cmd/osv-scanner@v1 >> "$LOG_FILE" 2>&1 || true
     fi

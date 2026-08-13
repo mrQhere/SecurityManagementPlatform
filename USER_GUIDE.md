@@ -4,7 +4,7 @@
 ║    ███████╗███╗   ███╗██████╗                                        ║
 ║    ██╔════╝████╗ ████║██╔══██╗                                       ║
 ║    ███████╗██╔████╔██║██████╔╝   Security Management Platform        ║
-║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.3 · Stable                      ║
+║    ╚════██║██║╚██╔╝██║██╔═══╝   V9.4.4 · Stable                      ║
 ║    ███████║██║ ╚═╝ ██║██║                                            ║
 ║    ╚══════╝╚═╝     ╚═╝╚═╝        © mrQhere                           ║
 ║                                                                      ║
@@ -270,14 +270,22 @@ SMP_LOCAL_ONLY=1 ./run.sh
 
 Key derivation: **PBKDF2-HMAC-SHA256**.
 
-Lost your password? There is no recovery path — this is by design. Back up `database/security.db` before changing passwords.
+Lost your password? There is no recovery path — this is by design. SMP encrypts your database using SQLCipher (AES-256) where the encryption key is derived directly from your master password via PBKDF2. Without the exact password, the AES key cannot be mathematically reconstructed, rendering the `security.db` permanently locked. Back up `database/security.db` and remember your password.
 
 **If you are completely locked out and need a full system wipe:**
 *(Warning: This deletes all historical scans and targets!)*
 ```bash
-rm -f .smp_keystore
-rm -f database/*.db
-./run.sh  # Will prompt to create a new admin password
+# 1. Delete the encrypted PBKDF2 authentication file
+rm -f config/auth.json
+
+# 2. Delete the encrypted SQLCipher database (all targets and scan states)
+rm -rf database/*.db
+
+# 3. Delete any unstructured evidence blobs/reports
+rm -rf reports/
+
+# 4. Restart the orchestrator to trigger initial setup
+./run.sh
 ```
 
 ---
@@ -510,7 +518,7 @@ SMP includes extensive standalone documentation for edge cases, architecture, an
 The platform has undergone a massive architectural evolution from a simple script executor to a resilient, AI-driven, and CI-hardened desktop orchestration suite.
 
 ```text
-       [ V9.4.3 ]  Base Standardization
+       [ V9.4.4 ]  Base Standardization
           │      (Unified execution scripts and basic GUI)
           ╰───────────╮
                       │
@@ -530,21 +538,21 @@ The platform has undergone a massive architectural evolution from a simple scrip
           │        (SSRF, LFI, and OSINT capabilities restored)
           ╰───────────╮
                       │
-         CISA KEV  [ V9.4.3 ]
+         CISA KEV  [ V9.4.4 ]
                       │      (Regenerated intelligence from live KEV catalog)
           ╭───────────╯
           │
-       [ V9.4.3 ]  Architecture & Tooling Hardening
+       [ V9.4.4 ]  Architecture & Tooling Hardening
           │        (Strict `encoding="utf-8"`, Thread-safe EventBus wrapper)
           ╰───────────╮
                       │
-     Neural Graph  [ V9.4.3 ]  (CURRENT)
+     Neural Graph  [ V9.4.4 ]  (CURRENT)
      & API Engine     │      (TF-IDF semantic clustering, Linchpin detection,
                       │       Air-gapped sync, V10 API Client foundation)
                       V
 ```
 
-### V9.4.3 (current)
+### V9.4.4 (current)
 - **Neural Brain Revolution**: Replaced simple CVE plotting with a classical AI heuristic engine.
 - Implemented **Graph Centrality (PageRank-style)** to automatically detect network chokepoints ("Linchpins").
 - Added **TF-IDF Semantic Clustering** to dynamically group zero-days and vulnerabilities by behavior (e.g. all XSS variants).
@@ -744,7 +752,7 @@ pandoc docs/thesis/SMP_Academic_Thesis.md -o docs/thesis/SMP_Academic_Thesis.pdf
 
 ## 16 · Scheduler Settings
 
-SMP V9.4.3 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
+SMP V9.4.4 introduces a UI for configuring background scheduler jobs, available in the **Settings** > **Professional Settings** tab.
 This allows operators to specify exactly when automated daily scans and threat intelligence synchronizations occur.
 
 - **Daily Scan Time**: Set the Hour and Minute for the automated daily vulnerability scan on all active targets.
@@ -890,7 +898,7 @@ By wrapping the 90 scanners within individual containerized instances, SMP acts 
 version: '3.8'
 services:
   smp-core:
-    image: smp/core:v9.4
+    image: smp/core:v9.4.4
     environment:
       - DISTRIBUTED_MODE=1
       - REDIS_URL=redis://smp-cache:6379
