@@ -10,7 +10,7 @@ logger = logging.getLogger("smp.scan")
 @register_scanner(
     name="Race-the-Web Scanner",
     step_name="Running Race-the-Web Scanner",
-    depends_on=["Running HTTPx", "Running Subfinder"],
+    depends_on=["HTTPx", "Subfinder"],
     needs_binary=True,
     binary_name="race-the-web"
 )

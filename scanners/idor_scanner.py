@@ -8,7 +8,7 @@ logger = logging.getLogger("smp.scan")
 @register_scanner(
     name="IDOR Scanner",
     step_name="Running IDOR Scanner",
-    depends_on=["Running HTTPx", "Running Subfinder"],
+    depends_on=["HTTPx", "Subfinder"],
     needs_binary=False,
     binary_name=None
 )

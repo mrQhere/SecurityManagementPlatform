@@ -15,10 +15,11 @@ Report sections:
   6. Appendix (intel provenance, evidence hashes, attestation)
 """
 
+import os
 import json
 import hashlib
 import uuid
-import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
 # CVSS v3.1 severity bands
@@ -46,7 +47,7 @@ class ReportGenerator:
 
     def __init__(self, version: str = "V9.5"):
         self.version = version
-        self.generated_at = datetime.datetime.now(datetime.timezone.utc)
+        self.generated_at = datetime.now(timezone.utc)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Authenticity
@@ -64,15 +65,16 @@ class ReportGenerator:
 
     def generate_json_report(
         self,
-        engagement_id: str,
-        findings: List[Dict],
-        evidence_hashes: List[str],
-        intel_version: str,
-        scanner_versions: Dict[str, str],
+        engagement_id: Optional[str] = None,
+        findings: Optional[List[Dict]] = None,
+        evidence_hashes: Optional[List[str]] = None,
+        intel_version: str = "V9.5",
+        scanner_versions: Optional[Dict[str, str]] = None,
         target: Optional[str] = None,
         operator: Optional[str] = None,
         assets: Optional[List[Dict]] = None,
         services: Optional[List[Dict]] = None,
+        **kwargs,
     ) -> Dict:
         """
         Generate a machine-readable JSON report with authenticity hash.
@@ -80,6 +82,15 @@ class ReportGenerator:
         Returns:
             dict: Complete report payload suitable for storage/transmission.
         """
+        if engagement_id is None:
+            engagement_id = str(kwargs.get("scan_id", "default"))
+        if findings is None:
+            findings = []
+        if evidence_hashes is None:
+            evidence_hashes = []
+        if scanner_versions is None:
+            scanner_versions = {}
+
         # Sort findings by severity priority
         sorted_findings = sorted(
             findings,
@@ -582,3 +593,48 @@ python3 tools/verify_report.py <report_file.json>
             with open(md_path, "w", encoding="utf-8") as f:
                 f.write(markdown_content)
             return False
+
+    def generate(self, target_id=None, target: str = None, operator: str = None) -> str:
+        """
+        High-level report generator helper for UI / CLI.
+        Loads findings and target metadata, creates JSON and Markdown reports in reports/.
+        Returns the path to the generated markdown report.
+        """
+        from tools import db_manager
+        
+        target_str = target
+        findings = []
+        try:
+            if target_id is not None:
+                findings = db_manager.get_findings_by_target(target_id)
+                targets = db_manager.get_targets()
+                for t in targets:
+                    if t.get("id") == target_id:
+                        target_str = target_str or t.get("url")
+            if not findings:
+                findings = db_manager.get_all_findings()
+        except Exception:
+            findings = []
+
+        json_report = self.generate_json_report(
+            engagement_id=str(target_id or "default"),
+            findings=findings,
+            target=target_str or "Default Target",
+            operator=operator or "SMP Operator"
+        )
+        
+        reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        json_path = os.path.join(reports_dir, f"report_{ts}.json")
+        md_path = os.path.join(reports_dir, f"report_{ts}.md")
+        
+        with open(json_path, "w", encoding="utf-8") as jf:
+            json.dump(json_report, jf, indent=2, default=str)
+            
+        md_content = self.generate_markdown_report(json_report)
+        with open(md_path, "w", encoding="utf-8") as mf:
+            mf.write(md_content)
+            
+        return md_path

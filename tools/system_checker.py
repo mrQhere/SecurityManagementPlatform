@@ -106,27 +106,17 @@ def _get_free_disk_gb(path: str = "/") -> float:
 
 
 def _check_network(host: str = _NET_HOST, port: int = _NET_PORT) -> bool:
-    """Check network reachability via TCP connect."""
+    """Check network reachability via TCP connect, gracefully falling back if offline."""
     try:
         sock = socket.create_connection((host, port), timeout=_NET_TIMEOUT)
         sock.close()
         return True
-    except Exception as e:
-        from tools.errors import SMPUnclassifiedError
-        import traceback
-        import logging
-        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-        raise SMPUnclassifiedError(str(e))
+    except Exception:
         # Try fallback: DNS resolution
         try:
             socket.gethostbyname("scanme.nmap.org")
             return True
-        except Exception as e:
-            from tools.errors import SMPUnclassifiedError
-            import traceback
-            import logging
-            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-            raise SMPUnclassifiedError(str(e))
+        except Exception:
             return False
 
 

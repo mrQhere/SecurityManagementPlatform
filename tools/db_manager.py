@@ -1292,7 +1292,7 @@ def get_scans_for_target(target_id, limit=10):
 
 # ----------------- Findings Management -----------------
 
-def add_finding(scan_id, severity, title, description, source_tool,
+def add_finding(scan_id, severity, title, description, source_tool=None,
                 confidence=50, mitre_id="Unknown",
                 # Enterprise V9.4.3 enriched fields
                 url=None, evidence=None, recommendation=None,
@@ -1300,12 +1300,15 @@ def add_finding(scan_id, severity, title, description, source_tool,
                 affected_component=None, owasp_category=None,
                 business_impact=None, reproduction_steps=None,
                 references_json=None, remediation_code=None,
-                epss_score=None, epss_percentile=None):
+                epss_score=None, epss_percentile=None,
+                **kwargs):
     """
     Insert a scan finding with full enterprise-grade metadata.
     Prevents duplicates for the same scan, title and source_tool.
     Mirrors every finding to the redundancy database for disaster recovery.
     """
+    source_tool = source_tool or kwargs.pop("scanner", "Unknown")
+    recommendation = recommendation or kwargs.pop("remediation", None)
     import json as _json
     conn = get_db_connection()
     if mitre_id == "Unknown":

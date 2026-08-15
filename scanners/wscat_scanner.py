@@ -9,7 +9,7 @@ logger = logging.getLogger("smp.scan")
 @register_scanner(
     name="WebSocket Scanner",
     step_name="Running WebSocket Scanner",
-    depends_on=["Running HTTPx", "Running Subfinder"],
+    depends_on=["HTTPx", "Subfinder"],
     needs_binary=True,
     binary_name="wscat"
 )
