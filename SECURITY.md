@@ -2,39 +2,36 @@
 
 ## Supported Versions
 
-Only the current V9.5.x release line receives security updates.
-
-| Version  | Supported |
-| -------- | --------- |
-| >= V9.5  | ✅ Yes    |
-| < V9.5   | ❌ No     |
+| Version | Supported |
+|---------|-----------|
+| V9.5.x  | ✅ Yes     |
+| < V9.5  | ❌ No      |
 
 ## Security Architecture
 
-SMP is designed to handle highly sensitive vulnerability data.
+The Security Management Platform (SMP) is built from the ground up with a zero-trust, data sovereignty first approach:
 
-* **Database Encryption (Pentest Data)**: Sensitive databases (`security.db`,
-  `redundancy.db`) are encrypted at rest using **SQLCipher (AES-256)**.
-  Public intelligence databases (`cve.db`, `global_intel.db`) are plaintext
-  SQLite for I/O performance; they contain no client data.
-* **Audit Trail**: All intelligence outbound calls are logged to
-  `logs/egress_audit.log`. Scan activity is logged to `logs/smp.log`.
-* **API Security**: The REST API is secured with JWT Bearer tokens.
-* **Single-Instance Lock**: A file-based lock (`/tmp/smp.lock`) prevents
-  multiple simultaneous SMP processes from corrupting the database.
-* **Air-Gapped & Zero-Exfiltration Brain**: The Neural Correlation Engine and V10 Local LLM adapter operate exclusively on local heuristics and local models (e.g. Ollama). All target findings remain 100% local with zero synthetic data forging or external telemetry.
-* **Authentic Findings Integrity**: Scan findings process real tool outputs directly. No simulated or synthetic CVE IDs are generated.
-* **Multi-Session Auth Isolation**: IDOR/BOLA session testing utilizes explicit secondary token parameters (`secondary_auth_token`) within isolated scan contexts, ensuring credential boundaries are strictly maintained.
-
-> [!WARNING]
-> **Project Disclaimer**
-> SMP is a personal project maintained on a best-effort basis. It has not undergone any formal third-party security audits. Use this software at your own risk.
+- **Key Management:** Uses a 4-layer key hierarchy (KEK/DEK/IEK/EEK) protected by PBKDF2-SHA256 with 600,000 iterations.
+- **Database Encryption:** `security.db` and `redundancy.db` are encrypted using SQLCipher AES-256.
+- **Threat Intel:** `cve.db` and `analytics.db` are plaintext but contain **no client data**.
+- **Evidence Storage:** All scan evidence in `data/evidence/` is encrypted using AES-256-GCM.
+- **Authentication:** The `/api/v6/` API enforces JWT Bearer token authentication.
+- **Concurrency & Auditing:** Single-instance file locks (`/tmp/smp.lock`) prevent corruption, and comprehensive audit logs are written to `logs/`.
+- **Zero Cloud Dependency:** All data stays local to the executing machine.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within SMP, please **do not** open a
-public issue.
+Please do **NOT** open public issues for security vulnerabilities.
 
-Report it directly by contacting `@mrQhere` or by using **GitHub Security Advisories** on this repository if enabled.
+If you discover a security vulnerability in SMP, please:
+1. Contact `@mrQhere` directly on GitHub, or
+2. Use GitHub Security Advisories.
 
-Please include detailed steps to reproduce the issue. Reports are generally acknowledged within 24 hours.
+Include detailed reproduction steps. All reports will be acknowledged within 48 hours.
+
+## Scope of Responsible Disclosure
+
+- **In Scope:** Authentication bypass, encryption flaws, command injection in orchestration, authorization issues via API.
+- **Out of Scope:** Vulnerabilities in third-party scanner binaries (e.g., nmap, nuclei) unless SMP's wrapper introduces the flaw; physical access attacks; denial of service (DoS) requiring extreme resources.
+
+> **WARNING:** This is a personal/early-stage project and has not been formally audited by a third-party security firm. Use at your own risk.

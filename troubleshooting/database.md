@@ -14,7 +14,7 @@ This guide covers operational maintenance, recovery, and encryption troubleshoot
 | `SMP-3003` | `db_wal_locked` | SQLite Write-Ahead Log (WAL) deadlock |
 | `SMP-3004` | `db_integrity_check_failed` | PRAGMA integrity_check detected corruption |
 | `SMP-3005` | `db_migration_error` | Schema migration failed or table version mismatch |
-| `SMP-3006` | `raw_output_storage_failed` | Gzip compression / Fernet encryption storage failure |
+| `SMP-3006` | `raw_output_storage_failed` | Gzip compression / AES-256-GCM evidence encryption storage failure |
 | `SMP-3007` | `redundancy_db_failed` | Secondary redundancy database failure |
 
 ---
@@ -47,7 +47,7 @@ python3 -c "from pysqlcipher3 import dbapi2 as sqlite3; print('SQLCipher OK')"
 
 **Symptom:** Operations fail with `sqlite3.OperationalError: database is locked`.
 
-**Root Cause:** A previous scanner process or API thread terminated abruptly without closing an active write transaction, leaving a locked `-wal` file.
+**Root Cause:** A previous scanner process or API thread terminated abruptly without closing an active write transaction, leaving a locked `-wal` file in `database/security.db` (or `database/redundancy.db`, `database/cve.db`, `database/analytics.db`).
 
 **Copy-Paste Solution:**
 ```bash
@@ -107,7 +107,7 @@ print('Integrity status:', res)
 conn.close()
 "
 
-# 2. Restore from most recent automated snapshot
+# 2. Restore from most recent automated snapshot in database/backups/
 python3 -c "
 from tools.db_manager import restore_from_backup
 ok = restore_from_backup()
@@ -135,19 +135,20 @@ print('Schema migrations applied successfully.')
 
 ---
 
-### Scenario 6: Raw Output Directory Disk Space Full (`SMP-3006`)
+### Scenario 6: Evidence Directory Disk Space Full (`SMP-3006`)
 
 **Symptom:** Scans finish but report `SMP-3006: Encryption key unavailable or storage failure`.
 
-**Root Cause:** Partition containing `database/raw_outputs/` has run out of available inodes or disk space.
+**Root Cause:** Partition containing `data/evidence/` has run out of available inodes or disk space.
 
 **Copy-Paste Solution:**
 ```bash
 # 1. Check disk utilization
-df -h database/raw_outputs/
+df -h data/evidence/
 
-# 2. Purge raw output captures older than 30 days
-find database/raw_outputs/ -name "raw_*.gz" -mtime +30 -delete
+# 2. Purge evidence captures older than 30 days
+find data/evidence/ -name "raw_*.gz" -mtime +30 -delete
+find data/evidence/ -name "evidence.enc" -mtime +30 -delete
 
 # 3. Trigger database vacuum
 python3 -c "

@@ -12,6 +12,11 @@ This guide provides technical diagnosis and resolutions for operating system dep
 | `SMP-3001` | `db_connection_error` | `pysqlcipher3` C-extension missing or build failure |
 | `SMP-4041` | `binary_incompatibility` | Native binary architecture mismatch (x86_64 vs arm64) |
 | `SMP-5001` | `config_missing` | Missing configuration templates or environment variables |
+| `SMP-9001` | `network_route_failure` | Pre-flight network reachability check failed |
+| `SMP-9002` | `dpkg_lock` | DPKG/APT locked by another process |
+| `SMP-9003` | `python_env_lock` | Python virtual environment lock |
+| `SMP-9004` | `binary_download_failure` | Tool binary download failed |
+| `SMP-9005` | `checksum_mismatch` | SHA-256 checksum mismatch / partial download |
 
 ---
 
@@ -66,7 +71,7 @@ pip install --no-cache-dir pysqlcipher3
 
 ### Scenario 3: Golang Security Tools Missing from PATH
 
-**Symptom:** Scanners such as `nuclei`, `subfinder`, `httpx`, `ffuf`, or `dalfox` fail with `SMP-2002: Required security tool binary missing`.
+**Symptom:** Scanners such as `subfinder`, `httpx`, `ffuf`, or `dalfox` fail with `SMP-2002: Required security tool binary missing`.
 
 **Root Cause:** Go binaries installed to `~/go/bin` or project-local `bin/` are not exported in the system `$PATH`.
 
@@ -113,7 +118,6 @@ which wscat && which ppmap
 ```bash
 # Force native recompilation using Go on host architecture
 export GOARCH=$(dpkg --print-architecture | sed 's/arm64/arm64/' | sed 's/amd64/amd64/')
-go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 go install -v github.com/ffuf/ffuf/v2@latest
@@ -148,4 +152,34 @@ services:
 ```
 ```bash
 docker compose up -d
+```
+
+---
+
+### Scenario 7: Network Route Pre-Flight Failure (`SMP-9001`)
+
+**Symptom:** Installation stops during pre-flight checks with `SMP-9001: network_route_failure`.
+
+**Root Cause:** The `verify_network_routes()` function failed to probe `github.com`, `raw.githubusercontent.com`, `pypi.org`, or `go.dev`.
+
+**Copy-Paste Solution:**
+```bash
+# Verify your proxy and firewall settings allowing outbound HTTPS to these domains
+export HTTP_PROXY="http://your-proxy:8080"
+export HTTPS_PROXY="http://your-proxy:8080"
+python3 tools/troubleshoot.py --fix
+```
+
+---
+
+### Scenario 8: Binary Download Integrity Failure (`SMP-9005`)
+
+**Symptom:** Setup fails stating a downloaded file has a SHA-256 mismatch.
+
+**Root Cause:** The binary download was partial or corrupted during transit.
+
+**Copy-Paste Solution:**
+```bash
+# The setup process is idempotent. Simply re-run the installer and it will resume/retry.
+./setup.sh
 ```

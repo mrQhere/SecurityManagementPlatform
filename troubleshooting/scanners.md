@@ -1,6 +1,6 @@
-# 🔬 Scanner & DAG Orchestration Troubleshooting — V9.5
+# 🔬 Scanners & DAG Engine Troubleshooting — V9.5
 
-This guide provides technical diagnosis and resolutions for scanner execution, Directed Acyclic Graph (DAG) topological scheduling, subprocess crashes, and tool-specific edge cases.
+This guide provides technical diagnosis and resolutions for scanner plugins, dependency injection, and DAG scheduling.
 
 ---
 
@@ -8,7 +8,6 @@ This guide provides technical diagnosis and resolutions for scanner execution, D
 
 | Code | Slug | Issue Description |
 |---|---|---|
-| `SMP-2000` | `scanner_error` | Generic scanner execution failure |
 | `SMP-2001` | `scanner_timeout` | Scanner exceeded maximum execution time |
 | `SMP-2002` | `scanner_binary_missing` | Required security binary not found |
 | `SMP-2003` | `scanner_crashed` | Scanner subprocess crashed (segfault / OOM) |
@@ -48,15 +47,15 @@ getcap $(which nmap)
 
 **Copy-Paste Solution:**
 ```bash
-# Validate and print DAG topological order (Kahn's algorithm)
+# Validate and print DAG topological order
 python3 -c "
-from scanners.core.dag import build_scanner_dag, validate_dag_acyclic
-dag = build_scanner_dag()
-is_valid, cycle = validate_dag_acyclic(dag)
-if not is_valid:
-    print('Cycle detected involving scanners:', cycle)
-else:
+from scanners.core.dag import DAGOrchestrator
+orchestrator = DAGOrchestrator()
+try:
+    orchestrator.validate_dag()
     print('DAG is valid and acyclic.')
+except Exception as e:
+    print('Cycle detected involving scanners:', e)
 "
 ```
 
@@ -84,15 +83,15 @@ sudo systemctl restart systemd-resolved
 
 **Symptom:** Nuclei scan produces zero findings or emits `[ERR] Could not load templates`.
 
-**Root Cause:** Nuclei template cache in `~/.local/nuclei-templates` is empty, corrupted, or incompatible with installed Nuclei version.
+**Root Cause:** Nuclei template cache in `~/.local/nuclei-templates` is empty, corrupted, or incompatible with installed Nuclei version. Note that Nuclei is a pre-compiled binary located at `bin/nuclei`.
 
 **Copy-Paste Solution:**
 ```bash
-# Force fresh update of official Nuclei templates
-nuclei -update-templates -force
+# Force fresh update of official Nuclei templates using the local binary
+bin/nuclei -update-templates -force
 
 # Verify template syntax
-nuclei -validate
+bin/nuclei -validate
 ```
 
 ---

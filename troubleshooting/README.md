@@ -32,9 +32,9 @@ When an issue cannot be resolved automatically by `--fix`, consult the domain-sp
 | 🔐 **Authentication & Keys** | [api.md](api.md) | `SMP-1000` – `SMP-1009` | JWT token expiration, KEK derivation, DEK/IEK/EEK unlock, password complexity |
 | 🗄️ **Database & SQLCipher** | [database.md](database.md) | `SMP-3000` – `SMP-3007` | PRAGMA key failure, WAL lock deadlock, migration errors, backup recovery |
 | 🔬 **Scanners & DAG Engine** | [scanners.md](scanners.md) | `SMP-2000` – `SMP-2010`, `SMP-4040`–`4042` | DAG dependency cycles, Nmap raw capability, timeout budgets, port collisions |
-| 🔌 **API & WebSockets** | [api.md](api.md) | `SMP-4000` – `SMP-4002` | FastAPI 401/403/429, SlowAPI rate limiting, CORS preflight, WebSocket disconnects |
+| 🔌 **API & WebSockets** | [api.md](api.md) | `SMP-4000` – `SMP-4002` | FastAPI 401/403/429, SlowAPI rate limiting, CORS preflight |
 | 📄 **Reports & Evidence** | [reports.md](reports.md) | `SMP-4010` – `SMP-4022` | Authenticity hash mismatch, WeasyPrint PDF rendering, evidence tamper alerts |
-| 📦 **Installation & Runtime** | [installation.md](installation.md) | `SMP-2002`, `SMP-4041` | `pysqlcipher3` C compilation, Qt XCB GUI crashes, Go/Node toolchains, Docker |
+| 📦 **Installation & Runtime** | [installation.md](installation.md) | `SMP-2002`, `SMP-4041`, `SMP-9001`–`SMP-9005` | Network routing, binary download integrity, Go/Node toolchains, Docker |
 | 🤖 **Autonomous Auto-Fixes** | [auto_fixes.md](auto_fixes.md) | `SMP-9000` – `SMP-9999` | Lock removal recipes, cache flushes, service restarts, emergency factory reset |
 
 ---
@@ -71,7 +71,7 @@ When an issue cannot be resolved automatically by `--fix`, consult the domain-sp
 
 ## 🧪 System Health Verification
 
-To run the complete 11-suite end-to-end integration and cryptographic attestation test pipeline:
+To run the complete 15-suite end-to-end integration and cryptographic attestation test pipeline:
 
 ```bash
 source venv/bin/activate

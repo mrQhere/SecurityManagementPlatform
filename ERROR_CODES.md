@@ -1,148 +1,151 @@
-# SMP Error Codes Reference — V9.5 Security Data Pipeline
+# SMP Error Codes Reference
 
-This document defines the canonical `SMP-xxxx` error taxonomy for the **Security Management Platform (SMP)** V9.5.
+The Security Management Platform (SMP) V9.5 uses a strictly categorized, 4-digit error code system. This ensures that every failure across the DAG orchestrator, cryptographic engine, API, and UI has a deterministic root cause and a clear remediation path.
 
-All REST API endpoints, CLI diagnostics (`tools/troubleshoot.py`), DAG orchestrators, and database managers emit structured exceptions conforming to this taxonomy.
-
----
-
-## Quick Reference Summary
-
-| Category | Range | Domain | Primary Recovery Mechanism |
-|---|---|---|---|
-| **1xxx** | `SMP-1000` – `SMP-1009` | Authentication, Session & Key Hierarchy | Password re-entry, Token refresh, KEK recovery |
-| **2xxx** | `SMP-2000` – `SMP-2010` | Scanner Execution, DAG & State Machine | Binary auto-install, DAG re-evaluation, Timeout increase |
-| **3xxx** | `SMP-3000` – `SMP-3007` | Database, SQLCipher & Storage Pipeline | WAL checkpoint, Schema migration, Backup restoration |
-| **4xxx** | `SMP-4000` – `SMP-4042` | Evidence Store, Reporting & Verification | Evidence EEK loading, Hash verification, Font install |
-| **5xxx** | `SMP-5000` – `SMP-5007` | Threat Intelligence, CVE & Deduplication | Offline DB sync, CPE normalization, Local-only mode check |
-| **6xxx** | `SMP-6000` – `SMP-6006` | Scope Engine & Scan Policy | Scope rule adjustment, Rate limit ceiling change, Auth attestation |
-| **9xxx** | `SMP-9000` – `SMP-9999` | Unclassified / System Errors | Log analysis, System diagnostic report, Bug report |
+When SMP encounters a fatal exception, the framework dumps a context-enriched error card to the terminal or log file containing the error code, the exact source code snippet, and actionable steps.
 
 ---
 
-## 1xxx — Authentication, Session & Cryptographic Key Hierarchy
+## 1xxx: Authentication & Cryptography (10 Codes)
+
+The `1xxx` series indicates failures in the 4-layer Key Hierarchy (KEK/DEK/IEK/EEK), JWT Bearer token lifecycle, or SQLCipher master password validation.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-1000** | `auth_error` | Generic authentication failure | Missing or unparseable credentials in request header or CLI | Provide valid username/password or Authorization Bearer header. |
-| **SMP-1001** | `token_expired` | JWT bearer token expired | Bearer token generated > 24 hours ago | Request fresh token via `POST /api/v6/auth/token`. |
-| **SMP-1002** | `invalid_credentials` | Master password / login credentials incorrect | Failed PBKDF2 hash verification against `config/auth.json` | Verify master password or perform emergency recovery via `tools/troubleshoot.py --fix`. |
-| **SMP-1003** | `password_policy_violation` | Master password rejected by policy | Password < 12 characters or missing upper/lower/digit/special chars | Choose a password meeting minimum 12 chars, mixed case, digit, special character. |
-| **SMP-1004** | `kek_derivation_failed` | KEK key derivation failed | OpenSSL / PBKDF2 HMAC-SHA256 computational failure | Check `cryptography` Python package installation (`pip install cryptography`). |
-| **SMP-1005** | `dek_unavailable` | Database Encryption Key (DEK) not loaded | Database accessed while application is in locked state | Unlock application via GUI password prompt or authenticate API session. |
-| **SMP-1006** | `iek_unavailable` | Intelligence Encryption Key (IEK) not loaded | Threat intel database accessed before master key unlock | Provide master password to decrypt the local `vulnerability.db`. |
-| **SMP-1007** | `eek_unavailable` | Evidence Encryption Key (EEK) not loaded | Evidence store accessed without active unlocked EEK | Ensure application is unlocked before storing or retrieving raw evidence files. |
-| **SMP-1008** | `key_rotation_failed` | Master password / subkey rotation failed | Old password mismatch or partial key write error | Re-verify current master password before attempting key rotation. |
-| **SMP-1009** | `auth_file_corrupt` | Master auth metadata `config/auth.json` corrupted | Interrupted disk write or invalid JSON formatting in `auth.json` | Restore `config/auth.json` from backup or run `python3 tools/troubleshoot.py --fix`. |
+|------|------|-------------|------------|--------------------|
+| `SMP-1000` | `ERR_AUTH_GENERIC` | Generic authentication failure. | Unknown credentials provided. | Verify username/password or token. |
+| `SMP-1001` | `ERR_INVALID_PASS` | Master password incorrect. | PBKDF2-SHA256 failed to unwrap the KEK. | Retry master password. If lost, database reset required. |
+| `SMP-1002` | `ERR_TOKEN_EXPIRED` | JWT token expired. | API bearer token exceeded its lifetime. | Request a new token from `POST /api/v6/auth/token`. |
+| `SMP-1003` | `ERR_TOKEN_INVALID` | JWT signature malformed. | Tampered or incorrectly formatted JWT. | Clear client session and re-authenticate. |
+| `SMP-1004` | `ERR_KEK_UNWRAP_FAIL` | Failed to unwrap DEK/IEK/EEK. | KEK corruption or keyfile tampering. | Restore key configuration from secure backup. |
+| `SMP-1005` | `ERR_SQLCIPHER_DENY` | SQLCipher PRAGMA key rejected. | Incorrect DEK provided to SQLite. | Ensure `security.db` matches the active keyfile. |
+| `SMP-1006` | `ERR_SESSION_TIMEOUT` | UI session timeout. | Inactivity timer triggered auto-lock. | Re-enter master password in the PySide6 UI. |
+| `SMP-1007` | `ERR_NO_AUTH_HEADER` | Missing Authorization header. | API call made without Bearer token. | Append `Authorization: Bearer <token>` to request. |
+| `SMP-1008` | `ERR_ROLE_UNAUTHORIZED`| Insufficient permissions. | Non-admin user attempted admin action. | Elevate privileges or use admin account. |
+| `SMP-1009` | `ERR_CRYPTO_INIT_FAIL` | Cryptographic engine init failed. | Missing OpenSSL libraries on host system. | Run `./setup.sh` to install dependencies. |
 
 ---
 
-## 2xxx — Scanner Execution, DAG Orchestration & State Machine
+## 2xxx: Scanner & DAG Orchestration (11 Codes)
+
+The `2xxx` series relates to failures within the 95 scanner modules, Kahn's algorithm topological sorting, process sandboxing, and execution timeouts.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-2000** | `scanner_error` | Generic scanner execution failure | Subprocess crash, non-zero exit code, or unhandled exception | Check `logs/smp.log` and raw output file in `database/raw_outputs/`. |
-| **SMP-2001** | `scanner_timeout` | Scanner exceeded maximum execution time | Target host unresponsive, large network subnet, or aggressive rate limit | Increase scanner timeout in Scan Policy or switch profile to `standard` / `fast`. |
-| **SMP-2002** | `scanner_binary_missing` | Required security binary not found in PATH | Tool not installed during `./setup.sh` or missing from `./bin/` | Run `python3 tools/troubleshoot.py --fix` or `./setup.sh` to auto-install tool. |
-| **SMP-2003** | `scanner_crashed` | Scanner process terminated unexpectedly | Segfault, out-of-memory kill, or missing native shared library (`.so`) | Check system memory (`free -m`) and verify binary dependencies (`ldd $(which <tool>)`). |
-| **SMP-2004** | `scanner_output_parse_error` | Observation parser failed to decode output | Unexpected tool output format or incompatible tool version | Verify tool semver matches manifest; check regex/JSON parser in `scanners/adapters/`. |
-| **SMP-2005** | `dag_cycle_detected` | Scanner dependency graph contains cycle | Circular dependency declared between scanner plugins | Run `python3 tools/verify_smp.py` to validate DAG topological ordering (Kahn's algorithm). |
-| **SMP-2006** | `invalid_state_transition` | State machine transition rule violated | Scanner attempted illegal state jump (e.g. `NOT_STARTED` → `COMPLETED`) | Ensure scanner wrapper transitions through `STARTED` → `RUNNING` before terminal states. |
-| **SMP-2007** | `sandbox_isolation_violation` | Scanner process attempted sandbox escape | Attempted write outside designated temporary workspace | Check `scanners/framework/sandbox.py` permissions and target directory boundaries. |
-| **SMP-2008** | `missing_dependency_tool` | Upstream parent scanner failed or skipped | Required parent scanner (e.g. Nmap) did not produce required observations | Re-run parent scanner or remove strict dependency from scan policy profile. |
-| **SMP-2009** | `resource_limit_exceeded` | Process CPU/Memory concurrency limit reached | Concurrency ceiling exceeded during heavy multi-scanner Phase 2 | Reduce `max_concurrency` in scan policy or increase system worker limits. |
-| **SMP-2010** | `adapter_manifest_invalid` | Scanner adapter manifest validation failed | Manifest missing required fields (id, category, parser, timeout) | Validate adapter manifest against `core/scanner_manifest.py` schema. |
+|------|------|-------------|------------|--------------------|
+| `SMP-2000` | `ERR_SCAN_GENERIC` | Generic scanner failure. | Scanner adapter encountered unhandled exception. | Check logs for specific Python traceback. |
+| `SMP-2001` | `ERR_DAG_CYCLE` | Cyclic dependency detected. | Two scanners mutually depend on each other. | Review `scanners.core.dag` and remove circular links. |
+| `SMP-2002` | `ERR_SCANNER_NOT_FOUND`| Scanner binary missing. | System PATH missing required third-party tool. | Rerun `./setup.sh` to download missing binaries. |
+| `SMP-2003` | `ERR_PORT_COLLISION` | Scanner port conflict. | Multiple tools attempted to bind the same port. | Allow Kahn's algorithm to separate execution phases. |
+| `SMP-2004` | `ERR_SCAN_TIMEOUT` | Tool exceeded time limit. | Scanner hung or network routing blackholed. | Decrease scanner timeout or exclude target host. |
+| `SMP-2005` | `ERR_PARSER_FAIL` | Observation parser failed. | Tool output format changed unexpectedly. | Update SMP to latest version or check tool version. |
+| `SMP-2006` | `ERR_STATE_TRANSITION` | 14-State machine invalid move. | Attempted to jump from INIT directly to FINISHED. | Restart scan job from UI to reset state. |
+| `SMP-2007` | `ERR_OUT_OF_MEMORY` | Process exceeded RAM limit. | Java/Go scanner consumed too much memory. | Increase swap or reduce parallel scanner count. |
+| `SMP-2008` | `ERR_ZOMBIE_PROCESS` | Orphaned scanner detected. | Parent adapter died but child binary persisted. | Run `pkill -f smp_scanner` to clean up. |
+| `SMP-2009` | `ERR_INVALID_ARGS` | Malformed scanner arguments. | CLI flags passed to tool were rejected. | Review scanner configuration in Dashboard UI. |
+| `SMP-2010` | `ERR_NMAP_ROOT_REQD` | Nmap requires root privileges. | SYN scan attempted without sudo permissions. | Run SMP with elevated permissions or use TCP connect. |
 
 ---
 
-## 3xxx — Database, SQLCipher & Storage Pipeline
+## 3xxx: Database Operations (8 Codes)
+
+The `3xxx` series encompasses SQLite/SQLCipher lock contention, constraint violations, and schema migrations.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-3000** | `db_error` | Generic database error | Low-level SQLite/SQLCipher driver failure | Inspect `logs/smp.log` for SQL query and parameter traceback. |
-| **SMP-3001** | `db_connection_error` | Cannot connect to database | `pysqlcipher3` missing, permission denied on database file, or lock contention | Run `sudo apt install libsqlcipher-dev && pip install pysqlcipher3`. |
-| **SMP-3002** | `db_encryption_error` | SQLCipher database decryption failed | Incorrect passphrase supplied to `PRAGMA key` | Verify master password or restore encrypted backup snapshot. |
-| **SMP-3003** | `db_wal_locked` | SQLite Write-Ahead Log (WAL) deadlock | Stale lock from crashed or ungracefully killed scan process | Run `python3 tools/troubleshoot.py --fix` to execute `PRAGMA wal_checkpoint(TRUNCATE)`. |
-| **SMP-3004** | `db_integrity_check_failed` | PRAGMA integrity_check failed | File corruption from sudden power loss or process kill | Restore from automated snapshot in `database/backups/`. |
-| **SMP-3005** | `db_migration_error` | Schema migration failed | Incompatible schema version upgrade | Run `python3 tools/db_manager.py --migrate` or inspect `database/schema/`. |
-| **SMP-3006** | `raw_output_storage_failed` | Gzip compression / Fernet encryption failed | Disk full or missing active encryption key | Free disk space (`df -h`) and confirm encryption keys are initialized. |
-| **SMP-3007** | `redundancy_db_failed` | Redundancy secondary database error | SQLite fallback in-memory or secondary file failure | Clear secondary lock or recreate `database/redundancy.db`. |
+|------|------|-------------|------------|--------------------|
+| `SMP-3000` | `ERR_DB_GENERIC` | Generic database error. | Unhandled SQL exception during query. | Review application logs for raw SQL error. |
+| `SMP-3001` | `ERR_DB_LOCKED` | SQLITE_BUSY lock detected. | High concurrency caused a WAL lock timeout. | System will auto-retry. Reduce concurrent API calls. |
+| `SMP-3002` | `ERR_MIGRATION_FAIL` | Schema migration failed. | V9.4 to V9.5 database upgrade encountered error. | Restore `security.db` from backup and retry. |
+| `SMP-3003` | `ERR_CONSTRAINT_FAIL` | Foreign key or unique failure. | Attempted to insert duplicate or orphaned record. | Verify target and scan IDs exist before insertion. |
+| `SMP-3004` | `ERR_DISK_FULL` | SQLITE_FULL error. | Host machine partition exhausted free space. | Clear logs and `data/evidence/` or expand disk. |
+| `SMP-3005` | `ERR_CORRUPTION` | Database file corrupted. | Hard power loss during WAL checkpointing. | Restore from `redundancy.db` immediately. |
+| `SMP-3006` | `ERR_MISSING_TABLE` | Requested table not found. | Schema initialization was incomplete. | Run `tools/db_manager.py --init` to rebuild. |
+| `SMP-3007` | `ERR_REDUNDANCY_FAIL`| Sync to redundancy.db failed. | Write permissions lost on backup directory. | Fix permissions on `database/` folder recursively. |
 
 ---
 
-## 4xxx — Evidence Store, Reporting & Authenticity Verification
+## 4xxx: Evidence & Reporting (13 Codes)
+
+The `4xxx` series handles file operations, AES-256-GCM evidence processing, PDF generation, and strict legal data export gates.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-4000** | `validation_error` | Generic request validation error | Request body or argument failed type constraint | Review endpoint schema documentation at `/api/v6/docs`. |
-| **SMP-4001** | `invalid_target` | Invalid target IP, URL, or domain | URL missing scheme (e.g. missing `http://`), or invalid IPv4/IPv6 address | Ensure target is well-formed (e.g. `https://example.com` or `192.168.1.1/24`). |
-| **SMP-4002** | `invalid_payload` | Malformed API request payload | Non-JSON body or missing required fields | Verify JSON structure and mandatory parameter keys. |
-| **SMP-4010** | `evidence_storage_error` | AES-256-GCM evidence encryption error | Disk write failure or EEK missing during evidence capture | Verify `data/evidence` directory write permissions and ensure EEK is in memory. |
-| **SMP-4011** | `evidence_not_found` | Evidence record UUID not found | Evidence was pruned or invalid UUID requested | Verify evidence ID exists in `core/evidence.py` index for the engagement. |
-| **SMP-4012** | `evidence_tamper_detected` | Evidence SHA-256 checksum mismatch | Raw encrypted evidence file modified externally | Treat as security incident: file integrity compromise detected. Check audit logs. |
-| **SMP-4020** | `report_generation_error` | Report generator failed to compile report | Missing findings data, template render error, or write permission denied | Run `python3 tools/generate_demo_report.py` to verify report generator engine. |
-| **SMP-4021** | `report_authenticity_failed` | Canonical SHA-256 authenticity hash mismatch | Report JSON was altered after initial cryptographic signing | Run `python3 tools/verify_report.py <report.json>` to inspect mismatch details. |
-| **SMP-4022** | `weasyprint_render_error` | Headless PDF rendering failure | `weasyprint` or system fonts (Pango, Cairo, Liberation) missing | Run `sudo apt install fonts-liberation libpango-1.0-0 libcairo2`. |
-| **SMP-4040** | `exploit_timeout` | Interactive shell or exploit stalled | `msfconsole`, `impacket`, or `sqlmap` waiting for user input | Set non-interactive flags or decrease timeout in scanner configuration. |
-| **SMP-4041** | `binary_incompatibility` | Native binary architecture mismatch | x86_64 binary executed on ARM64 / Apple Silicon system | Compile binary natively using `setup.sh` or run inside Docker container. |
-| **SMP-4042** | `port_collision` | Local privileged port conflict | Tool (e.g. `Responder`) attempted binding to occupied port (UDP 53) | Stop conflicting service (`sudo systemctl stop systemd-resolved dnsmasq`). |
+|------|------|-------------|------------|--------------------|
+| `SMP-4000` | `ERR_REPORT_GENERIC` | Report generation failed. | Unknown error in `ReportGenerator`. | Check console for Jinja2 or WeasyPrint errors. |
+| `SMP-4001` | `ERR_PDF_ENGINE_FAIL`| WeasyPrint crashed. | Missing system fonts or GTK dependencies. | Install required fonts via `./setup.sh`. |
+| `SMP-4002` | `ERR_EVIDENCE_MISSING`| Raw output file not found. | Scanner completed but failed to write output. | Ensure scanner has write access to `/tmp`. |
+| `SMP-4003` | `ERR_EVIDENCE_DECRYPT`| AES-GCM decryption failed. | EEK mismatch or file tampering detected. | Do not trust evidence file. Delete and rescan. |
+| `SMP-4004` | `ERR_JSON_EXPORT_FAIL`| JSON serialization error. | Unserializable object passed to exporter. | Update Pydantic v2 schemas. |
+| `SMP-4005` | `ERR_MARKDOWN_FAIL` | Markdown render error. | Template variable missing in Jinja2. | Validate custom templates in `ui/templates/`. |
+| `SMP-4006` | `ERR_SARIF_SCHEMA` | SARIF format violation. | Exported data did not match SARIF 2.1.0 schema. | File bug report on GitHub with error trace. |
+| `SMP-4007` | `ERR_HASH_MISMATCH` | Report signature invalid. | SHA-256 authenticity hash failed verification. | Report has been tampered with post-generation. |
+| `SMP-4008` | `ERR_JIRA_FORMAT` | Jira exporter mapping fail. | Missing mandatory fields for Jira JSON. | Map required vulnerability severity levels. |
+| `SMP-4009` | `ERR_CSV_WRITE_FAIL` | CSV permission denied. | Output directory is read-only. | Change export path or grant write permissions. |
+| `SMP-4050` | `ERR_LEGAL_GATE_DENY`| Export gate unacknowledged. | User rejected the "I AGREE" plaintext prompt. | Must type "I AGREE" to export unencrypted data. |
+| `SMP-4051` | `ERR_LEGAL_TYPO` | Gate signature mistyped. | User typed incorrect string in ExportGateDialog. | Carefully type exact phrase requested. |
+| `SMP-4052` | `ERR_AUDIT_LOG_FAIL` | Non-repudiation log failed. | Unable to write legal acknowledgment to disk. | Restore write access to `logs/audit.log`. |
 
 ---
 
-## 5xxx — Threat Intelligence, CVE Correlation & Deduplication
+## 5xxx: Configuration & Intelligence (8 Codes)
+
+The `5xxx` series covers `.env` parsing, configuration loading, and CVE intelligence correlation engines.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-5000** | `config_error` | Generic configuration error | Malformed JSON in `config/settings.json` | Validate JSON syntax in `config/settings.json` with `jq . config/settings.json`. |
-| **SMP-5001** | `config_missing` | Required configuration file missing | Missing `config/settings.json` or `config/metadata.json` | Run `python3 tools/troubleshoot.py --fix` to restore defaults from template. |
-| **SMP-5002** | `intel_sync_error` | CISA KEV / NVD / EPSS feed sync error | Outbound network failure, proxy block, or remote API rate limiting | Check network connectivity, verify proxy settings, or enable `SMP_LOCAL_ONLY=1`. |
-| **SMP-5003** | `vulnerability_db_missing` | Offline vulnerability intelligence database missing | `database/global_intel.db` not found or uninitialized | Run `python3 intelligence/nvd.py --init` or restore `global_intel.db`. |
-| **SMP-5004** | `cpe_parsing_error` | CPE 2.3 URI string malformed | Non-standard CPE format emitted by scanner | Check CPE normalization logic in `intelligence/matching.py`. |
-| **SMP-5005** | `deduplication_engine_error` | Finding deduplication fingerprint collision | Hash calculation failure on observation attributes | Verify SHA-256 components in `core/finding_engine.py`. |
-| **SMP-5006** | `mitre_mapping_error` | MITRE ATT&CK taxonomy lookup failed | Unknown CWE ID or corrupted MITRE mapping table | Check `intelligence/mitre_mapper.py` for missing technique mappings. |
-| **SMP-5007** | `local_only_violation` | Network call attempted while `SMP_LOCAL_ONLY=1` | Component attempted external DNS/HTTP request in air-gapped mode | Disable external sync or unset `SMP_LOCAL_ONLY` if internet access is intended. |
+|------|------|-------------|------------|--------------------|
+| `SMP-5000` | `ERR_CONF_GENERIC` | Configuration error. | Malformed syntax in configuration file. | Review `.env` or settings JSON for typos. |
+| `SMP-5001` | `ERR_ENV_MISSING` | Missing required `.env` var. | Critical environment variable not defined. | Copy `.env.example` to `.env` and configure. |
+| `SMP-5002` | `ERR_INTEL_SYNC_FAIL`| CVE database update failed. | Unable to reach NVD or Threat Intel API. | Check network connection and proxy settings. |
+| `SMP-5003` | `ERR_INVALID_CVE` | Malformed CVE string. | Scanner returned non-standard CVE format. | Ignore or write custom parser filter. |
+| `SMP-5004` | `ERR_RATE_LIMIT` | Intel API rate limit hit. | Too many requests to external threat feeds. | Wait 15 minutes or configure API key in `.env`. |
+| `SMP-5005` | `ERR_CORRELATION_FAIL`| Risk scoring engine failed. | Could not calculate CVSS v3.1 vector. | Check `intelligence/brain.py` logs. |
+| `SMP-5006` | `ERR_LLM_ADAPTER` | Local LLM connection failed. | Ollama/Llama.cpp not running on localhost. | Start local LLM server or disable feature. |
+| `SMP-5007` | `ERR_TFIDF_FAIL` | TF-IDF heuristic engine fail. | Insufficient data to perform correlation. | Run more scans to build intelligence corpus. |
 
 ---
 
-## 6xxx — Scope Engine & Scan Policy
+## 6xxx: Target Scope Engine (7 Codes)
+
+The `6xxx` series represents failures related to the strict engagement boundaries and domain parsing.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-6000** | `scope_violation` | Target out of authorized engagement scope | Target IP/domain not matched by allow rules (default deny) | Add target to scope rules in Engagement settings or check CIDR boundary. |
-| **SMP-6001** | `scope_rule_syntax_error` | Invalid scope rule format | Malformed CIDR subnet, invalid wildcard, or broken regex pattern | Correct rule syntax (e.g. `192.168.1.0/24`, `*.example.com`, `^https://.*`). |
-| **SMP-6002** | `scan_policy_restricted` | Scanner disallowed by scan policy | Scanner is on denylist or not in allowlist for the engagement | Update `scanner_allowlist` in scan policy configuration. |
-| **SMP-6003** | `rate_limit_exceeded` | Request rate ceiling reached | Exceeded requests-per-second limit configured in scan policy | Increase `requests_per_second` in scan policy or configure slower scanner delay. |
-| **SMP-6004** | `intrusive_scan_denied` | Intrusive scanner attempted on passive profile | Active/Intrusive scanner queued during `osint` / `passive` scan | Change scan profile to `standard` or `full` to enable active testing. |
-| **SMP-6005** | `time_window_closed` | Scan triggered outside allowed hours | Current time outside authorized schedule in Scan Policy | Adjust `time_windows` in scan policy or wait for authorized testing window. |
-| **SMP-6006** | `responsibility_attestation_missing` | Operator authorization attestation missing | Active scan initiated without signed operator responsibility checkbox | Check the authorization attestation box in GUI or pass `attestation=true` in API. |
+|------|------|-------------|------------|--------------------|
+| `SMP-6000` | `ERR_SCOPE_GENERIC` | Scope engine failure. | Unhandled exception during boundary check. | Review target configuration. |
+| `SMP-6001` | `ERR_OUT_OF_SCOPE` | Target rejected by scope. | Scanner attempted to hit unapproved asset. | Add asset to Scope Rules or investigate scanner. |
+| `SMP-6002` | `ERR_INVALID_CIDR` | Malformed CIDR notation. | e.g., 192.168.1.0/99 provided as scope. | Correct network notation (e.g., /24). |
+| `SMP-6003` | `ERR_DNS_RESOLVE` | Unresolvable domain name. | Target domain does not have A/AAAA records. | Check DNS configuration or remove dead target. |
+| `SMP-6004` | `ERR_WILDCARD_REJECT`| Domain wildcard too broad. | Refused to scope `*.com` or `*.org`. | Provide a specific top-level domain. |
+| `SMP-6005` | `ERR_REGEX_COMPILE` | URL regex compilation fail. | Malformed regular expression in scope rules. | Validate regex syntax. |
+| `SMP-6006` | `ERR_DEFAULT_DENY` | Global default deny hit. | No scope rules defined for engagement. | You must explicitly allow-list targets first. |
 
 ---
 
-## 9xxx — Installation, Bootstrap & System Failures
+## 9xxx: Installer & System Check (5 Codes)
+
+The `9xxx` series defines early-stage faults during the `./setup.sh` pre-flight checks and cross-platform installation.
 
 | Code | Slug | Description | Root Cause | Remediation Action |
-|---|---|---|---|---|
-| **SMP-9000** | `unclassified_error` | Base unclassified internal exception | Uncaught exception in core engine | Check `logs/smp.log` for full Python traceback. |
-| **SMP-9001** | `network_route_unreachable` | Pre-flight network route / mirror unreachable | Outbound HTTPS blocked by firewall/proxy or DNS failure | Check internet connectivity, configure `https_proxy`, or use `./setup.sh --skip-tools`. |
-| **SMP-9002** | `pkg_manager_lock_contention` | Package manager (dpkg/apt/dnf) lock held | Background updater / unattended-upgrades holding lock | Wait for background updater or run `sudo killall apt apt-get dpkg && sudo dpkg --configure -a`. |
-| **SMP-9003** | `tool_bootstrap_failure` | Security binary bootstrap / extraction failed | Corrupt download, network interruption, or disk full | Run `python3 tools/troubleshoot.py --fix` or manually place binary in `./bin/`. |
-| **SMP-9004** | `preflight_check_failure` | Pre-flight environment preconditions unmet | Unsupported architecture or non-root permissions | Ensure required build dependencies are installed and user has sudo access. |
-| **SMP-9005** | `python_env_bootstrap_failure` | Python venv or dependency installation failed | Missing `python3-venv`/`python3-dev` or pip error | Run `sudo apt install python3-dev python3-venv build-essential` and rerun `./setup.sh`. |
-| **SMP-9999** | `unexpected_error` | Fatal system runtime crash | Kernel signal, unhandled exception, or unexpected environment fault | Run `python3 tools/troubleshoot.py --fix` and review `logs/key_audit.log`. |
+|------|------|-------------|------------|--------------------|
+| `SMP-9001` | `ERR_OS_UNSUPPORTED` | Operating System unsupported. | OS is not Linux or macOS (Darwin). | Install on a supported POSIX environment. |
+| `SMP-9002` | `ERR_DPKG_LOCKED` | APT/DPKG is locked. | Another package manager is running (unattended-upgrades). | Wait for completion or run troubleshoot tool. |
+| `SMP-9003` | `ERR_NETWORK_OFFLINE`| Pre-flight network check fail. | Cannot reach GitHub/PyPI/Go repositories. | Fix internet connection, corporate firewall, or DNS. |
+| `SMP-9004` | `ERR_SHA256_MISMATCH`| Binary signature invalid. | Downloaded tool (e.g., Nuclei) failed checksum. | Network tampering or proxy interception. Retry. |
+| `SMP-9005` | `ERR_ENV_CREATE_FAIL`| Python venv creation failed. | Missing `python3-venv` package on host. | Install base python utilities via `apt-get`. |
 
 ---
 
 ## Automated Error Resolution
 
-To automatically diagnose and heal any error:
+The Security Management Platform includes an advanced, self-healing diagnostic engine to resolve the most common runtime and installation faults autonomously. 
+
+When encountering structural faults (such as `SMP-3001` database locks, `SMP-9002` dpkg locks, or `SMP-2008` zombie processes), you do not necessarily need to intervene manually. Instead, leverage the built-in troubleshooting suite:
 
 ```bash
-# Run comprehensive diagnostic scan
-python3 tools/troubleshoot.py
-
-# Automatically fix all repairable issues (DB locks, missing binaries, directory trees)
+# Execute the self-healing engine
 python3 tools/troubleshoot.py --fix
-
-# Look up specific error code resolution
-python3 tools/troubleshoot.py --lookup SMP-3003
 ```
+
+**How it works:**
+1. **State Analysis:** The engine will parse `logs/audit.log` to identify the most recent error codes triggered in the last 15 minutes.
+2. **Process Cleansing:** If `SMP-2008` is detected, it will safely send `SIGTERM` followed by `SIGKILL` to orphaned scanner binaries without corrupting the DAG orchestrator.
+3. **Database Recovery:** For `SMP-3001` and `SMP-3005`, it will attempt to safely flush the SQLite Write-Ahead Log (WAL) or transparently restore the latest checkpoint from `redundancy.db`.
+4. **Environment Repair:** For dependency or checksum failures (`SMP-9004`, `SMP-9002`), it flushes the local artifact cache (`/tmp/smp_cache`) and forcibly releases orphaned package manager locks via safe `fuser` commands.
+
+If the automated resolution engine cannot rectify the fault, it will dump a comprehensive JSON diagnostic report to `/tmp/smp_diagnostic.json`. Please attach this file when seeking assistance from the core development team or when opening an issue.

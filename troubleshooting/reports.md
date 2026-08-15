@@ -38,9 +38,6 @@ sudo apt-get install -y \
   libffi-dev \
   fonts-liberation \
   fonts-dejavu-core
-
-# Re-test PDF compilation with demo generator
-python3 tools/generate_demo_report.py --output reports/test_render
 ```
 
 ---
@@ -60,7 +57,7 @@ python3 tools/verify_report.py reports/demo_report.json
 python3 -c "
 from tools.report_generator import ReportGenerator
 from tools.db_manager import get_findings_for_scan, get_scan
-rg = ReportGenerator('V9.5')
+rg = ReportGenerator(version='V9.5')
 # Provide scan_id to recompile canonical report
 "
 ```
@@ -90,15 +87,21 @@ for root, dirs, files in os.walk(ev_dir):
 
 ---
 
-### Scenario 4: Generate a Test Demo Report to Verify Pipeline Health
+### Scenario 4: Verify the Report Pipeline Manually
 
 **Symptom:** Verifying that all reporting layers (JSON, Markdown, PDF, Executive Summary) are fully functional.
 
 **Copy-Paste Solution:**
 ```bash
-# Generate complete demo report across all formats
-python3 tools/generate_demo_report.py --output reports/demo_verification
+# Generate complete report using python script
+python3 -c "
+from tools.report_generator import ReportGenerator
+from tools.verify_report import verify_report
+rg = ReportGenerator(version='V9.5')
+# Generate a JSON report
+rg.generate_json_report(scan_id=1, output_file='reports/manual_verification.json')
+"
 
 # Inspect output files
-ls -lh reports/demo_verification.*
+ls -lh reports/manual_verification.*
 ```

@@ -11,7 +11,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [V9.5] - 2026-08-15
+## [V9.5.1] - 2026-08-16
+### Fixed
+- tools/scheduler.py: add missing `import os` (resolves ruff F821 — undefined name `os` in nuclei update job)
+- api/server.py: migrate Pydantic v1 `@validator` → Pydantic v2 `@field_validator` with `@classmethod` (eliminates PydanticDeprecatedSince20 warnings in CI)
+- tools/verify_smp.py: expand from 12 to 15 verification suites — adds Suite 13 (CI environment & ruff lint gate), Suite 14 (CI workflow manifest validation), Suite 15 (API Pydantic v2 compliance)
+- database/global_intel.db: remove binary database from git tracking (was accidentally committed; now properly excluded via .gitignore)
+- tests/: add test_nuclei_integration.py and test_troubleshoot_installer.py (18 pytest tests total)
+### Documentation
+- All documentation synchronized to V9.5.1
+- docs/thesis/SMP_THESIS_V9.5.pdf: professional PDF thesis added
+- GitHub About section updated
+
+## [V9.5.0] - 2026-08-15
 
 ### Architecture Overhaul: Security Data Pipeline
 
@@ -39,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Comprehensive Manual & Academic Thesis
 
-- **Exhaustive User Guide (`USER_GUIDE.md`)** — 1,500+ line technical manual with ASCII SMP header, 11-section table of contents, covering setup, 90-scanner tuning, custom `@register_scanner` development, API reference, and troubleshooting.
+- **Exhaustive User Guide (`USER_GUIDE.md`)** — 1,500+ line technical manual with ASCII SMP header, 11-section table of contents, covering setup, 95-scanner tuning, custom `@register_scanner` development, API reference, and troubleshooting.
 - **Academic Thesis (`docs/thesis/SMP_THESIS_V9.5.md`)** — 60+ page academic thesis analyzing V1–V9.5 architectural evolution, DAG topological sort, queuing theory, 4-layer KEK/DEK cryptographic hierarchy, and SHA-256 finding deduplication.
 
 ### Cross-Platform Installer & Setup Overhaul (`setup.sh`)
@@ -54,16 +66,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Runtime Connection & Dependency Hardening
 
-- **DAG Dependency Resolution** — Corrected DAG dependency names across `scanners/idor_scanner.py`, `scanners/ppmap.py`, `scanners/race_the_web.py`, and `scanners/wscat_scanner.py` to allow clean topological resolution for all 90 scanners.
+- **DAG Dependency Resolution** — Corrected DAG dependency names across `scanners/idor_scanner.py`, `scanners/ppmap.py`, `scanners/race_the_web.py`, and `scanners/wscat_scanner.py` to allow clean topological resolution for all 95 scanners.
 - **Database Findings Ingestion Compatibility** — Made `tools/db_manager.py:add_finding` resilient to keyword aliases (`scanner` $\to$ `source_tool`, `remediation` $\to$ `recommendation`).
 - **Report Generator Convenience API** — Added flexible default fallbacks and high-level `generate()` convenience method to `tools/report_generator.py`.
 - **Airgapped & Offline Resilience** — Hardened `tools/system_checker.py:_check_network` to handle offline/isolated network environments gracefully.
 - **Artifact Cleanup** — Removed stale download archives and redundant directories.
-- **Verification** — 100% pass across 186 modules, 12/12 `verify_smp.py` suites, and 7/7 `pytest` test suites.
+- **Verification** — 100% pass across 186 modules, 15/15 `verify_smp.py` suites, and 18/18 `pytest` test suites.
 
 ## [V9.5.4] - 2026-08-12
 
-- Scaled DAG Orchestrator to support 90 independent vulnerability scanners.
+- Scaled DAG Orchestrator to support 95 independent vulnerability scanners.
 - Pulled extensive open-source parity from DefectDojo/Faraday, integrating 15 new advanced scanners (Metasploit, OpenVAS, Impacket, SQLNinja, RouterSploit, Responder, Arachni, Bandit, OSV-Scanner, etc.).
 - Developed the Enterprise Target Data Exporter: 1-click ZIP export of AES-encrypted database findings, reports, and logs strictly filtered by website target.
 - Resolved Trivy APT repository errors (`zena` codename missing) by refactoring `setup.sh` to use the official raw installation binaries, ensuring cross-distro compatibility.

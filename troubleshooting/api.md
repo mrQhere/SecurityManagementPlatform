@@ -1,6 +1,6 @@
 # 🔌 API & Authentication Troubleshooting — V9.5
 
-This guide provides technical diagnosis and copy-paste remediation procedures for the SMP FastAPI backend, JWT authentication, rate limiting, and WebSocket telemetry stream.
+This guide provides technical diagnosis and copy-paste remediation procedures for the SMP FastAPI backend, JWT authentication, and rate limiting.
 
 ---
 
@@ -36,8 +36,8 @@ TOKEN=$(curl -s -X POST http://localhost:8000/api/v6/auth/token \
   -H "Content-Type: application/json" \
   -d '{"password": "YOUR_MASTER_PASSWORD"}' | jq -r .access_token)
 
-# Verify token by calling system status
-curl -s http://localhost:8000/api/v6/system/status \
+# Verify token by calling system health endpoint
+curl -s http://localhost:8000/api/v6/health \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
@@ -70,10 +70,10 @@ jq '.api.rate_limit_whitelist += ["192.168.1.50", "127.0.0.1"]' config/settings.
 
 **Copy-Paste Solution:**
 ```bash
-# Authenticate and unlock the in-memory KeyStore
-curl -X POST http://localhost:8000/api/v6/auth/unlock \
+# Obtain token and check health endpoint (auth/unlock is not supported)
+curl -X POST http://localhost:8000/api/v6/auth/token \
   -H "Content-Type: application/json" \
-  -d '{"master_password": "YOUR_MASTER_PASSWORD"}'
+  -d '{"password": "YOUR_MASTER_PASSWORD"}'
 ```
 
 ---
@@ -87,7 +87,7 @@ curl -X POST http://localhost:8000/api/v6/auth/unlock \
 **Copy-Paste Solution:**
 ```bash
 # Correct format: Always include scheme and valid host
-curl -X POST http://localhost:8000/api/v6/targets \
+curl -X POST http://localhost:8000/api/v6/target \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -95,6 +95,9 @@ curl -X POST http://localhost:8000/api/v6/targets \
     "company_name": "Target Org",
     "submitted_to": "Security Operations Team"
   }'
+
+# Fetch targets to verify
+curl -s http://localhost:8000/api/v6/target -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ---
@@ -108,7 +111,7 @@ curl -X POST http://localhost:8000/api/v6/targets \
 **Copy-Paste Solution:**
 ```bash
 # Pass attestation=true in the scan launch payload
-curl -X POST http://localhost:8000/api/v6/scans \
+curl -X GET http://localhost:8000/api/v6/scan \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -116,6 +119,9 @@ curl -X POST http://localhost:8000/api/v6/scans \
     "scan_type": "standard",
     "attestation": true
   }'
+
+# Get findings afterwards
+curl -s http://localhost:8000/api/v6/findings -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ---
@@ -135,33 +141,7 @@ python3 main.py --api
 
 ---
 
-### Scenario 7: WebSocket Telemetry Stream Drops Behind Reverse Proxy
-
-**Symptom:** Real-time scan logs in dashboard disconnect after exactly 60 seconds.
-
-**Root Cause:** Nginx reverse proxy closing inactive WebSocket connections due to missing proxy headers.
-
-**Copy-Paste Solution:**
-Add WebSocket upgrade directives to `/etc/nginx/sites-available/smp`:
-
-```nginx
-location /api/v6/ws/ {
-    proxy_pass http://127.0.0.1:8000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_read_timeout 86400s;
-    proxy_send_timeout 86400s;
-}
-```
-```bash
-sudo nginx -t && sudo systemctl reload nginx
-```
-
----
-
-### Scenario 8: Port 8000 Collision on API Startup
+### Scenario 7: API Server Won't Start (Port 8000 in Use)
 
 **Symptom:** `main.py --api` fails with `[Errno 98] Address already in use`.
 

@@ -1,247 +1,167 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" />
+  
+# Security Management Platform (SMP) V9.5
 
-  <br />
+[![CI](https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge)](https://github.com/mrQhere/SecurityManagementPlatform/actions)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![AES-256](https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge)](SECURITY.md)
+[![CodeQL](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/codeql-analysis.yml/badge.svg?style=flat)](https://github.com/mrQhere/SecurityManagementPlatform/actions/workflows/codeql-analysis.yml)
 
-  <h1>Security Management Platform (SMP)</h1>
-  <p><b>The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine</b></p>
+The ultimate open-source, on-premise Vulnerability Assessment and Penetration Testing orchestration engine.
 
-  <p>
-    <a href="https://github.com/mrQhere/SecurityManagementPlatform/actions"><img src="https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge" alt="Build Status" /></a>
-    <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" /></a>
-    <a href="SECURITY.md"><img src="https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock" alt="Security" /></a>
-  </p>
+[Overview](#-overview) • [Features](#-key-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Security](#-security-model) • [Documentation](#-documentation)
 
-  <p>
-    <a href="#-overview"><b>Overview</b></a> •
-    <a href="#-key-features"><b>Features</b></a> •
-    <a href="#-quick-start"><b>Quick Start</b></a> •
-    <a href="#-architecture"><b>Architecture</b></a> •
-    <a href="#-documentation"><b>Documentation</b></a>
-  </p>
 </div>
 
----
+<br/>
 
 ## 🛡️ Overview
 
-The **Security Management Platform (SMP)** is an Vulnerability Assessment and Penetration Testing (VAPT) orchestrator designed for high-compliance, air-gapped environments.
+The Security Management Platform (SMP) is a Vulnerability Assessment and penetration testing automation framework designed strictly for security professionals and red teams. Operating completely on-premise with a zero-cloud dependency model, SMP guarantees absolute data sovereignty. 
 
-> **Current Version**: `V9.5` — Major architecture rebuild introducing the **Security Data Pipeline**, evidence-preserving deduplication, offline CVE intelligence, and cryptographically-signed VAPT reports.
+At its core in V9.5, SMP acts as a central nervous system for **95 scanner modules**, orchestrating them through a sophisticated Directed Acyclic Graph (DAG) pipeline. By abstracting away the complex command-line arguments, dependency management, and parsing logic of the world's most powerful open-source security tools, SMP allows security teams to focus on triage and remediation rather than tool wrangling.
 
-Unlike cloud-based SIEMs that exfiltrate sensitive intelligence to third-party servers, **SMP executes 86+ distinct security tools locally**, routes all raw outputs through an **encrypted evidence store**, correlates findings via offline CVE/EPSS/KEV intelligence, and generates tamper-evident PDF/JSON reports — entirely on your own hardware.
-
----
+Whether deployed via its comprehensive 10-tab PySide6 UI or headless via the FastAPI backend, SMP standardizes the execution, deduplication, and reporting lifecycle of vulnerability assessments.
 
 ## ✨ Key Features
 
-### 🔒 Absolute Data Sovereignty
-- **Zero cloud dependency** — all analysis runs locally
-- **SQLCipher (AES-256)** encrypted databases with a hierarchical key model (KEK → DEK/IEK/EEK)
-- **Per-file AES-256-GCM** encryption for all raw scanner evidence
-- `SMP_LOCAL_ONLY=1` mode structurally blocks all external API calls
-- Master password with PBKDF2-SHA256 (600,000 iterations) key derivation
+### 1. Data Sovereignty & Cryptographic Security
+* **Zero Cloud Dependency:** 100% on-premise execution. Your vulnerability data, target lists, and credentials never leave your infrastructure.
+* **4-Layer Cryptographic Architecture:** Advanced key derivation leveraging KEK, DEK, IEK, and EEK strategies (PBKDF2-SHA256 with 600,000 iterations).
+* **Database Encryption at Rest:** All sensitive operational data is secured within SQLCipher AES-256 databases (`security.db` and `redundancy.db`).
+* **Encrypted Evidence Store:** Raw scanner output and exploitation proof in `data/evidence/` are individually encrypted using AES-256-GCM.
+* **API Security:** Complete backend protection utilizing JWT Bearer authentication under the `/api/v6/` namespace.
 
-### 🚀 Security Data Pipeline
-SMP V9.5 treats security findings as immutable data — not mutable records. The full pipeline:
-```
-Nmap Discovery → Observations → Evidence Store → CVE Intelligence Matching → Finding Correlation → Risk Scoring → Signed Report
-```
-- **Nmap as first-class asset source** — parsed into typed AssetObservation, PortObservation, ServiceObservation, CPEObservation
-- **Evidence-preserving deduplication** — SHA-256 fingerprint-based correlation, never destroys raw evidence
-- **Offline CVE intelligence** — NVD, CISA KEV, EPSS via local `vulnerability.db`
+### 2. DAG-Orchestrated Security Data Pipeline
+* **95 Scanner Modules:** Massively parallel execution of 95 distinct tools (Nuclei, Nmap, Masscan, Metasploit, TruffleHog, Checkov, Trivy, and more).
+* **Kahn's Algorithm Orchestration:** Dynamically calculates scanner execution order and resolves dependencies using graph topology to prevent port collisions.
+* **14-State Machine Tracking:** Robust scanner state tracking from initialization and recon to active exploitation and finalization.
+* **Typed Observation Model:** Normalizes disparate tool outputs (JSON, XML, CSV, Regex) into standard immutable Python data classes.
+* **SHA-256 Deduplication:** Intelligently collapses overlapping findings (e.g., Nmap and Masscan finding the same open port) via cryptographic hashing.
 
-### 🧠 Intelligent Orchestration
-- **DAG-based concurrent execution** using Kahn's topological sort (86+ scanners)
-- **Scope Engine** — CIDR, wildcard, regex authorization boundaries, prevents out-of-scope scanning
-- **14-state scanner state machine** (NOT_STARTED → RUNNING → COMPLETED_WITH_FINDINGS / TIMEOUT / PARSE_FAILED etc.)
-- **Autonomous self-healing** — `tools/troubleshoot.py --fix` resolves missing binaries and DB corruption
+### 3. Comprehensive Target Scope Engine
+* **Engagement Scoping:** Define strict rules of engagement using CIDR blocks, single IP addresses, domain wildcards, and regex URLs.
+* **Default-Deny Posture:** Scanners will fundamentally refuse to route traffic to any asset not explicitly allow-listed in the target scope.
+* **Dynamic Resolution:** Seamlessly resolves DNS and expands subnets during the reconnaissance phase to populate the target map.
+* **Out-of-Scope Drops:** Any scanner finding that falls outside the allowed engagement boundaries is automatically dropped and flagged in the audit log.
+* **Target Segregation:** Complete data isolation between different clients or internal departments within the unified database structure.
 
-### 📊 Professional Reporting
-- **Tamper-evident VAPT reports** — SHA-256 authenticity hash over entire report payload
-- Sections: Cover Page · Executive Summary · Scope & Methodology · Per-Finding Detail · Asset Inventory · Appendix
-- Compliance mapping: **SOC 2 Type II, ISO 27001, CIS Controls v8, PCI-DSS v4.0**
-- Output formats: **PDF, Markdown, JSON**
+### 4. High-Performance Decoupled Architecture
+* **FastAPI Backend (`/api/v6/`):** Asynchronous, high-throughput REST API supporting comprehensive programmatic integration.
+* **PySide6 Desktop Client:** A responsive, multi-threaded GUI featuring a 10-tab dashboard (Overview, Targets, Active Scans, Findings, Intel, etc.).
+* **Asynchronous execution:** Scanner processes are heavily sandboxed with strict CPU, memory, and timeout governance.
+* **CI/CD Quality Gates:** Maintained through stringent continuous integration, verified by 15 separate `tools/verify_smp.py` suites and 18 pytest suites.
+* **Self-Healing Installer:** The `setup.sh` script automatically detects OS architectures, downloads required Go/Python/Ruby binaries, and handles dpkg locks.
 
-### 🌐 API & Integration
-- **FastAPI REST API** with JWT authentication (`--api` mode)
-- **WebSocket real-time scan updates**
-- OpenAPI/Swagger docs at `/api/v6/docs`
-- Headless Docker mode for CI/CD pipelines
-
----
+### 5. Enterprise Reporting & Data Export
+* **Customizable PDF Generation:** Beautiful, professional PDF reports complete with CVSS v3.1 scoring, PCI-DSS v4.0 mapping, and mitigation steps.
+* **Multi-Format Support:** Export findings to JSON, Markdown, CSV, or standard SARIF 2.1.0 formats for CI/CD ingestion.
+* **Enterprise Ticketing Exporter:** One-click integration payloads mapped for Jira, ServiceNow, and DefectDojo.
+* **Authenticity Hashing:** Every generated report receives a unique SHA-256 signature to guarantee non-repudiation and tamper evidence.
+* **Mandatory Legal Gates:** Enforced typed `"I AGREE"` dialogs for exporting plaintext vulnerabilities, permanently recorded in audit logs.
 
 ## ⚡ Quick Start
 
-### Linux \& macOS
+### 1. Pre-Flight Installation (Linux/macOS)
+
+SMP utilizes a heavily engineered, self-healing installation script. Prior to downloading dependencies, `setup.sh` runs extensive pre-flight network checks to ensure repository mirrors (GitHub, PyPI, Go) are reachable, preventing partial installs.
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# 2. Run the automated installer (handles all system packages, Python deps, and Go tools)
+# Execute the self-healing setup engine
+chmod +x setup.sh
 ./setup.sh
-
-# 3. Verify environment integrity (optional — auto-heals missing binaries)
-python3 tools/troubleshoot.py --fix
-
-# 4. Launch the desktop GUI
-./run.sh
-
-# — or — launch in headless API mode (no display required)
-./run.sh --api
-# API docs available at: http://localhost:8000/api/v6/docs
 ```
 
-> **Windows is not supported.** Use WSL2.
+### 2. Launching the Platform
 
-### Generate a Demo Report (no GUI required)
+You can start the full PySide6 GUI interface via the run script:
 
 ```bash
-python3 tools/generate_demo_report.py
-# → outputs: reports/demo_report.json
-# → outputs: reports/demo_report.md
+# Launch the Desktop UI
+./run.sh
 ```
 
----
+### 3. Headless API Mode
+
+For server deployments, CI/CD pipelines, or remote integrations, run the backend API directly:
+
+```bash
+source venv/bin/activate
+# Starts the FastAPI server on port 8000
+python -m api.server
+```
 
 ## 🏗️ Architecture
 
-SMP V9.5 implements a **layered security-data pipeline** with strict separation of concerns:
+### ASCII Data Flow Pipeline
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    SMP V9.5 Architecture                     │
-└─────────────────────────────────────────────────────────────┘
+The Security Management Platform processes vulnerabilities via a strictly enforced unidirectional pipeline:
 
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  PySide6 UI  │   │  FastAPI API │   │  CLI Tools   │
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       └──────────────────┼──────────────────┘
-                          │
-               ┌──────────▼──────────┐
-               │  Application Layer   │
-               │  Engagement / Scope  │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼─────┐    ┌─────────▼──────┐   ┌───────▼──────┐
-│  Scope   │    │  Scan Planner  │   │  Scheduler   │
-│  Engine  │    │  (DAG Builder) │   │  (Kahn's)    │
-└────┬─────┘    └─────────┬──────┘   └───────┬──────┘
-     └────────────────────┼──────────────────┘
-                          │
-               ┌──────────▼──────────┐
-               │  Execution Sandbox   │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼────────┐  ┌────────▼────────┐  ┌───────▼──────┐
-│  86+ Scanner│  │  Observation    │  │  Evidence    │
-│  Adapters   │  │  Parsers        │  │  Store       │
-└─────────────┘  └────────┬────────┘  │  (AES-256    │
-                          │           │   per-file)  │
-                          │           └──────────────┘
-               ┌──────────▼──────────┐
-               │   Finding Engine     │
-               │  (Fingerprint Dedup) │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼────────┐  ┌────────▼────────┐  ┌───────▼──────┐
-│  Vuln Intel │  │  Report         │  │  Risk Engine │
-│  (NVD/KEV/  │  │  Generator      │  │              │
-│   EPSS)     │  │  (PDF/MD/JSON)  │  │              │
-└─────────────┘  └─────────────────┘  └──────────────┘
-```
-
-### Data Flow
-
-```
-1.  Target Definition
-2.  Scope Validation (ScopeEngine)
-3.  Scan Planning (ScanPlanner + DAG)
-4.  Scanner Execution (ScannerAdapters + ExecutionSandbox)
-5.  Raw Output → Evidence Store (AES-256-GCM per file)
-6.  Observation Parsing (typed: Asset/Port/Service/CPE/Vuln)
-7.  CVE Intelligence Matching (offline NVD/EPSS/KEV)
-8.  Finding Correlation (SHA-256 fingerprint deduplication)
-9.  Risk Scoring
-10. Signed VAPT Report (SHA-256 authenticity hash)
+```text
+  [ Target ] ---> [ Scope Engine ] ---> [ DAG Orchestrator ] ---> [ 95 Scanners ]
+                                                                        |
+                                                                        v
+  [ Report Generator ] <--- [ Risk Scoring ] <--- [ Deduplication ] <--- [ CVE Correlation ] <--- [ Evidence Store ] <--- [ Observation Parser ]
 ```
 
 ### Database Architecture
 
-```
-data/
-├── security.db          # Encrypted (DEK): engagements, scans, findings, observations
-├── vulnerability.db     # Encrypted (IEK): CVEs, CPEs, EPSS, CISA KEV
-├── evidence/            # Per-file AES-256-GCM: raw scanner outputs
-│   └── <eng>/<scan>/<evidence_id>/
-│       ├── evidence.enc
-│       ├── metadata.json
-│       └── checksum.txt
-└── work/                # Temporary scanner workspaces
-    └── <scan_id>/
-```
+To maintain strict data segregation and performance, SMP distributes its schema across four distinct SQLite/SQLCipher databases:
 
----
+| Database | Type | Encryption | Purpose |
+|----------|------|------------|---------|
+| `security.db` | Operational | **SQLCipher AES-256** | Houses all sensitive client data, scan targets, credentials, job states, and parsed vulnerability findings. |
+| `redundancy.db` | Backup | **SQLCipher AES-256** | High-availability, fault-tolerant mirror of `security.db` for automated recovery in case of corruption. |
+| `cve.db` | Threat Intel | Plaintext | Contains static vulnerability intelligence, CVE descriptions, and mitigation advice. **Contains no PII or client data.** |
+| `analytics.db` | Telemetry | Plaintext | Stores application performance metrics, scanner execution times, and pipeline efficiency logs. **Contains no PII or client data.** |
+
+### Verification & Testing Architecture
+
+SMP enforces reliability through rigorous quality assurance tooling built into the core:
+* **Verify Suites:** The framework is validated via `tools/verify_smp.py`, which executes **15 distinct verification suites**, verifying everything from DAG topology and Pydantic v2 compliance to CI workflow manifests.
+* **Unit Testing:** The `tests/` directory contains **18 passing pytest test suites** ensuring critical path logic remains stable during updates.
 
 ## 🔐 Security Model
 
-SMP uses a **4-layer hierarchical key architecture**:
+SMP was designed under the assumption that the host machine could be compromised. Data at rest is protected by a bespoke cryptographic key management system.
 
-```
-Master Password (PBKDF2-SHA256, 600k iterations)
-       ↓
-Key Encryption Key (KEK)
-       ↓
-├── Database Encryption Key (DEK) → security.db (AES-256)
-├── Intelligence Encryption Key (IEK) → vulnerability.db (AES-256)
-└── Evidence Encryption Key (EEK) → per-file evidence (AES-256-GCM)
-```
+### 4-Layer Key Hierarchy
 
-- Keys exist **in-memory only** — never persisted in plaintext
-- Sub-keys are encrypted with AES-256-GCM under the KEK and stored in `config/auth.json`
-- Key operations are audit-logged to `logs/key_audit.log`
-- Password rotation re-encrypts all sub-keys without changing DEK/IEK/EEK
+1. **Key Encryption Key (KEK):** Derived directly from the user's master password utilizing PBKDF2-SHA256 pushed to **600,000 iterations**. The KEK is never stored on disk.
+2. **Database Encryption Key (DEK):** A randomly generated high-entropy key that decrypts `security.db` and `redundancy.db`. It is stored encrypted (wrapped) by the KEK.
+3. **Intel Encryption Key (IEK):** Secures custom intelligence payloads or proprietary signatures. Wrapped by the KEK.
+4. **Evidence Encryption Key (EEK):** Used exclusively for the `data/evidence/` directory to encrypt raw scanner dumps via AES-256-GCM. Wrapped by the KEK.
 
----
+This architecture ensures that changing the master password only requires re-wrapping the DEK/IEK/EEK, avoiding computationally expensive database rewrites.
+
+## 🧰 API Endpoints
+
+The FastAPI backend operates under the `/api/v6/` prefix. Key endpoints include:
+- `GET /api/v6/health` - System status.
+- `GET /api/v6/version` - V9.5 version check.
+- `POST /api/v6/auth/token` - JWT token issuance.
+- `GET /api/v6/target`, `POST /api/v6/target` - Scope management.
+- `GET /api/v6/scan` - DAG orchestration tracking.
+- `GET /api/v6/findings` - Retrieve deduplicated results.
+- `GET /api/v6/cve/stats` - Threat intelligence queries.
+- `GET /api/v6/risk/score` - Organizational risk analytics.
 
 ## 📚 Documentation
 
-| Document | Description |
-|---|---|
-| [USER_GUIDE.md](USER_GUIDE.md) | Full operational manual, API reference, scanner configuration |
-| [docs/thesis/SMP_THESIS_V9.5.md](docs/thesis/SMP_THESIS_V9.5.md) | Academic paper — mathematical proofs, algorithmic analysis |
-| [CHANGELOG.md](CHANGELOG.md) | Version history and change log |
-| [ERROR_CODES.md](ERROR_CODES.md) | `SMP-xxxx` error code reference |
-| [SECURITY.md](SECURITY.md) | Security disclosure policy |
-| [troubleshooting/](troubleshooting/) | Autonomous recovery procedures |
+Detailed documentation is essential for mastering the platform's orchestration capabilities:
 
----
+- [**USER_GUIDE.md**](USER_GUIDE.md): The comprehensive 1,500+ line technical manual covering installation, configuration, and custom scanner development.
+- [**Architecture Thesis**](docs/thesis/): In-depth academic analysis detailing the queuing theory, Kahn's algorithm, and cryptography behind SMP V9.5.
+- [**Troubleshooting Guide**](troubleshooting/): Step-by-step resolution paths for network, dependency, and database locks.
+- [**Error Codes Reference**](ERROR_CODES.md): Exhaustive index of all 1xxx to 9xxx internal error codes, root causes, and remediation steps.
 
 ## 🤝 Contributing
 
-Built and maintained by **mrQhere**.
+Pull requests are highly encouraged! Whether you are writing a new `ScannerAdapter` wrapper for the latest open-source tool, or optimizing the PySide6 UI, contributions are welcome.
 
-This project started as a learning exercise and evolved into a sovereign, intelligence engine. The git history intentionally preserves the entire evolution for educational transparency.
-
-Before contributing, please:
-1. Read [SECURITY.md](SECURITY.md)
-2. Ensure new scanner modules use the `@register_scanner` decorator from `scanners/core/registry.py`
-3. Include a test fixture in `tests/`
-4. Verify all 12 suites still pass: `python3 tools/verify_smp.py`
-
----
-
-<div align="center">
-<i>Use only against systems you have written authorisation to test.</i>
-<br>
-© mrQhere. Licensed under the MIT License.
-</div>
+For major architectural changes, please open an issue first to discuss the proposed modifications. Ensure all code conforms to the project's Ruff linting standards and that all 15 verification suites and 18 pytests pass successfully before submission.
