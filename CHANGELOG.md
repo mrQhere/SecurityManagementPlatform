@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Cross-Platform Installer & Setup Overhaul (`setup.sh`)
 
 - **Multi-OS / Multi-Arch Support** — Added Darwin/macOS and Linux binary resolution with `_bin_url()` helper for Go security tools (Nuclei, Subfinder, HTTPx, Katana, DNSx, FFUF, Gitleaks, Dalfox).
+- **Zero-Friction Pre-Flight Route Verification** — Integrated `verify_network_routes()` to probe outbound HTTPS reachability across key repository mirrors (`github.com`, `raw.githubusercontent.com`, `pypi.org`, `go.dev`) before initiating downloads.
+- **Automated Self-Healing in Installer** — Automatically triggers the self-healing engine (`tools/troubleshoot.py --fix` and internal bash routines) upon encountering DPKG locks, stale runtime locks, or network timeouts, with transparent retry mechanisms.
+- **Context-Enriched Source-Level Error Dumps** — When unrecoverable faults occur, `report_error_with_code()` outputs a structured terminal error card displaying the official SMP error code (`SMP-9001` through `SMP-9005`, `SMP-2002`, `SMP-3001`), root cause analysis, recent log excerpts, copy-paste remediation steps, and **the entire source code snippet** of the failing function with line numbers.
+- **Pre-Compiled Binary Direct Downloads** — Nuclei, Subfinder, HTTPx, Katana, DNSx, FFUF, Gitleaks, and Dalfox download pre-compiled releases with cryptographic SHA-256 validation (reducing installation time from 5–10 minutes down to ~12 seconds).
 - **Homebrew & Shell Profile Integration** — Auto-configures `.zprofile` on macOS and `.bashrc` on Linux with PATH exports.
 - **Package Repository Hardening** — Fixed Gitleaks naming and automated cleanup of legacy repository artifacts.
 

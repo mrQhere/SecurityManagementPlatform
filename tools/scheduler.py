@@ -1,3 +1,4 @@
+import os
 import logging
 from datetime import datetime
 # pyrefly: ignore [missing-import]
@@ -178,11 +179,23 @@ def trigger_watchdog_job():
 def trigger_nuclei_update_job():
     """Weekly job: auto-update nuclei templates."""
     try:
+        import shutil
         import subprocess
+        from tools.config_manager import BASE_DIR, load_settings
+        settings = load_settings()
+        nuclei_bin = settings.get("nuclei_path", "nuclei")
+        if not shutil.which(nuclei_bin):
+            local_bin = os.path.join(BASE_DIR, "bin", "nuclei")
+            if os.path.isfile(local_bin) and os.access(local_bin, os.X_OK):
+                nuclei_bin = local_bin
+
         logger.info("[Nuclei Update] Starting nuclei template auto-update...")
-        subprocess.run(["nuclei", "-update-templates"], capture_output=True, text=True, timeout=120)
-        logger.info("[Nuclei Update] Templates updated successfully.")
-        add_log_entry("INFO", "Nuclei Update: Templates updated successfully.")
+        res = subprocess.run([nuclei_bin, "-update-templates", "-duc", "-ni"], capture_output=True, text=True, timeout=120)
+        if res.returncode == 0:
+            logger.info("[Nuclei Update] Templates updated successfully.")
+            add_log_entry("INFO", "Nuclei Update: Templates updated successfully.")
+        else:
+            logger.warning(f"[Nuclei Update] Update returned non-zero code {res.returncode}: {res.stderr.strip()[:100]}")
     except Exception as e:
         logger.error(f"[Nuclei Update] Job failed: {e}")
         add_log_entry("ERROR", f"Nuclei Update failed: {e}")

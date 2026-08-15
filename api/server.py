@@ -30,14 +30,14 @@ try:
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
-    from pydantic import BaseModel, HttpUrl, validator, Field
+    from pydantic import BaseModel, HttpUrl, field_validator, Field
     from tools.errors import SMPError, SMPInvalidTargetError, SMPInvalidPayloadError, SMPDatabaseError
     _FASTAPI_AVAILABLE = True
 except ImportError:
     _FASTAPI_AVAILABLE = False
     logger.warning("[API] FastAPI not installed. API mode unavailable.")
     BaseModel = object
-    def validator(*args, **kwargs):
+    def field_validator(*args, **kwargs):
         def dec(fn): return fn
         return dec
     def Field(*args, **kwargs):
@@ -133,7 +133,8 @@ class TargetCreate(BaseModel):
     company_name: str = ""
     submitted_to: str = ""
 
-    @validator("url")
+    @field_validator("url")
+    @classmethod
     def validate_url(cls, v):
         if not v.startswith("http://") and not v.startswith("https://"):
             raise SMPInvalidTargetError("URL must start with http:// or https://")
@@ -143,7 +144,8 @@ class TokenRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=1)
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         if not v.isalnum():
             raise SMPInvalidPayloadError("Username must be alphanumeric.")

@@ -569,7 +569,7 @@ ERROR_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
         "auto_fixable": False,
     },
 
-    # ── 9xxx Unclassified / System ──────────────────────────────────────────
+    # ── 9xxx Unclassified & Installer / System ──────────────────────────────
     "SMP-9000": {
         "code": "SMP-9000",
         "category": "System",
@@ -577,6 +577,51 @@ ERROR_KNOWLEDGE_BASE: Dict[str, Dict[str, Any]] = {
         "description": "An unclassified internal exception occurred in the platform core.",
         "cause": "Uncaught runtime exception.",
         "solution": "Check logs/smp.log for full stack trace.",
+        "auto_fixable": True,
+    },
+    "SMP-9001": {
+        "code": "SMP-9001",
+        "category": "Installation & Network",
+        "title": "Network Route or Repository Unreachable",
+        "description": "Pre-flight network route verification failed to reach key download mirrors (GitHub, PyPI, Go CDN).",
+        "cause": "Outbound HTTPS blocked by firewall/proxy, DNS resolution failure, or internet connectivity interruption.",
+        "solution": "Check internet connection, verify proxy settings (export https_proxy=...), or run './setup.sh --skip-tools'.",
+        "auto_fixable": True,
+    },
+    "SMP-9002": {
+        "code": "SMP-9002",
+        "category": "Installation & OS",
+        "title": "Package Manager or DPKG Lock Contention",
+        "description": "System package manager (apt/dpkg/dnf/pacman) lock is held by another process or unattended upgrades.",
+        "cause": "Background system update, unattended-upgrades daemon, or crashed package manager process holding lock file.",
+        "solution": "Wait for background updater to finish, or run 'sudo killall apt apt-get dpkg' and retry './setup.sh'.",
+        "auto_fixable": True,
+    },
+    "SMP-9003": {
+        "code": "SMP-9003",
+        "category": "Installation & Tools",
+        "title": "Security Tool Bootstrap or Extraction Failure",
+        "description": "Failed to download, extract, or verify SHA-256 integrity for a pre-compiled security binary.",
+        "cause": "Corrupted download archive, network interruption, or disk space exhaustion.",
+        "solution": "Run 'python3 tools/troubleshoot.py --fix' or install binary manually into './bin/'.",
+        "auto_fixable": True,
+    },
+    "SMP-9004": {
+        "code": "SMP-9004",
+        "category": "Pre-Flight Validation",
+        "title": "Pre-Flight Environment Validation Failure",
+        "description": "Pre-installation environment validation failed required preconditions (OS, architecture, permissions).",
+        "cause": "Unsupported architecture, missing core compiler dependencies, or non-root permission for package manager.",
+        "solution": "Review setup.log for prerequisite failure; ensure user has sudo privileges or build tools.",
+        "auto_fixable": False,
+    },
+    "SMP-9005": {
+        "code": "SMP-9005",
+        "category": "Installation & Python",
+        "title": "Python Virtualenv or Dependency Bootstrap Failure",
+        "description": "Failed to create Python virtual environment or install required Python dependencies.",
+        "cause": "Missing python3-venv / python3-dev headers, C compiler error on native extensions (pysqlcipher3), or pip failure.",
+        "solution": "Install build headers with 'sudo apt install python3-dev build-essential libsqlcipher-dev' and rerun './setup.sh'.",
         "auto_fixable": True,
     },
     "SMP-9999": {
@@ -815,12 +860,42 @@ def check_auth_configuration() -> Dict[str, Any]:
     }
 
 
+def check_network_routes() -> Dict[str, Any]:
+    """Verify connectivity to external repository, package index, and CDN endpoints."""
+    import urllib.request
+    endpoints = {
+        "GitHub": "https://github.com",
+        "RawGitHub": "https://raw.githubusercontent.com",
+        "PyPI": "https://pypi.org",
+        "GoDev": "https://go.dev",
+    }
+    reachable = []
+    unreachable = []
+    for name, url in endpoints.items():
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (SMP Diagnostics)"})
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
+                if resp.status < 500:
+                    reachable.append(name)
+                else:
+                    unreachable.append(f"{name} (HTTP {resp.status})")
+        except Exception as e:
+            unreachable.append(f"{name} ({e.__class__.__name__})")
+
+    return {
+        "status": "OK" if not unreachable else ("WARNING" if len(reachable) > 0 else "ERROR"),
+        "reachable": reachable,
+        "unreachable": unreachable,
+    }
+
+
 def run_full_diagnostics() -> Dict[str, Any]:
     """Execute complete suite of diagnostics across the V9.5 pipeline."""
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "platform_version": "V9.5",
         "directory_tree": check_directory_tree(),
+        "network_routes": check_network_routes(),
         "python_dependencies": check_python_dependencies(),
         "security_binaries": check_system_binaries(),
         "database_health": check_database_health(),
@@ -1008,6 +1083,13 @@ def main():
     dt = diag["directory_tree"]
     dt_status = f"{GRN}OK{RST}" if dt["status"] == "OK" else f"{YEL}HEALED{RST}"
     print(f"  📁 Directory Tree:         [{dt_status}] (All required workspace folders verified)")
+
+    # Network Routes
+    nr = diag.get("network_routes", {"status": "OK", "reachable": [], "unreachable": []})
+    nr_status = f"{GRN}OK{RST}" if nr["status"] == "OK" else (f"{YEL}WARNING{RST}" if nr["status"] == "WARNING" else f"{RED}ERROR{RST}")
+    print(f"  🌐 Network & Repo Routes:  [{nr_status}] ({len(nr.get('reachable', []))} reachable, {len(nr.get('unreachable', []))} unreachable)")
+    if nr.get("unreachable"):
+        print(f"     {DIM}Unreachable: {', '.join(nr['unreachable'])}{RST}")
 
     # Python Dependencies
     py = diag["python_dependencies"]
