@@ -95,7 +95,7 @@ from scanners.shodan_idb import run_shodan_idb_scan
 from scanners.zap import run_zap_scan
 from scanners.theharvester import run_theharvester_scan
 from scanners.gitleaks import run_gitleaks_scan
-from tools.report_generator import generate_scan_reports
+from tools.report_generator import ReportGenerator
 
 logger = logging.getLogger("smp.scan")
 
@@ -1244,11 +1244,31 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
         if severity_escalated:
             add_alert(target_id, "Severity Increased", "High")
 
-        # ── Report Generation (pentest report + SBOM in one run) ──────────
+        # ── Report Generation (V9.5 ReportGenerator class) ────────────────
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        html_report, pdf_report, sbom_report = generate_scan_reports(
-            scan_id, target, current_findings, previous_scan
-        )
+        try:
+            _rg = ReportGenerator()
+            _json_report = _rg.generate_json_report(
+                scan_id=scan_id,
+                target=target,
+                findings=current_findings,
+                assets=[],
+                services=[],
+            )
+            _report_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
+            os.makedirs(_report_dir, exist_ok=True)
+            _json_path = os.path.join(_report_dir, f"scan_{scan_id}.json")
+            _md_path   = os.path.join(_report_dir, f"scan_{scan_id}.md")
+            import json as _json
+            with open(_json_path, "w") as _jf:
+                _json.dump(_json_report, _jf, indent=2, default=str)
+            _md_content = _rg.generate_markdown_report(_json_report)
+            with open(_md_path, "w") as _mf:
+                _mf.write(_md_content)
+            html_report, pdf_report, sbom_report = _json_path, _md_path, None
+        except Exception as _rg_err:
+            logger.error(f"[scan_runner] Report generation failed: {_rg_err}")
+            html_report, pdf_report, sbom_report = None, None, None
         if sbom_report:
             add_log_entry("INFO", f"SBOM Generated: {os.path.basename(sbom_report)}")
         add_log_entry("INFO", "Report Generated")

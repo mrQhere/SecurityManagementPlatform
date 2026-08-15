@@ -271,7 +271,7 @@ def _emit_mac_change(iface: str, new_mac: str, message: str):
         logger.warning(f"[MacChanger] Could not log MAC change to DB: {e}")
 
     try:
-        from tools import event_bus
+        import tools.event_bus as event_bus
         event_bus.emit("mac_changed", {"iface": iface, "new_mac": new_mac, "message": message})
     except Exception as e:
         logger.warning(f"[MacChanger] Could not emit event bus MAC change: {e}")

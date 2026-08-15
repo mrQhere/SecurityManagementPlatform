@@ -172,7 +172,7 @@ class TestSMPComponents(unittest.TestCase):
 
         # Logging audit entry
         test_msg = f"Audit log test entry {datetime.now(timezone.utc).timestamp()}"
-        add_log_entry("INFO", test_msg, scan_id=0)
+        add_log_entry("INFO", test_msg)
         logs = get_log_entries(limit=10)
         log_messages = [l["message"] for l in logs]
         self.assertIn(test_msg, log_messages)

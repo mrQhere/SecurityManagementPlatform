@@ -6,7 +6,9 @@ KubeHunter Scanner — SMP V9.4.3
 import logging
 import subprocess
 from scanners.core.registry import register_scanner
-from config.settings import get_setting
+from tools.config_manager import load_settings
+def get_setting(key, default=None):
+    return load_settings().get(key, default)
 
 logger = logging.getLogger("smp.scan")
 

@@ -174,7 +174,7 @@ class ResponsibilityDialog(QDialog):
         self.is_accepted = True
         self.attestation_text = self.confirm_input.text()
         try:
-            from tools import responsibility_manager
+            import tools.responsibility_manager as responsibility_manager
             responsibility_manager.set_target_attestation(self.target_url, self.operator)
         except Exception:
             pass

@@ -209,7 +209,7 @@ class DashboardLogicMixin:
 
     def _get_operator_name(self) -> str:
         try:
-            from core import config_manager
+            from tools import config_manager
             settings = config_manager.load_settings()
             return settings.get('operator_name', 'Unknown')
         except Exception:
@@ -217,7 +217,7 @@ class DashboardLogicMixin:
 
     def _get_db(self):
         try:
-            from database import db_manager
+            from tools import db_manager
             return db_manager
         except ImportError as e:
             self._show_status(f"Database module unavailable: {e}")
@@ -371,7 +371,7 @@ class DashboardLogicMixin:
     def _load_scanner_registry(self):
         if not hasattr(self, 'tbl_scanners'): return
         try:
-            from core import registry
+            from scanners.core import registry
             scanners = registry.get_registered_scanners()
             self.tbl_scanners.setRowCount(0)
             for i, s in enumerate(scanners):
@@ -472,7 +472,7 @@ class DashboardLogicMixin:
             dlg = SystemCheckDialog(parent=self)
             if dlg.exec() == QDialog.Accepted:
                 target = {'id': target_id, 'url': url}
-                from core import config_manager
+                from tools import config_manager
                 settings = config_manager.load_settings()
                 
                 worker = ScanWorker(target, settings)
@@ -560,7 +560,7 @@ class DashboardLogicMixin:
         filepath = Path(BASE_DIR) / 'reports' / filename
         
         try:
-            from tools import verify_report
+            import tools.verify_report as verify_report
             result = verify_report.verify_report(str(filepath))
             if result:
                 QMessageBox.information(self, "Verification", "Report is authentic and untampered.")
@@ -635,7 +635,7 @@ class DashboardLogicMixin:
     # Settings
     def _save_settings(self):
         try:
-            from core import config_manager
+            from tools import config_manager
             # Collect data from form
             settings = {}
             config_manager.save_settings(settings)

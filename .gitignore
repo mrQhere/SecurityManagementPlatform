@@ -83,3 +83,4 @@ database/*.db
 database/backup/
 bin/
 
+setup.log

@@ -15,15 +15,12 @@ class StartupWorker(QThread):
         self.progress.emit(10, "Verifying database integrity...")
         time.sleep(0.3)
         try:
-            from tools.encryption_manager import is_decryption_ok, ACTIVE_KEY, decrypt_databases
-            # Re-run decryption if the DB files are missing (safety net)
-            import os
-            from tools.config_manager import BASE_DIR
-            db_path = os.path.join(BASE_DIR, "database", "security.db")
-            enc_path = os.path.join(BASE_DIR, "database", "security.db.enc")
-            if not os.path.exists(db_path) and os.path.exists(enc_path):
-                # Plain DB missing but .enc exists — attempt decryption again
-                decrypt_databases()
+            from tools.encryption_manager import is_decryption_ok
+            # In V9.5 the key hierarchy is managed by KeyStore after verify_password().
+            # ACTIVE_KEY / decrypt_databases() have been replaced by the in-memory
+            # get_active_key("DEK") accessor — no explicit decryption call needed here.
+            if not is_decryption_ok():
+                print("[Startup] Encryption not yet verified — password dialog will handle auth.")
         except Exception as e:
             print(f"[Startup] Decryption verification error: {e}")
 

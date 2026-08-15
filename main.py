@@ -43,7 +43,7 @@ def graceful_shutdown(signum, frame):
 def start_api_mode():
     try:
         import uvicorn
-        from api.app import app
+        from api.server import app
         uvicorn.run(app, host="0.0.0.0", port=8000)
     except ImportError:
         print("Error: Required API packages (FastAPI/uvicorn) not installed.")
@@ -52,23 +52,23 @@ def start_api_mode():
 def start_gui_mode(operator_name):
     from PySide6.QtWidgets import QApplication, QMessageBox
     from PySide6.QtCore import QTimer
-    
+
     from ui.views.splash_screen import SplashScreen
     from ui.components.password_dialog import PasswordDialog
     from ui.dashboard import DashboardWindow
-    from core.encryption_manager import EncryptionManager
-    
+    from tools.encryption_manager import KeyStore as EncryptionManager
+
     app = QApplication(sys.argv)
-    
+
     splash = SplashScreen()
     splash.show()
-    
+
     # Process events to show splash screen properly
     app.processEvents()
-    
+
     def on_splash_timeout():
         splash.close()
-        
+
         enc_manager = EncryptionManager()
         is_first_run = not enc_manager.has_password_set()
         
