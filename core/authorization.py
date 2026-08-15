@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -14,7 +14,7 @@ class AuthorizationSchema(BaseModel):
     engagement_id: str
     target: str
     authorized_by: str
-    authorized_at: datetime = Field(default_factory=datetime.utcnow)
+    authorized_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
     scope: str
     limitations: List[str] = Field(default_factory=list)
@@ -52,7 +52,10 @@ class AuthorizationTracker:
             
         if auth["expires_at"]:
             expires_at = datetime.fromisoformat(auth["expires_at"])
-            if datetime.utcnow() > expires_at:
+            now = datetime.now(timezone.utc)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if now > expires_at:
                 update_authorization_status(auth_id, AuthStatus.EXPIRED.value)
                 return False
                 

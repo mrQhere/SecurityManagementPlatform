@@ -144,7 +144,7 @@ def load_settings():
         import logging
         logging.getLogger('smp').error(f"Configuration file {path} is malformed: {e}")
         from tools.errors import SMPConfigError
-        raise SMPConfigError(f"Configuration file {path} is malformed.")
+        raise SMPConfigError("Configuration file is malformed.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
         import traceback

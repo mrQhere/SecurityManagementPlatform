@@ -57,3 +57,41 @@ def test_archive_path_traversal():
                     if not target.is_relative_to(destination):
                         raise SMPError(f"Archive path traversal detected: {member}")
                     zr.extract(member, temp_extract_dir)
+
+def test_api_database_error_sanitization(monkeypatch):
+    """Verify that when database fails in API endpoints, response does not leak paths or raw exception traces."""
+    from fastapi.testclient import TestClient
+    import api.server
+    
+    # Mock user auth
+    api.server.app.dependency_overrides[api.server._get_current_user] = lambda: "test_user"
+    client = TestClient(api.server.app)
+    
+    # Mock get_targets to raise a raw database exception
+    def mock_broken_get_targets():
+        raise RuntimeError("OperationalError: unable to open database file /var/lib/secret/database/security.db near line 45")
+        
+    monkeypatch.setattr(api.server, "get_targets", mock_broken_get_targets)
+    
+    response = client.get("/api/v6/target")
+    assert response.status_code == 500
+    data = response.json()
+    assert data["code"] == "SMP-3000"
+    assert data["message"] == "Failed to fetch targets."
+    # Ensure no path or raw exception leaked
+    assert "/var/lib/secret" not in data["message"]
+    assert "OperationalError" not in data["message"]
+    
+    # Mock get_risk_scores_all_targets
+    def mock_broken_risk_scores():
+        raise RuntimeError("Disk I/O failure at /private/var/db.sqlite")
+    import tools.db_manager
+    monkeypatch.setattr(tools.db_manager, "get_risk_scores_all_targets", mock_broken_risk_scores)
+    
+    response = client.get("/api/v6/risk/score")
+    assert response.status_code == 500
+    data = response.json()
+    assert data["code"] == "SMP-3000"
+    assert data["message"] == "Failed to fetch risk scores."
+    assert "/private/var" not in data["message"]
+    assert "Disk I/O failure" not in data["message"]
