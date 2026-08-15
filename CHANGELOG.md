@@ -15,20 +15,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Architecture Overhaul: Security Data Pipeline
 
-- **Introduced the Security Data Pipeline model** — findings are now immutable evidence-linked records, not mutable database rows.
-- **Hierarchical Key Management (KEK/DEK/IEK/EEK)** — replaced single-key encryption with a four-layer key architecture. Master password derives KEK via PBKDF2-SHA256 (600,000 iterations); KEK wraps DEK (database), IEK (intelligence), and EEK (evidence) independently.
-- **Evidence Store** — per-file AES-256-GCM encryption for all raw scanner outputs, with SHA-256 integrity checksums and JSON metadata sidecar.
-- **Typed Observation Model** — raw scanner outputs now parsed into typed observations: Asset, Port, Service, CPE, HTTP, Technology, VulnerabilityCandidate, Secret, etc.
-- **Fingerprint-based Finding Deduplication** — SHA-256 fingerprint over (asset_id, service_id, vulnerability_class, matched_cves) collapses duplicate observations without destroying evidence.
-- **ScannerAdapter Framework** — new abstract `ScannerAdapter` base class in `scanners/framework/adapter.py`; all new scanners implement this interface.
-- **Nmap First-Class Adapter** — `scanners/adapters/nmap_adapter.py` parses Nmap XML into AssetObservation, PortObservation, ServiceObservation, CPEObservation, and NSE script VulnerabilityCandidate observations.
-- **14-state Scanner State Machine** — formal state transition graph replacing ad-hoc string status values.
-- **Scope Engine** — engagement-scoped authorization engine with CIDR, IP, domain wildcard, and URL regex rule types; default-deny posture when no rules are defined.
-- **Report Generator overhaul** — `tools/report_generator.py` now produces full-length professional VAPT reports in both Markdown (PDF-renderable via weasyprint) and JSON formats, with SHA-256 authenticity hash for tamper evidence.
-- **Academic Thesis** — added `docs/thesis/SMP_THESIS_V9.5.md` with formal analysis of the pipeline architecture, cryptographic design, and algorithmic guarantees.
-- **README rewrite** — updated for V9.5 data pipeline model, new architecture diagram, and complete feature documentation.
-- **UI navigation fix** — fixed `PAGE_NAMES` index mismatch that caused an `IndexError` when navigating to the new Findings and Evidence pages.
-- **Version bump** — all version strings synchronized to `V9.5`.
+- **Security Data Pipeline Model** — Findings are now immutable, evidence-linked records rather than mutable rows.
+- **Hierarchical Key Management (KEK/DEK/IEK/EEK)** — Replaced single-key encryption with a four-layer key architecture. Master password derives KEK via PBKDF2-SHA256 (600,000 iterations); KEK wraps DEK (database), IEK (intelligence), and EEK (evidence) independently.
+- **Evidence Store** — Per-file AES-256-GCM encryption for all raw scanner outputs, with SHA-256 integrity checksums and JSON metadata sidecars.
+- **Typed Observation Model** — Raw scanner outputs parsed into typed, immutable observations: `AssetObservation`, `PortObservation`, `ServiceObservation`, `CPEObservation`, `VulnerabilityObservation`, `SecretObservation`, etc.
+- **Fingerprint-Based Finding Deduplication** — SHA-256 canonical fingerprint over `(asset_id, service_id, vulnerability_class, matched_cves)` collapses duplicate observations from overlapping scanners without destroying evidence.
+- **ScannerAdapter Framework** — Abstract `ScannerAdapter` base class in `scanners/framework/adapter.py` providing process sandboxing, timeouts, and resource governance.
+- **Nmap First-Class Adapter** — `scanners/adapters/nmap_adapter.py` parses Nmap XML into typed observations and candidate vulnerabilities.
+- **14-State Scanner State Machine** — Formal state transition engine in `core/state_machine.py` replacing ad-hoc string status values.
+- **Scope Engine** — Engagement-scoped authorization engine with CIDR, IP, domain wildcard, and URL regex rule types; default-deny posture when no rules are defined.
+
+### Decoupled UI Rebuild (PySide6)
+
+- **Complete MVC Decoupling** — Separated view layouts (`ui/views/dashboard_layout.py`) from event logic controllers (`ui/controllers/dashboard_logic.py`).
+- **10-Page Dashboard Layout** — Overview, Targets, Active Scans, Findings, Intelligence, Assets & Services, Reports, Exporter, Scanners, and Settings.
+- **High-Performance UI Components** — Built reusable widgets: `StatCard`, `FindingDetailPanel` (slide-in finding inspector), `ExportGateDialog`, `PasswordDialog`, `ResponsibilityDialog`, and `SystemCheckDialog`.
+- **Theme Engine & QSS Style System** — Custom dark-theme engine (`ui/theme.py`, `ui/style.qss`) tailored for cybersecurity operations.
+
+### Enterprise Data Exporter & Legal Gate
+
+- **Multi-Format Enterprise Ticketing Exporter** — `tools/data_exporter.py` supporting Jira JSON, ServiceNow CSV, DefectDojo JSON, Generic JSON, Markdown ZIP, and SARIF 2.1.0 formats.
+- **Mandatory Typed Legal Gate** — Enforced typed `"I AGREE"` acknowledgment dialog (`ui/components/export_gate_dialog.py`) for plaintext data exports with permanent non-repudiation audit logging (`SMP-4050`, `SMP-4051`, `SMP-4052`).
+
+### Comprehensive Manual & Academic Thesis
+
+- **Exhaustive User Guide (`USER_GUIDE.md`)** — 1,500+ line technical manual with ASCII SMP header, 11-section table of contents, covering setup, 90-scanner tuning, custom `@register_scanner` development, API reference, and troubleshooting.
+- **Academic Thesis (`docs/thesis/SMP_THESIS_V9.5.md`)** — 60+ page academic thesis analyzing V1–V9.5 architectural evolution, DAG topological sort, queuing theory, 4-layer KEK/DEK cryptographic hierarchy, and SHA-256 finding deduplication.
+
+### Cross-Platform Installer & Setup Overhaul (`setup.sh`)
+
+- **Multi-OS / Multi-Arch Support** — Added Darwin/macOS and Linux binary resolution with `_bin_url()` helper for Go security tools (Nuclei, Subfinder, HTTPx, Katana, DNSx, FFUF, Gitleaks, Dalfox).
+- **Homebrew & Shell Profile Integration** — Auto-configures `.zprofile` on macOS and `.bashrc` on Linux with PATH exports.
+- **Package Repository Hardening** — Fixed Gitleaks naming and automated cleanup of legacy repository artifacts.
+
+### Runtime Connection & Dependency Hardening
+
+- **DAG Dependency Resolution** — Corrected DAG dependency names across `scanners/idor_scanner.py`, `scanners/ppmap.py`, `scanners/race_the_web.py`, and `scanners/wscat_scanner.py` to allow clean topological resolution for all 90 scanners.
+- **Database Findings Ingestion Compatibility** — Made `tools/db_manager.py:add_finding` resilient to keyword aliases (`scanner` $\to$ `source_tool`, `remediation` $\to$ `recommendation`).
+- **Report Generator Convenience API** — Added flexible default fallbacks and high-level `generate()` convenience method to `tools/report_generator.py`.
+- **Airgapped & Offline Resilience** — Hardened `tools/system_checker.py:_check_network` to handle offline/isolated network environments gracefully.
+- **Artifact Cleanup** — Removed stale download archives and redundant directories.
+- **Verification** — 100% pass across 186 modules, 12/12 `verify_smp.py` suites, and 7/7 `pytest` test suites.
 
 ## [V9.4.4] - 2026-08-12
 
