@@ -5,12 +5,12 @@
 ╚════██║██║╚██╔╝██║██╔═══╝     ╚██╗ ██╔╝ ╚═══██║       ██╔╝
 ███████║██║ ╚═╝ ██║██║          ╚████╔╝  █████╔╝        ██║
 ╚══════╝╚═╝     ╚═╝╚═╝           ╚═══╝   ╚════╝         ╚═╝
-  Security Management Platform V9.5  ·  by mrQhere
+  Security Management Platform  ·  by mrQhere
   Local-first · Zero-cloud · AES-256 Encrypted at Rest
   github.com/mrQhere/SecurityManagementPlatform
 ```
 
-# Security Management Platform V9.5 (SMP V9.5) User Guide: Part 1 - Introduction and Setup
+# Security Management Platform (SMP) — Complete User Guide
 
 ## Table of Contents
 1. [Introduction & User Tiers](#1-introduction)
@@ -29,184 +29,314 @@
 
 ## 1. Introduction
 
-Welcome to the Security Management Platform V9.5 (SMP V9.5), the premier
-enterprise-grade solution for comprehensive security orchestration, automation,
-and response (SOAR). Whether you are taking your first steps into the world of
-cybersecurity, managing an established penetration testing engagement, or
-conducting advanced threat research, SMP V9.5 is designed to meet your needs
-with unparalleled flexibility, power, and security.
+The **Security Management Platform (SMP)** is a zero-cloud, local-first VAPT (Vulnerability Assessment and Penetration Testing) intelligence engine. It runs entirely on your machine — no accounts, no cloud subscriptions, no external servers. All findings, raw tool outputs, and reports are encrypted at rest using **SQLCipher AES-256** and never leave your hardware unless you explicitly export them.
 
-This guide is structured to accompany you through every stage of your journey
-with SMP V9.5. We have meticulously designed the platform to be accessible yet
-profoundly deep, ensuring that as your skills and requirements evolve, the
-platform scales effortlessly alongside you.
+SMP is hosted exclusively on GitHub and installed via two scripts:
+- **`setup.sh`** — installs all system and Python dependencies, compiles SQLCipher, and downloads pinned Go security tool binaries.
+- **`run.sh`** — activates the virtual environment and launches the GUI (or falls back to headless API mode if no display is detected).
 
-### 1.1 For the Beginner
-If you are new to security management, SMP V9.5 offers an intuitive, guided experience. The platform abstracts complex security concepts into digestible, actionable insights. Upon launching the application, you will be greeted by a streamlined dashboard that highlights critical alerts without overwhelming you with raw data. 
+There is no installer wizard, no product portal, no license key, and no cloud backend. The entire platform runs under your normal user account.
 
-For beginners, the platform provides:
-- **Automated Triage:** SMP V9.5 automatically categorizes incoming alerts based
-on severity, allowing you to focus on what truly matters.
-- **Playbook Templates:** We include dozens of industry-standard response
-playbooks out-of-the-box. These templates guide you step-by-step through
-incident mitigation, ensuring you follow best practices even if you lack
-extensive prior experience.
-- **Contextual Help:** Throughout the user interface, you will find tooltips,
-inline definitions, and links to detailed documentation, effectively serving as
-an on-the-job training tool.
+---
 
-### 1.2 For the Intermediate and Advanced User
-As you gain proficiency, SMP V9.5 reveals its underlying architecture, granting you granular control over your security posture. Security analysts and engineers will appreciate the ability to customize every aspect of the platform.
+### 1.1 What SMP Does
 
-For intermediate to advanced users, the platform offers:
-- **Custom Playbook Creation:** Move beyond templates by designing intricate,
-multi-step automated response playbooks using our  or
-via our robust Python API.
-- **Advanced Threat Hunting:** Utilize our proprietary query language to sift
-through terabytes of log data across your entire enterprise infrastructure in
-milliseconds.
-- **Integration Ecosystem:** Seamlessly connect SMP V9.5 with over 500 third-
-party security tools, firewalls, endpoint detection and response (EDR)
-solutions, and threat intelligence feeds.
+At its core, SMP is a **DAG-orchestrated security data pipeline** that:
+1. Takes one or more target IP addresses, CIDR ranges, or URLs.
+2. Runs up to 90 security tools — Nmap, Nuclei, Nikto, Subfinder, SQLMap, Dalfox, Gitleaks, SSLyze, and more — in topologically sorted parallel waves.
+3. Parses raw tool outputs into typed, immutable **Observation** objects (assets, ports, services, CPEs, vulnerabilities, secrets).
+4. Correlates observations against an offline CVE/EPSS/CISA KEV intelligence database.
+5. Deduplicates findings using SHA-256 composite fingerprinting and scores them logarithmically.
+6. Generates tamper-evident, cryptographically signed JSON, Markdown, and PDF VAPT reports.
+7. Optionally exports findings to enterprise ticketing systems (Jira, ServiceNow, DefectDojo, SARIF) via a mandatory legal acknowledgment gate.
 
-### 1.3 For the Researcher
-For the security researcher, reverse engineer, and malware analyst, SMP V9.5 is an indispensable laboratory. We understand that researchers require unvarnished access to raw data and the ability to execute code in secure, isolated environments.
+---
 
-For researchers, the platform includes:
-- **Sandboxed Execution Environments:** Safely detonate suspicious payloads
-within dynamically provisioned, heavily instrumented virtual machines. SMP V9.5
-captures every system call, network request, and memory modification.
-- **Memory Forensics Integration:** Built-in capabilities to ingest, parse, and
-analyze volatile memory dumps, allowing you to uncover sophisticated fileless
-malware and rootkits.
-- **Threat Intelligence Export:** easily package your findings, Indicators of
-Compromise (IoCs), and custom detection rules into standard formats 
-for distribution to the broader security community.
+### 1.2 For the Beginner
+
+If this is your first VAPT tool, start here:
+- **Install and launch**: Three commands — `git clone`, `./setup.sh`, `./run.sh`.
+- **Add a target**: Click the **Targets** tab → Enter a URL or IP → Accept the legal responsibility dialog.
+- **Run a scan**: Click the target → click **Scan Target** → watch the **Active Scans** tab.
+- **Read results**: Navigate to the **Findings** and **Reports** tabs after the scan completes.
+- **Export**: Use the **Exporter** tab to send findings to your ticketing system.
+
+You do not need to understand the underlying cryptography or DAG architecture to use SMP effectively. The UI guides you through every step.
+
+---
+
+### 1.3 For the Intermediate and Advanced User
+
+SMP exposes its full execution pipeline to anyone who wants to go deeper:
+- **Custom Scanners**: Drop a new `.py` file in `scanners/` using the `@register_scanner` decorator. The DAG picks it up automatically.
+- **Scan Policy Profiles**: Edit `core/scan_policy.py` to define `PASSIVE`, `ACTIVE`, `AGGRESSIVE`, and `DEEP_EXPLOIT` tool allowlists.
+- **Risk Scoring Weights**: Tune CVSS/EPSS/KEV multipliers in `tools/risk_scorer.py`.
+- **Compliance Frameworks**: Add HIPAA, CIS, SOC 2, or custom controls to `tools/compliance_mapper.py`.
+- **Headless API**: Run `./run.sh --api` or `python3 main.py --api` to expose the full FastAPI REST interface at `http://localhost:8000/api/v6/docs`.
+
+---
+
+### 1.4 For the Researcher
+
+SMP was built with academic transparency as a core principle:
+- The full git history preserves every architectural decision from V1 onward.
+- All cryptographic implementations (PBKDF2, SQLCipher, AES-256-GCM evidence store, RFC 8785 canonical report hashing) are in plain Python — no black-box binaries.
+- The `docs/thesis/SMP_THESIS_V9.5.md` document provides the mathematical and algorithmic foundation for every design choice.
+- See **Section 12** of this guide for the full technical architecture and end-to-end lifecycle walkthrough.
 
 ---
 
 ## 2. Installation
 
-Deploying SMP V9.5 correctly is critical to ensuring its effectiveness and
-security. This section details the prerequisites and step-by-step installation
-procedures for various environments.
+SMP is hosted on GitHub and installed entirely via `setup.sh`. There is no product portal, no license key, and no binary distribution. The process is:
 
-### 2.1 Prerequisites
-
-Before initiating the installation process, ensure your infrastructure meets the
-following minimum requirements:
-
-**Hardware Requirements:**
-- **CPU:** Minimum 8 cores (16+ cores recommended for high-volume environments).
-- **RAM:** Minimum 32 GB (64+ GB recommended for memory forensics and heavy
-virtualization).
-- **Storage:** Minimum 1 TB SSD for the operating system and application
-binaries. An additional 5+ TB NVMe storage array is highly recommended for hot
-log data storage and database operations.
-- **Network:** Dedicated gigabit network interface cards (NICs) for management
-and data ingestion.
-
-**Software Requirements:**
-- **Operating System:** Supported distributions include Ubuntu 22.04 LTS, Red
-Hat Enterprise Linux (RHEL) 8.x/9.x, and CentOS Stream 9. Windows Server 2022 is
-supported for standalone sensor deployments only.
-- **Dependencies:** Python 3.10+, PostgreSQL 14+, Redis 6+, and Docker CE (if
-utilizing containerized execution environments).
-
-### 2.2 Getting the Software
-
-SMP V9.5 is distributed via our secure enterprise portal.
-
-1. Log in to the Customer Success Portal using your provided credentials.
-2. Navigate to the "Downloads" section and select the appropriate package for
-your operating system.
-3. Download the installation archive (e.g., `smp-v9.5.0-linux-x86_64.tar.gz`).
-4. **Crucial Step:** Download the accompanying detached signature file (`.sig`)
-and the public PGP key. You must verify the integrity and authenticity of the
-installation archive before proceeding.
-
-```bash
-gpg --import smp-public-key.asc
-gpg --verify smp-v9.5.0-linux-x86_64.tar.gz.sig smp-v9.5.0-linux-x86_64.tar.gz
 ```
-Ensure the output indicates a "Good signature" from the official release team.
-
-### 2.3 Installation Process (Linux)
-
-For this guide, we will outline the installation process on a standard Linux
-environment.
-
-1. **Extract the Archive:**
-   ```bash
-   tar -xzf smp-v9.5.0-linux-x86_64.tar.gz
-   cd smp-v9.5.0
-   ```
-
-2. **Execute the Installer script:**
-   The installation script must be run with administrative privileges. It will
-handle the extraction of binaries, creation of necessary service accounts, and
-setting up systemd services.
-   ```bash
-   sudo ./install.sh
-   ```
-
-3. **Follow the Interactive Prompts:**
-   The installer will prompt you for configuration details such as the desired
-installation directory (default is `/opt/smp`), network binding addresses, and
-database connection strings.
-
-4. **Service Verification:**
-   Upon completion, verify that the core services are running correctly:
-   ```bash
-   sudo systemctl status smp-core
-   sudo systemctl status smp-database
-   sudo systemctl status smp-web
-   ```
+git clone → ./setup.sh → ./run.sh
+```
 
 ---
 
-## 3. System Readiness Checks
+### 2.1 System Requirements
 
-Before the SMP V9.5 application can fully initialize, it undergoes a rigorous
-series of System Readiness Checks. These pre-flight diagnostics ensure that the
-environment is sound and that all prerequisites are functioning as expected.
-Failure at this stage will prevent the application from starting, safeguarding
-against potential data corruption or security vulnerabilities.
+**Minimum Hardware:**
+| Resource | Minimum | Recommended |
+| :--- | :--- | :--- |
+| CPU | 2 cores | 4+ cores |
+| RAM | 2 GB free | 4 GB+ free |
+| Disk | 5 GB free | 20 GB+ free (for raw scanner evidence) |
+| Network | Any | Wired for stable scanning |
 
-### 3.1 Pre-Flight Diagnostics
+> These are real requirements verified at startup by `tools/system_checker.py`. The scan system check dialog (`ui/components/system_check_dialog.py`) will warn you if your machine falls below these thresholds before any scan begins.
 
-When you first execute the application (`smp-start`), the system readiness
-module is the first component to load. It performs the following sequential
-checks:
+**Supported Operating Systems:**
 
-1. **Hardware Validation:** The system queries the host kernel to verify CPU
-core count, available memory, and storage space. If the system falls below the
-minimum required specifications, a critical warning is logged, and the startup
-sequence is halted.
-2. **Network Port Binding:** The application verifies that required ports (e.g.,
-TCP 443 for the web interface, TCP 8080 for API ingestion, TCP 514 for Syslog)
-are available and not currently bound by conflicting services.
-3. **Dependency Health Check:** SMP V9.5 attempts to establish preliminary
-connections to required external services, such as the PostgreSQL database and
-the Redis caching layer. It verifies network connectivity, authentication
-credentials, and database schema versions.
-4. **Filesystem Permissions:** The readiness module scans the installation
-directories (`/opt/smp/`, `/var/log/smp/`, `/var/lib/smp/`) to ensure that the
-designated service accounts have the appropriate read, write, and execute
-permissions. Incorrect permissions are a common source of runtime errors and are
-aggressively flagged during startup.
+`setup.sh` detects your distribution and maps package names automatically. Supported families:
 
-### 3.2 Interpreting Readiness Results
+| Family | Distributions | Package Manager |
+| :--- | :--- | :--- |
+| Debian | Ubuntu 20.04/22.04/24.04, Debian 11/12, Kali, Parrot | `apt` |
+| Fedora | Fedora 39+ | `dnf` |
+| RHEL | RHEL 8+, Rocky, AlmaLinux, CentOS Stream | `dnf` |
+| Arch | Arch Linux, Manjaro, EndeavourOS, Garuda | `pacman` |
+| openSUSE | Tumbleweed, Leap 15 | `zypper` |
+| macOS | Monterey 12+ (via Homebrew) | `brew` |
 
-The results of the readiness checks are displayed in the terminal and logged to
-`/var/log/smp/startup.log`.
+> **Windows is not supported.** SMP relies on POSIX system calls (`fcntl` for the single-instance lock, `signal` for graceful shutdown, and native subprocess sandboxing). Use WSL2 on Windows.
 
-- **[PASS]:** The check completed successfully.
-- **[WARN]:** The system detected a non-critical issue (e.g., running close to minimum RAM limits). The application will start, but performance may be degraded.
-- **[FAIL]:** A critical prerequisite was not met. The application will immediately shut down. The log output will provide specific remediation steps, such as "Ensure PostgreSQL is running and accepting connections on port 5432."
+**Python requirement:** Python 3.10 or later. `setup.sh` creates an isolated virtual environment (`venv/`) so your system Python is never modified.
 
-By enforcing these strict readiness checks, SMP V9.5 guarantees that when the
-system is operational, it is running in a stable and supported configuration.
+---
+
+### 2.2 Step 1 — Clone the Repository
+
+SMP is distributed exclusively via GitHub. There are no releases or binary archives to download.
+
+```bash
+git clone https://github.com/mrQhere/SecurityManagementPlatform.git
+cd SecurityManagementPlatform
+```
+
+This gives you the full source tree including all scanner modules, the UI, the API server, and the documentation.
+
+---
+
+### 2.3 Step 2 — Run the Installer (`setup.sh`)
+
+`setup.sh` is a self-contained, non-interactive Bash script that handles the entire environment setup. You must run it at least once before launching SMP.
+
+```bash
+./setup.sh
+```
+
+**What `setup.sh` does, in order:**
+
+1. **Detects your OS and architecture** — reads `/etc/os-release` and `uname -m` to determine the correct package manager and CPU architecture (`x86_64` or `arm64`).
+2. **Updates the package index** — runs `apt update`, `dnf makecache`, `pacman -Sy`, `brew update`, or equivalent. Retries up to 5 times on network failure.
+3. **Installs system packages** — installs only what is missing (checks first with `dpkg -s`, `rpm -q`, `pacman -Q`, etc.):
+   - `python3`, `python3-pip`, `python3-venv`, `python3-dev`
+   - `libsqlcipher-dev`, `libsqlcipher0` (or `sqlcipher`, `sqlcipher-devel` depending on distro)
+   - `build-essential` / `base-devel` / `@development-tools`
+   - `nmap`, `nikto`, `ruby`, `perl`, `git`, `nodejs`, `npm`, `cargo`
+4. **Compiles SQLCipher from source** (if no pre-built library is found) — clones `sqlcipher/sqlcipher`, compiles with `DSQLITE_HAS_CODEC`, installs to `/usr/local`, and runs `ldconfig`.
+5. **Creates a Python virtual environment** at `venv/` (unless `--no-venv` is passed).
+6. **Installs Python dependencies** from `requirements.txt` into the venv. Key packages include:
+   - `PySide6` — GUI framework
+   - `pysqlcipher3` — encrypted SQLite driver
+   - `fastapi`, `uvicorn`, `slowapi` — headless API server
+   - `cryptography` — AES-256-GCM key derivation and evidence encryption
+   - `pydantic` — typed data models (Observation, Finding schemas)
+   - `sslyze`, `sqlmap`, `python-owasp-zap-v2.4`, `shodan` — embedded security tools
+7. **Downloads pinned Go security tool binaries** directly from their official GitHub Release pages. SHA-256 hashes are verified after every download. Tools are extracted into the local `bin/` directory:
+
+| Tool | Version | Source | Purpose |
+| :--- | :--- | :--- | :--- |
+| `nuclei` | v3.3.9 | projectdiscovery/nuclei | Template-based vulnerability scanner |
+| `subfinder` | v2.7.0 | projectdiscovery/subfinder | Passive subdomain enumeration |
+| `httpx` | v1.7.0 | projectdiscovery/httpx | HTTP probe and tech fingerprinting |
+| `katana` | v1.1.2 | projectdiscovery/katana | Web crawler and endpoint discovery |
+| `dnsx` | v1.2.1 | projectdiscovery/dnsx | DNS resolution and bruteforce |
+| `ffuf` | v2.1.0 | ffuf/ffuf | Web fuzzer |
+| `gitleaks` | v8.30.1 | gitleaks/gitleaks | Secret scanning in git history |
+| `dalfox` | v2.10.0 | hahwul/dalfox | XSS parameter analysis |
+| `race-the-web` | v1.0.3 | The-Z-Labs/race-the-web | Race condition exploitation |
+
+8. **Installs Node.js tools** via `npm` (globally, into the repo's local `node_modules`):
+   - `ppmap` — prototype pollution payload mapper
+   - `wscat` — WebSocket testing client
+
+9. **Logs all output** to `setup.log` in the repository root. The terminal shows a live spinner with coloured output (`✔`, `⚠`, `✘`).
+
+**Optional flags:**
+
+```bash
+./setup.sh --skip-tools   # Skip Go binary downloads (useful in AV-restricted environments)
+./setup.sh --no-venv      # Use system Python instead of creating a new venv
+./setup.sh --help         # Print usage
+```
+
+**Typical install time:** 2–5 minutes on a fast connection. SQLCipher source compilation adds ~1 minute on slower machines.
+
+---
+
+### 2.4 Step 3 — Verify the Environment (Optional but Recommended)
+
+After setup, you can run the autonomous self-check to confirm everything is functional:
+
+```bash
+python3 tools/troubleshoot.py --fix
+```
+
+This checks all Go binary paths, Python imports, and the SQLCipher linkage. The `--fix` flag automatically re-downloads missing binaries and reinstalls broken Python packages.
+
+Alternatively, run the full 12-suite integration test:
+
+```bash
+python3 tools/verify_smp.py
+```
+
+All 12 suites must report `PASS` before your environment is considered healthy.
+
+---
+
+## 3. First Launch — Encryption Setup
+
+After `setup.sh` completes, launch SMP with:
+
+```bash
+./run.sh
+```
+
+This is the only command you need to start SMP for every session.
+
+---
+
+### 3.1 What `run.sh` Does
+
+`run.sh` is a lightweight Bash launcher that handles the pre-launch checks so that `main.py` does not have to:
+
+1. **Checks for `venv/`** — if the virtual environment directory is missing (i.e., `setup.sh` was never run), it prints an error and exits immediately.
+2. **Activates `venv/`** — sources `venv/bin/activate` so all subsequent Python invocations use the isolated dependencies.
+3. **Checks for `pysqlcipher3`** — attempts `from pysqlcipher3 import dbapi2`. If it fails (e.g., `libsqlcipher.so.0` is missing from the system library path), it prints distro-specific fix instructions and exits. SMP cannot run without an encrypted database.
+4. **Checks for `libxcb-cursor0`** — required by Qt 6.5+ for the `xcb` platform plugin on Linux. If missing and the package manager is `apt`, it silently auto-installs it. If the install fails, it sets `HEADLESS_FORCED=1` to prevent a Qt crash.
+5. **Detects display server** — checks `$DISPLAY` and `$WAYLAND_DISPLAY`. If neither is set (SSH session, server, CI/CD), it automatically switches to API-only headless mode.
+6. **Launches `main.py`** — sets `PYTHONPATH` to the repository root and calls `python3 main.py` (GUI) or `python3 main.py --api` (headless).
+
+**Flags you can pass through to `main.py`:**
+
+```bash
+./run.sh --operator "Alice"   # Sets the operator name shown in scan records and reports
+./run.sh --api                # Force headless API mode even if a display is available
+./run.sh --no-lock            # Disable the single-instance lock (useful for development)
+```
+
+---
+
+### 3.2 Application Startup Sequence (`main.py`)
+
+Once `run.sh` hands off to `main.py`, the application performs these steps:
+
+1. **Single-instance lock** — acquires an exclusive, non-blocking file lock on `/tmp/.smp_runtime.lock` via `fcntl.flock()`. If another SMP instance is already running, it prints `"Another instance of SMP is already running. Exiting."` and terminates.
+2. **Signal handlers** — registers `SIGINT` and `SIGTERM` handlers for clean shutdown (releases the file lock, closes the database WAL).
+3. **Mode selection**:
+   - If `--api` was passed: starts `uvicorn` serving the FastAPI app (`api/server.py`) on `0.0.0.0:8000`. API docs are at `http://localhost:8000/api/v6/docs`.
+   - Otherwise: initialises the PySide6 GUI.
+
+---
+
+### 3.3 Splash Screen
+
+In GUI mode, the first thing you see is the **Splash Screen** (`ui/views/splash_screen.py`). It is a frameless, translucent 400×250 window with a matrix-style character decode animation. While the splash is visible, a background thread (`StartupWorker`) performs:
+
+1. **Database integrity verification** — calls `tools/encryption_manager.is_decryption_ok()` to confirm the key hierarchy is initialised.
+2. **Database schema initialisation** — calls `tools/db_manager.init_db()` to create tables (`targets`, `scans`, `findings`, `audit_log`, `evidence_store`) if they do not exist.
+3. **Workspace and log setup** — calls `tools/config_manager.init_directories()` and `tools/logger_setup.setup_logging()`.
+4. **Tool verification** — iterates over all registered tool manifests in `tools/tool_installer.TOOLS` and reports count. Calls `check_and_install_all()` to verify binary availability, emitting per-tool progress (50–80% range on the progress bar).
+5. **Interrupted scan resumption** — calls `scanners/scan_runner.resume_interrupted_scans()` to pick up any scans that were killed mid-run.
+6. **Scheduler boot** — calls `tools/scheduler.start_scheduler()` to start the APScheduler background job processor.
+
+When progress reaches 100, the splash closes and the Password Dialog opens.
+
+---
+
+### 3.4 Master Password — First Run vs. Unlock
+
+After the splash, `main.py` checks whether a master password has already been configured (`enc_manager.has_password_set()`). Based on this:
+
+**First Run (No password set yet):**
+- The `PasswordDialog` (`ui/components/password_dialog.py`) opens in `first_run=True` mode.
+- Title: `"Create Master Password"`. Size: 450×500.
+- You enter a password and confirm it.
+- A **live strength meter** grades your password across five requirements:
+  - ✅ 8+ characters
+  - ✅ Uppercase letter
+  - ✅ Lowercase letter
+  - ✅ Digit
+  - ✅ Special character
+- The password bar must reach **100/100 (Strong)** before the "Set Password" button activates.
+- On confirm, `tools/encryption_manager.set_master_password(password)` is called.
+
+**Subsequent Runs (Password already set):**
+- The `PasswordDialog` opens in `first_run=False` mode.
+- Title: `"Unlock SMP"`. Size: 450×350.
+- You enter your password and click **Unlock**.
+- A `PBKDF2Thread` (background QThread) runs the verification with a live progress bar so the UI does not freeze during key derivation.
+- **Maximum 5 wrong attempts.** After 3 wrong attempts, a countdown warning appears. After 5 wrong attempts, the dialog locks for **30 seconds** before allowing further tries.
+- If you click Cancel, the application exits cleanly (`sys.exit(0)`).
+
+---
+
+### 3.5 The 4-Layer Cryptographic Key Hierarchy
+
+SMP uses a layered key model so that the master password is never stored, and all sub-keys are protected independently:
+
+```
+Master Password (human-provided, never stored)
+       │
+       ▼
+ PBKDF2-HMAC-SHA256
+ (600,000 iterations, 32-byte random salt)
+       │
+       ▼
+ Key Encryption Key (KEK)   ← derived fresh every session
+       │
+       ├──▶ Database Encryption Key (DEK)  → unlocks database/security.db (SQLCipher AES-256)
+       ├──▶ Intelligence Encryption Key (IEK) → unlocks database/vulnerability.db
+       └──▶ Evidence Encryption Key (EEK)  → encrypts per-file scanner outputs (AES-256-GCM)
+```
+
+- **KEK** is derived fresh every time you enter your password. It is never stored anywhere.
+- **DEK, IEK, and EEK** are 256-bit random keys generated once and stored in `config/auth.json` encrypted under the KEK (AES-256-GCM).
+- If you lose your master password, **none of the data can be recovered**. There is no recovery mechanism by design.
+- All in-memory keys are cleared when the application closes: `tools/encryption_manager.KeyStore.clear_keys()` overwrites all key bytes with zeroes.
+
+---
+
+### 3.6 Password Best Practices
+
+- Use a **passphrase** of 4–6 unrelated words (e.g., `correct-horse-battery-staple-77!`) rather than a short complex string.
+- Store it in a local password manager (KeePassXC, Bitwarden local vault) **separate from the machine running SMP**.
+- There is **no password reset**. If lost, the encrypted database is unreadable. Treat the master password like a PGP private key.
+- Every time you launch SMP (even after a reboot), you must re-enter the master password. The key hierarchy is never persisted in plaintext.
 
 ---
 

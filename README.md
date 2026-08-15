@@ -74,29 +74,28 @@ Nmap Discovery → Observations → Evidence Store → CVE Intelligence Matching
 
 ## ⚡ Quick Start
 
-### Linux & macOS
+### Linux \& macOS
 
 ```bash
-# 1. Clone
+# 1. Clone the repository
 git clone https://github.com/mrQhere/SecurityManagementPlatform.git
 cd SecurityManagementPlatform
 
-# 2. Automated install (~2 min)
+# 2. Run the automated installer (handles all system packages, Python deps, and Go tools)
 ./setup.sh
 
-# 3. Verify environment integrity (auto-heal)
+# 3. Verify environment integrity (optional — auto-heals missing binaries)
 python3 tools/troubleshoot.py --fix
 
-# 4. Launch desktop GUI
+# 4. Launch the desktop GUI
 ./run.sh
+
+# — or — launch in headless API mode (no display required)
+./run.sh --api
+# API docs available at: http://localhost:8000/api/v6/docs
 ```
 
-### Docker / Enterprise (Headless API)
-
-```bash
-docker compose up -d
-# API docs: http://localhost:8000/api/v6/docs
-```
+> **Windows is not supported.** Use WSL2.
 
 ### Generate a Demo Report (no GUI required)
 
@@ -235,9 +234,9 @@ This project started as a learning exercise and evolved into a sovereign, produc
 
 Before contributing, please:
 1. Read [SECURITY.md](SECURITY.md)
-2. Ensure new scanner adapters implement the `ScannerAdapter` interface in `scanners/framework/adapter.py`
-3. Include a test fixture in `scanners/adapters/tests/`
-4. Add a scanner manifest with all required fields
+2. Ensure new scanner modules use the `@register_scanner` decorator from `scanners/core/registry.py`
+3. Include a test fixture in `tests/`
+4. Verify all 12 suites still pass: `python3 tools/verify_smp.py`
 
 ---
 
