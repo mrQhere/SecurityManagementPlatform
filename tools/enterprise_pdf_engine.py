@@ -1,5 +1,5 @@
 """
-VAPT Final Report Generator — Compliance-Ready PDF
+Security Assessment Report Generator — Compliance-Ready PDF
 ====================================================
 Generates a professional Vulnerability Assessment and Penetration Testing
 (VAPT) Final Report conforming to PCI-DSS, SOC 2, and ISO 27001 audit
@@ -55,10 +55,10 @@ _P = {
     "white":    "#111827",  # Used as primary text color
     "muted":    "#6B7280",
     "dim":      "#9CA3AF",
-    "crit":     "#DC2626",
-    "high":     "#EA580C",
-    "med":      "#D97706",
-    "low":      "#2563EB",
+    "crit":     "#991B1B",
+    "high":     "#9A3412",
+    "med":      "#92400E",
+    "low":      "#1E40AF",
     "info":     "#4B5563",
     "green":    "#059669",
 }
@@ -151,7 +151,7 @@ class _VAPTDoc(SimpleDocTemplate):
         canvas.drawString(18, 10, "SMP • Security Management Platform © mrQhere")
         
         canvas.setFont(_get_font("primary", "Helvetica"), 7)
-        canvas.drawString(200, 10, f"VAPT Final Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
+        canvas.drawString(200, 10, f"Security Assessment Report  |  Target: {self.target_url}  |  Date: {self.scan_date}")
         
         # ── V9.4.3 — Dynamic config text footer ──
         right_text = _get_text("header_right", "v{version} | Page {page}").replace("{version}", str(self.doc_version)).replace("{page}", str(canvas.getPageNumber()))
@@ -594,7 +594,7 @@ def _generate_vapt_pdf(filepath, ctx):
         _spacer(60),
         Paragraph("VULNERABILITY ASSESSMENT &amp;", st["cover_title"]),
         Paragraph("PENETRATION TESTING (VAPT)", st["cover_title"]),
-        Paragraph("FINAL REPORT", st["cover_title"]),
+        Paragraph("SECURITY ASSESSMENT", st["cover_title"]),
         _spacer(6),
         _hr(_P["accent"], thick=2),
         _spacer(10),
@@ -1335,7 +1335,7 @@ def _generate_vapt_pdf(filepath, ctx):
 
     story.append(Paragraph("Formal Attestation Letter", st["h3"]))
     attest_text = (
-        f"This Vulnerability Assessment and Penetration Testing (VAPT) Final Report has been prepared "
+        f"This Security Assessment Report has been prepared "
         f"by the Security Management Platform (SMP) automated assessment engine on behalf of the "
         f"designated Lead Penetration Tester, <b>{_esc(c['scanned_by'])}</b>.<br/><br/>"
         f"The assessment was conducted against the target system <b>{_esc(c['url'])}</b> on "
@@ -1733,7 +1733,7 @@ def _generate_html_fallback(filepath, ctx):
     CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --crit:#dc2626;--high:#ea580c;--med:#d97706;--low:#2563eb;--info:#4b5563;
+  --crit:#991B1B;--high:#9A3412;--med:#92400E;--low:#1E40AF;--info:#374151;
   --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
   --accent:#1e3a5f;--accent2:#2563eb;
 }
@@ -1741,10 +1741,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
 .page{max-width:1080px;margin:0 auto;padding:32px 20px 60px;}
 /* ── Cover ── */
-.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1d4ed8 100%);color:#f8fafc;
+.cover{background:#1F2937;color:#F9FAFB;
   border-radius:16px;padding:56px 48px 48px;margin-bottom:36px;position:relative;overflow:hidden;}
-.cover::before{content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;
-  border-radius:50%;background:rgba(255,255,255,.04);}
+.cover::before{display:none;}
 .cover-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
 .cover-logo-icon{width:40px;height:40px;background:#2563eb;border-radius:8px;
   display:flex;align-items:center;justify-content:center;font-size:20px;}
