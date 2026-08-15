@@ -1,411 +1,104 @@
-# Reports Troubleshooting
+# 📄 Reports & Evidence Troubleshooting — V9.5
 
-This document contains 50 distinct troubleshooting cases.
-
-## General Diagnostics
-The system encountered an issue related to this category. This typically occurs when the configuration is invalid, resources are exhausted, or an external dependency fails.
-
-**Copy-Paste Solutions:** Run the respective command in your terminal to instantly resolve the issue. *(Note: Ensure you have the appropriate permissions before executing administrative commands.)*
+This guide provides technical diagnosis and resolutions for report generation, cryptographic authenticity hashing, PDF rendering (WeasyPrint), and evidence store integrity.
 
 ---
 
-# Case 1: Empty Report (No Vulnerabilities) (Scenario 1)
+## Error Codes Covered
 
+| Code | Slug | Issue Description |
+|---|---|---|
+| `SMP-4010` | `evidence_storage_error` | AES-256-GCM evidence encryption or write failure |
+| `SMP-4011` | `evidence_not_found` | Requested evidence UUID missing from store |
+| `SMP-4012` | `evidence_tamper_detected` | Evidence SHA-256 checksum mismatch / tampering detected |
+| `SMP-4020` | `report_generation_error` | Report generator failed to compile report document |
+| `SMP-4021` | `report_authenticity_failed` | Canonical SHA-256 report authenticity hash mismatch |
+| `SMP-4022` | `weasyprint_render_error` | WeasyPrint HTML-to-PDF rendering failed |
+
+---
+
+## Common Scenarios & Resolutions
+
+### Scenario 1: WeasyPrint PDF Rendering Fails (`SMP-4022`)
+
+**Symptom:** Generating a PDF report raises `weasyprint.exceptions.WeasyPrintError` or falls back to Markdown.
+
+**Root Cause:** Missing Pango/Cairo native rendering libraries or Liberation fonts.
+
+**Copy-Paste Solution:**
 ```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
+# Install required rendering toolchains on Debian/Ubuntu/Kali:
+sudo apt-get update
+sudo apt-get install -y \
+  libpango-1.0-0 \
+  libharfbuzz0b \
+  libpangoft2-1.0-0 \
+  libcairo2 \
+  libgdk-pixbuf-2.0-0 \
+  libffi-dev \
+  fonts-liberation \
+  fonts-dejavu-core
+
+# Re-test PDF compilation with demo generator
+python3 tools/generate_demo_report.py --output reports/test_render
 ```
 
 ---
 
-# Case 2: JSON Export Format Error (Scenario 2)
+### Scenario 2: Report Authenticity Verification Failed (`SMP-4021`)
 
+**Symptom:** `python3 tools/verify_report.py report.json` returns `❌ Report verification FAILED: Hash mismatch`.
+
+**Root Cause:** The JSON report file was manually modified, pretty-printed with different key sorting, or corrupted after the initial cryptographic signing.
+
+**Copy-Paste Solution:**
 ```bash
-python3 tools/report_generator.py --format json --scan-id 123
+# Inspect authenticity status using verification tool
+python3 tools/verify_report.py reports/demo_report.json
+
+# Regenerate a clean signed report from raw database findings
+python3 -c "
+from tools.report_generator import ReportGenerator
+from tools.db_manager import get_findings_for_scan, get_scan
+rg = ReportGenerator('V9.5')
+# Provide scan_id to recompile canonical report
+"
 ```
 
 ---
 
-# Case 3: Report Export Timeout (Scenario 3)
+### Scenario 3: Evidence Tamper Detected (`SMP-4012`)
 
+**Symptom:** Evidence retrieval throws `SMP-4012: Evidence SHA-256 checksum mismatch`.
+
+**Root Cause:** The ciphertext file `data/evidence/<eng>/<scan>/<id>/evidence.enc` has been modified, corrupted, or replaced.
+
+**Copy-Paste Solution:**
 ```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
+# Verify checksum against registered metadata
+python3 -c "
+import hashlib, json, sys, os
+ev_dir = sys.argv[1] if len(sys.argv) > 1 else 'data/evidence/'
+for root, dirs, files in os.walk(ev_dir):
+    if 'checksum.txt' in files and 'evidence.enc' in files:
+        expected = open(os.path.join(root, 'checksum.txt')).read().strip()
+        data = open(os.path.join(root, 'evidence.enc'), 'rb').read()
+        actual = hashlib.sha256(data).hexdigest()
+        print(f'Checking {root}:', 'VALID ✅' if actual == expected else 'TAMPERED ❌')
+"
 ```
 
 ---
 
-# Case 4: CSV Delimiter Mismatch (Scenario 4)
+### Scenario 4: Generate a Test Demo Report to Verify Pipeline Health
 
+**Symptom:** Verifying that all reporting layers (JSON, Markdown, PDF, Executive Summary) are fully functional.
+
+**Copy-Paste Solution:**
 ```bash
-sed -i 's/;/|/g' report.csv
+# Generate complete demo report across all formats
+python3 tools/generate_demo_report.py --output reports/demo_verification
+
+# Inspect output files
+ls -lh reports/demo_verification.*
 ```
-
----
-
-# Case 5: PDF Generation Failed (Missing Fonts) (Scenario 5)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 6: Empty Report (No Vulnerabilities) (Scenario 6)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 7: JSON Export Format Error (Scenario 7)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 8: Report Export Timeout (Scenario 8)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 9: CSV Delimiter Mismatch (Scenario 9)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 10: PDF Generation Failed (Missing Fonts) (Scenario 10)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 11: Empty Report (No Vulnerabilities) (Scenario 11)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 12: JSON Export Format Error (Scenario 12)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 13: Report Export Timeout (Scenario 13)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 14: CSV Delimiter Mismatch (Scenario 14)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 15: PDF Generation Failed (Missing Fonts) (Scenario 15)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 16: Empty Report (No Vulnerabilities) (Scenario 16)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 17: JSON Export Format Error (Scenario 17)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 18: Report Export Timeout (Scenario 18)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 19: CSV Delimiter Mismatch (Scenario 19)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 20: PDF Generation Failed (Missing Fonts) (Scenario 20)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 21: Empty Report (No Vulnerabilities) (Scenario 21)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 22: JSON Export Format Error (Scenario 22)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 23: Report Export Timeout (Scenario 23)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 24: CSV Delimiter Mismatch (Scenario 24)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 25: PDF Generation Failed (Missing Fonts) (Scenario 25)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 26: Empty Report (No Vulnerabilities) (Scenario 26)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 27: JSON Export Format Error (Scenario 27)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 28: Report Export Timeout (Scenario 28)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 29: CSV Delimiter Mismatch (Scenario 29)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 30: PDF Generation Failed (Missing Fonts) (Scenario 30)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 31: Empty Report (No Vulnerabilities) (Scenario 31)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 32: JSON Export Format Error (Scenario 32)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 33: Report Export Timeout (Scenario 33)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 34: CSV Delimiter Mismatch (Scenario 34)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 35: PDF Generation Failed (Missing Fonts) (Scenario 35)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 36: Empty Report (No Vulnerabilities) (Scenario 36)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 37: JSON Export Format Error (Scenario 37)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 38: Report Export Timeout (Scenario 38)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 39: CSV Delimiter Mismatch (Scenario 39)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 40: PDF Generation Failed (Missing Fonts) (Scenario 40)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 41: Empty Report (No Vulnerabilities) (Scenario 41)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 42: JSON Export Format Error (Scenario 42)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 43: Report Export Timeout (Scenario 43)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 44: CSV Delimiter Mismatch (Scenario 44)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 45: PDF Generation Failed (Missing Fonts) (Scenario 45)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-
-# Case 46: Empty Report (No Vulnerabilities) (Scenario 46)
-
-```bash
-sqlite3 smp.db "SELECT count(*) FROM findings WHERE scan_id=123;"
-```
-
----
-
-# Case 47: JSON Export Format Error (Scenario 47)
-
-```bash
-python3 tools/report_generator.py --format json --scan-id 123
-```
-
----
-
-# Case 48: Report Export Timeout (Scenario 48)
-
-```bash
-export SMP_REPORT_TIMEOUT=600 && python3 tools/report_generator.py
-```
-
----
-
-# Case 49: CSV Delimiter Mismatch (Scenario 49)
-
-```bash
-sed -i 's/;/|/g' report.csv
-```
-
----
-
-# Case 50: PDF Generation Failed (Missing Fonts) (Scenario 50)
-
-```bash
-sudo apt-get install fonts-liberation && ./run.sh --generate-report
-```
-
----
-

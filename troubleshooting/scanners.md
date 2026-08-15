@@ -1,411 +1,134 @@
-# Scanners Troubleshooting
+# 🔬 Scanner & DAG Orchestration Troubleshooting — V9.5
 
-This document contains 50 distinct troubleshooting cases.
-
-## General Diagnostics
-The system encountered an issue related to this category. This typically occurs when the configuration is invalid, resources are exhausted, or an external dependency fails.
-
-**Copy-Paste Solutions:** Run the respective command in your terminal to instantly resolve the issue. *(Note: Ensure you have the appropriate permissions before executing administrative commands.)*
+This guide provides technical diagnosis and resolutions for scanner execution, Directed Acyclic Graph (DAG) topological scheduling, subprocess crashes, and tool-specific edge cases.
 
 ---
 
-# Case 1: Subfinder API Keys Missing (Scenario 1)
+## Error Codes Covered
 
+| Code | Slug | Issue Description |
+|---|---|---|
+| `SMP-2000` | `scanner_error` | Generic scanner execution failure |
+| `SMP-2001` | `scanner_timeout` | Scanner exceeded maximum execution time |
+| `SMP-2002` | `scanner_binary_missing` | Required security binary not found |
+| `SMP-2003` | `scanner_crashed` | Scanner subprocess crashed (segfault / OOM) |
+| `SMP-2004` | `scanner_output_parse_error` | Observation parser failed to decode output |
+| `SMP-2005` | `dag_cycle_detected` | Scanner dependency graph contains cycle |
+| `SMP-2006` | `invalid_state_transition` | Scanner attempted illegal state transition |
+| `SMP-2008` | `missing_dependency_tool` | Upstream parent scanner dependency failed |
+| `SMP-4040` | `exploit_timeout` | Interactive shell or exploit framework stalled |
+| `SMP-4042` | `port_collision` | Local port collision on privileged binding |
+
+---
+
+## Common Scenarios & Resolutions
+
+### Scenario 1: Nmap Requires Root Privileges for SYN Scanning (`-sS`)
+
+**Symptom:** Nmap fails with `You requested a scan type which requires root privileges. QUITTING!`.
+
+**Root Cause:** Running standard/full scans without Linux raw socket capabilities granted to the `nmap` binary.
+
+**Copy-Paste Solution:**
 ```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
+# Grant raw network capabilities to Nmap without requiring full sudo
+sudo setcap cap_net_raw,cap_net_admin,cap_net_bind_service+eip $(which nmap)
+
+# Verify capabilities
+getcap $(which nmap)
 ```
 
 ---
 
-# Case 2: Prowler AWS Credentials Failed (Scenario 2)
+### Scenario 2: DAG Dependency Cycle Detected (`SMP-2005`)
 
+**Symptom:** Scan planner fails during startup with `SMP-2005: Scanner dependency graph contains circular dependency`.
+
+**Root Cause:** Two scanner plugins declared mutually recursive dependencies in their manifests.
+
+**Copy-Paste Solution:**
 ```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
+# Validate and print DAG topological order (Kahn's algorithm)
+python3 -c "
+from scanners.core.dag import build_scanner_dag, validate_dag_acyclic
+dag = build_scanner_dag()
+is_valid, cycle = validate_dag_acyclic(dag)
+if not is_valid:
+    print('Cycle detected involving scanners:', cycle)
+else:
+    print('DAG is valid and acyclic.')
+"
 ```
 
 ---
 
-# Case 3: Trivy DB Download Timeout (Scenario 3)
+### Scenario 3: Responder Port 53 Collision (`SMP-4042`)
 
+**Symptom:** Responder crashes immediately with `[!] Error starting TCP/UDP server on port 53: [Errno 98] Address already in use`.
+
+**Root Cause:** Local caching DNS resolver (`systemd-resolved` or `dnsmasq`) is bound to UDP port 53.
+
+**Copy-Paste Solution:**
 ```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
+# Option A: Temporarily stop systemd-resolved for the duration of LLMNR/NBT-NS testing
+sudo systemctl stop systemd-resolved
+
+# Option B: Rebind systemd-resolved to 127.0.0.53 without intercepting 0.0.0.0
+sudo sed -i 's/#DNSStubListener=yes/DNSStubListener=no/' /etc/systemd/resolved.conf
+sudo systemctl restart systemd-resolved
 ```
 
 ---
 
-# Case 4: FFUF OOM (Out of Memory) (Scenario 4)
+### Scenario 4: Nuclei Community Templates Outdated or Corrupted
 
+**Symptom:** Nuclei scan produces zero findings or emits `[ERR] Could not load templates`.
+
+**Root Cause:** Nuclei template cache in `~/.local/nuclei-templates` is empty, corrupted, or incompatible with installed Nuclei version.
+
+**Copy-Paste Solution:**
 ```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
+# Force fresh update of official Nuclei templates
+nuclei -update-templates -force
+
+# Verify template syntax
+nuclei -validate
 ```
 
 ---
 
-# Case 5: Nuclei Templates Outdated (Scenario 5)
+### Scenario 5: FFUF Directory Fuzzing Out-of-Memory / High False Positives
 
+**Symptom:** FFUF process killed with `OOMKilled` (Exit code 137) or returns thousands of false 200 OK responses.
+
+**Root Cause:** Target returns generic 200 OK for custom 404 pages (soft 404), or concurrency `-t` is set too high for available RAM.
+
+**Copy-Paste Solution:**
 ```bash
-nuclei -ut
+# Configure automatic calibration and filter size in scanner profile
+ffuf -w /usr/share/wordlists/dirb/common.txt \
+  -u http://target.internal/FUZZ \
+  -ac \
+  -t 20 \
+  -p 0.1 \
+  -o work/ffuf_out.json -of json
 ```
 
 ---
 
-# Case 6: Subfinder API Keys Missing (Scenario 6)
+### Scenario 6: Metasploit / SQLMap Interactive Shell Hang (`SMP-4040`)
+
+**Symptom:** Exploitation phase hangs indefinitely at 99% CPU or blocks DAG progression.
+
+**Root Cause:** Tool dropped into interactive console prompt waiting for terminal stdin.
+
+**Copy-Paste Solution:**
+Ensure all offensive tools are executed with non-interactive batch flags:
+- **SQLMap:** `--batch --non-interactive`
+- **Metasploit:** `msfconsole -q -x "..."`
+- **Hydra:** `-I` (ignore unrecoverable connection drops)
 
 ```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
+# Test SQLMap non-interactive execution
+sqlmap -u "http://target.internal/api?id=1" --batch --smart --random-agent
 ```
-
----
-
-# Case 7: Prowler AWS Credentials Failed (Scenario 7)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 8: Trivy DB Download Timeout (Scenario 8)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 9: FFUF OOM (Out of Memory) (Scenario 9)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 10: Nuclei Templates Outdated (Scenario 10)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 11: Subfinder API Keys Missing (Scenario 11)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 12: Prowler AWS Credentials Failed (Scenario 12)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 13: Trivy DB Download Timeout (Scenario 13)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 14: FFUF OOM (Out of Memory) (Scenario 14)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 15: Nuclei Templates Outdated (Scenario 15)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 16: Subfinder API Keys Missing (Scenario 16)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 17: Prowler AWS Credentials Failed (Scenario 17)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 18: Trivy DB Download Timeout (Scenario 18)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 19: FFUF OOM (Out of Memory) (Scenario 19)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 20: Nuclei Templates Outdated (Scenario 20)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 21: Subfinder API Keys Missing (Scenario 21)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 22: Prowler AWS Credentials Failed (Scenario 22)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 23: Trivy DB Download Timeout (Scenario 23)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 24: FFUF OOM (Out of Memory) (Scenario 24)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 25: Nuclei Templates Outdated (Scenario 25)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 26: Subfinder API Keys Missing (Scenario 26)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 27: Prowler AWS Credentials Failed (Scenario 27)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 28: Trivy DB Download Timeout (Scenario 28)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 29: FFUF OOM (Out of Memory) (Scenario 29)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 30: Nuclei Templates Outdated (Scenario 30)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 31: Subfinder API Keys Missing (Scenario 31)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 32: Prowler AWS Credentials Failed (Scenario 32)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 33: Trivy DB Download Timeout (Scenario 33)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 34: FFUF OOM (Out of Memory) (Scenario 34)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 35: Nuclei Templates Outdated (Scenario 35)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 36: Subfinder API Keys Missing (Scenario 36)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 37: Prowler AWS Credentials Failed (Scenario 37)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 38: Trivy DB Download Timeout (Scenario 38)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 39: FFUF OOM (Out of Memory) (Scenario 39)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 40: Nuclei Templates Outdated (Scenario 40)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 41: Subfinder API Keys Missing (Scenario 41)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 42: Prowler AWS Credentials Failed (Scenario 42)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 43: Trivy DB Download Timeout (Scenario 43)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 44: FFUF OOM (Out of Memory) (Scenario 44)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 45: Nuclei Templates Outdated (Scenario 45)
-
-```bash
-nuclei -ut
-```
-
----
-
-# Case 46: Subfinder API Keys Missing (Scenario 46)
-
-```bash
-echo 'securitytrails: <KEY>' >> ~/.config/subfinder/provider-config.yaml
-```
-
----
-
-# Case 47: Prowler AWS Credentials Failed (Scenario 47)
-
-```bash
-export AWS_ACCESS_KEY_ID=<KEY> AWS_SECRET_ACCESS_KEY=<SECRET> && prowler aws
-```
-
----
-
-# Case 48: Trivy DB Download Timeout (Scenario 48)
-
-```bash
-trivy image --download-db-only --db-repository ghcr.io/aquasecurity/trivy-db
-```
-
----
-
-# Case 49: FFUF OOM (Out of Memory) (Scenario 49)
-
-```bash
-ffuf -w wordlist.txt -u http://target/FUZZ -t 10 -p 0.1
-```
-
----
-
-# Case 50: Nuclei Templates Outdated (Scenario 50)
-
-```bash
-nuclei -ut
-```
-
----
-

@@ -1,411 +1,177 @@
-# Api Troubleshooting
+# 🔌 API & Authentication Troubleshooting — V9.5
 
-This document contains 50 distinct troubleshooting cases.
-
-## General Diagnostics
-The system encountered an issue related to this category. This typically occurs when the configuration is invalid, resources are exhausted, or an external dependency fails.
-
-**Copy-Paste Solutions:** Run the respective command in your terminal to instantly resolve the issue. *(Note: Ensure you have the appropriate permissions before executing administrative commands.)*
+This guide provides technical diagnosis and copy-paste remediation procedures for the SMP FastAPI backend, JWT authentication, rate limiting, and WebSocket telemetry stream.
 
 ---
 
-# Case 1: JWT Token Expired (Scenario 1)
+## Error Codes Covered
 
+| Code | Slug | Issue Description |
+|---|---|---|
+| `SMP-1000` | `auth_error` | Generic authentication failure / missing Authorization header |
+| `SMP-1001` | `token_expired` | JWT bearer token expired |
+| `SMP-1002` | `invalid_credentials` | Master password or login credentials rejected |
+| `SMP-1003` | `password_policy_violation` | Master password does not satisfy complexity policy |
+| `SMP-1005` | `dek_unavailable` | Database Encryption Key not loaded (application locked) |
+| `SMP-4000` | `validation_error` | Generic request body validation failure |
+| `SMP-4001` | `invalid_target` | Malformed target URL, IP, or hostname |
+| `SMP-4002` | `invalid_payload` | Unparseable or malformed JSON payload |
+| `SMP-6000` | `scope_violation` | Target out of authorized engagement scope |
+| `SMP-6006` | `responsibility_attestation_missing` | Operator authorization attestation missing |
+
+---
+
+## Common Scenarios & Resolutions
+
+### Scenario 1: JWT Bearer Token Expired (`SMP-1001`)
+
+**Symptom:** API requests return `401 Unauthorized` with payload `{"code": "SMP-1001", "slug": "token_expired"}`.
+
+**Root Cause:** The Bearer JWT token lifetime (default 24 hours) has elapsed.
+
+**Copy-Paste Solution:**
 ```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
+# Obtain a fresh Bearer token using your master password
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v6/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"password": "YOUR_MASTER_PASSWORD"}' | jq -r .access_token)
+
+# Verify token by calling system status
+curl -s http://localhost:8000/api/v6/system/status \
+  -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ---
 
-# Case 2: CORS Preflight Failure (Scenario 2)
+### Scenario 2: Rate Limit Exceeded (`HTTP 429 Too Many Requests`)
 
+**Symptom:** High-frequency API calls return `HTTP 429` with `RateLimitExceeded`.
+
+**Root Cause:** SlowAPI limiter triggered due to exceeding the default rate ceiling (100 requests/minute per client IP).
+
+**Copy-Paste Solution:**
 ```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
+# Option A: Adjust rate limit via environment variable and restart API
+export SMP_RATE_LIMIT="500/minute"
+python3 main.py --api
+
+# Option B: Whitelist client IP in config/settings.json
+jq '.api.rate_limit_whitelist += ["192.168.1.50", "127.0.0.1"]' config/settings.json > config/settings.tmp \
+  && mv config/settings.tmp config/settings.json
 ```
 
 ---
 
-# Case 3: 502 Bad Gateway (Scenario 3)
+### Scenario 3: Database Locked / DEK Unavailable (`SMP-1005`)
 
+**Symptom:** Endpoint returns `500 Internal Server Error` with `{"code": "SMP-1005", "slug": "dek_unavailable"}`.
+
+**Root Cause:** API backend was started in headless mode without supplying the master password to derive the Database Encryption Key (DEK).
+
+**Copy-Paste Solution:**
 ```bash
-systemctl restart smp-api && journalctl -u smp-api -f
+# Authenticate and unlock the in-memory KeyStore
+curl -X POST http://localhost:8000/api/v6/auth/unlock \
+  -H "Content-Type: application/json" \
+  -d '{"master_password": "YOUR_MASTER_PASSWORD"}'
 ```
 
 ---
 
-# Case 4: SSL Certificate Expired (Scenario 4)
+### Scenario 4: Target URL Rejected (`SMP-4001`)
 
+**Symptom:** Target creation fails with `{"code": "SMP-4001", "message": "URL must start with http:// or https://"}`.
+
+**Root Cause:** Target string lacks protocol scheme or contains invalid URI characters.
+
+**Copy-Paste Solution:**
 ```bash
-certbot renew --force-renewal && systemctl restart nginx
+# Correct format: Always include scheme and valid host
+curl -X POST http://localhost:8000/api/v6/targets \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "https://target-organization.internal",
+    "company_name": "Target Org",
+    "submitted_to": "Security Operations Team"
+  }'
 ```
 
 ---
 
-# Case 5: Rate Limit Exceeded (IP Block) (Scenario 5)
+### Scenario 5: Missing Responsibility Attestation (`SMP-6006`)
 
+**Symptom:** Scan initiation returns `400 Bad Request` with `{"code": "SMP-6006", "slug": "responsibility_attestation_missing"}`.
+
+**Root Cause:** Active/intrusive testing was requested without operator attestation of written testing authorization.
+
+**Copy-Paste Solution:**
 ```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "192.168.1.50"}' -H 'Authorization: Bearer <TOKEN>'
+# Pass attestation=true in the scan launch payload
+curl -X POST http://localhost:8000/api/v6/scans \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_id": 1,
+    "scan_type": "standard",
+    "attestation": true
+  }'
 ```
 
 ---
 
-# Case 6: JWT Token Expired (Scenario 6)
+### Scenario 6: CORS Preflight Failure on Custom Frontend
 
+**Symptom:** Browser console reports: `Access to XMLHttpRequest at 'http://localhost:8000' from origin 'http://localhost:3000' has been blocked by CORS policy`.
+
+**Root Cause:** The frontend web origin is not in the FastAPI CORS `allow_origins` list.
+
+**Copy-Paste Solution:**
 ```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
+# Export allowed origins environment variable before launching API
+export SMP_CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,https://smp.internal"
+python3 main.py --api
 ```
 
 ---
 
-# Case 7: CORS Preflight Failure (Scenario 7)
+### Scenario 7: WebSocket Telemetry Stream Drops Behind Reverse Proxy
 
+**Symptom:** Real-time scan logs in dashboard disconnect after exactly 60 seconds.
+
+**Root Cause:** Nginx reverse proxy closing inactive WebSocket connections due to missing proxy headers.
+
+**Copy-Paste Solution:**
+Add WebSocket upgrade directives to `/etc/nginx/sites-available/smp`:
+
+```nginx
+location /api/v6/ws/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 86400s;
+    proxy_send_timeout 86400s;
+}
+```
 ```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ---
 
-# Case 8: 502 Bad Gateway (Scenario 8)
+### Scenario 8: Port 8000 Collision on API Startup
 
+**Symptom:** `main.py --api` fails with `[Errno 98] Address already in use`.
+
+**Root Cause:** An existing Uvicorn process or another local web service is occupying port 8000.
+
+**Copy-Paste Solution:**
 ```bash
-systemctl restart smp-api && journalctl -u smp-api -f
+# Find and terminate the process holding port 8000
+sudo fuser -k 8000/tcp
+
+# Or start SMP API on an alternative port
+python3 main.py --api --port 8080
 ```
-
----
-
-# Case 9: SSL Certificate Expired (Scenario 9)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 10: Rate Limit Exceeded (IP Block) (Scenario 10)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.10"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 11: JWT Token Expired (Scenario 11)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 12: CORS Preflight Failure (Scenario 12)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 13: 502 Bad Gateway (Scenario 13)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 14: SSL Certificate Expired (Scenario 14)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 15: Rate Limit Exceeded (IP Block) (Scenario 15)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.15"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 16: JWT Token Expired (Scenario 16)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 17: CORS Preflight Failure (Scenario 17)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 18: 502 Bad Gateway (Scenario 18)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 19: SSL Certificate Expired (Scenario 19)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 20: Rate Limit Exceeded (IP Block) (Scenario 20)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.20"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 21: JWT Token Expired (Scenario 21)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 22: CORS Preflight Failure (Scenario 22)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 23: 502 Bad Gateway (Scenario 23)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 24: SSL Certificate Expired (Scenario 24)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 25: Rate Limit Exceeded (IP Block) (Scenario 25)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.25"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 26: JWT Token Expired (Scenario 26)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 27: CORS Preflight Failure (Scenario 27)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 28: 502 Bad Gateway (Scenario 28)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 29: SSL Certificate Expired (Scenario 29)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 30: Rate Limit Exceeded (IP Block) (Scenario 30)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.30"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 31: JWT Token Expired (Scenario 31)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 32: CORS Preflight Failure (Scenario 32)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 33: 502 Bad Gateway (Scenario 33)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 34: SSL Certificate Expired (Scenario 34)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 35: Rate Limit Exceeded (IP Block) (Scenario 35)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.35"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 36: JWT Token Expired (Scenario 36)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 37: CORS Preflight Failure (Scenario 37)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 38: 502 Bad Gateway (Scenario 38)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 39: SSL Certificate Expired (Scenario 39)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 40: Rate Limit Exceeded (IP Block) (Scenario 40)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.40"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 41: JWT Token Expired (Scenario 41)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 42: CORS Preflight Failure (Scenario 42)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 43: 502 Bad Gateway (Scenario 43)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 44: SSL Certificate Expired (Scenario 44)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 45: Rate Limit Exceeded (IP Block) (Scenario 45)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.45"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-
-# Case 46: JWT Token Expired (Scenario 46)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/auth/token -u admin:<PASSWORD>
-```
-
----
-
-# Case 47: CORS Preflight Failure (Scenario 47)
-
-```bash
-export SMP_CORS_ORIGINS='*' && systemctl restart smp-api
-```
-
----
-
-# Case 48: 502 Bad Gateway (Scenario 48)
-
-```bash
-systemctl restart smp-api && journalctl -u smp-api -f
-```
-
----
-
-# Case 49: SSL Certificate Expired (Scenario 49)
-
-```bash
-certbot renew --force-renewal && systemctl restart nginx
-```
-
----
-
-# Case 50: Rate Limit Exceeded (IP Block) (Scenario 50)
-
-```bash
-curl -X POST http://localhost:8000/api/v6/admin/unban -d '{"ip": "10.0.0.50"}' -H 'Authorization: Bearer <TOKEN>'
-```
-
----
-

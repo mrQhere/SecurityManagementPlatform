@@ -1,2048 +1,938 @@
 import os
-import logging
-import threading
-from datetime import datetime
-
-from PySide6.QtCharts import QChart, QChartView, QPieSeries
+import sys
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QHeaderView,
-    QListWidget, QListWidgetItem, QTextEdit, QMessageBox, QGroupBox,
-    QSplitter, QFrame, QStackedWidget, QFormLayout, QCheckBox, QComboBox,
-    QScrollArea, QSizePolicy, QSpacerItem
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QGridLayout, QLabel, QPushButton, QStackedWidget, QTableWidget, 
+    QTableWidgetItem, QSplitter, QListWidget, QLineEdit, QComboBox, 
+    QFrame, QProgressBar, QTextEdit, QGroupBox, QTabWidget, QCheckBox,
+    QSizePolicy, QFormLayout, QHeaderView, QAbstractItemView, QToolBar,
+    QStatusBar, QSpacerItem, QScrollArea, QDialog
 )
-from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QThread, Signal
-from PySide6.QtGui import QFont, QColor, QBrush, QPalette, QFontDatabase, QTextCursor, QPainter
-import hashlib
+from PySide6.QtCore import Qt, QSize, Signal, Slot, QTimer
+from PySide6.QtGui import QIcon, QFont, QColor, QPalette, QCursor
 
-class WorkerThread(QThread):
-    finished_signal = Signal(object)
+# Try to import custom components, fallback to stub if not available
+try:
+    from ui.components.stat_card import StatCard
+except ImportError:
+    class StatCard(QFrame):
+        """Fallback StatCard if component is not found."""
+        def __init__(self, title, value="0", parent=None):
+            super().__init__(parent)
+            self.setObjectName(f"statCard_{title.replace(' ', '')}")
+            self.setFrameShape(QFrame.StyledPanel)
+            self.setFrameShadow(QFrame.Raised)
+            self.setStyleSheet("""
+                QFrame {
+                    background-color: #2b2b2b;
+                    border-radius: 8px;
+                    border: 1px solid #3d3d3d;
+                    padding: 15px;
+                }
+            """)
+            layout = QVBoxLayout(self)
+            self.lbl_title = QLabel(title)
+            self.lbl_title.setStyleSheet("color: #aaaaaa; font-size: 14px; font-weight: bold;")
+            self.lbl_value = QLabel(value)
+            self.lbl_value.setStyleSheet("color: #ffffff; font-size: 28px; font-weight: bold;")
+            self.lbl_value.setAlignment(Qt.AlignCenter)
+            layout.addWidget(self.lbl_title)
+            layout.addWidget(self.lbl_value)
+            layout.addStretch()
 
-    def __init__(self, target_func, *args, **kwargs):
-        super().__init__()
-        self.target_func = target_func
-        self.args = args
-        self.kwargs = kwargs
-
-    def run(self):
-        try:
-            res = self.target_func(*self.args, **self.kwargs)
-            self.finished_signal.emit((True, res))
-        except Exception as e:
-            self.finished_signal.emit((False, e))
-
-from tools.db_manager import (
-    get_targets, add_target, delete_target, set_target_status,
-    get_active_scans, get_cves, get_cve_stats, get_log_entries
-)
-from tools.config_manager import load_settings, save_settings
-
-logger = logging.getLogger("smp")
-
-
-# ─── Helper DB Helpers ────────────────────────────────────────────────────────
-
-def get_latest_risk_score_for_target(target_id):
-    from tools.db_manager import get_db_connection
-    conn = get_db_connection()
-    try:
-        row = conn.execute("""
-            SELECT rs.score, rs.rating FROM risk_scores rs
-            JOIN scans s ON rs.scan_id = s.id
-            WHERE s.target_id = ?
-            ORDER BY s.id DESC LIMIT 1
-        """, (target_id,)).fetchone()
-        return dict(row) if row else None
-    except Exception as e:
-        from tools.errors import SMPUnclassifiedError
-        import traceback
-        import logging
-        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-        raise SMPUnclassifiedError(str(e))
-        return None
-    finally:
-        conn.close()
+        def set_value(self, val):
+            self.lbl_value.setText(str(val))
 
 
-def get_latest_scan_operator_for_target(target_id):
-    from tools.db_manager import get_db_connection
-    conn = get_db_connection()
-    try:
-        row = conn.execute("""
-            SELECT s.scanned_by FROM scans s
-            WHERE s.target_id = ?
-            ORDER BY s.id DESC LIMIT 1
-        """, (target_id,)).fetchone()
-        return row["scanned_by"] if (row and row["scanned_by"]) else "N/A"
-    except Exception as e:
-        from tools.errors import SMPUnclassifiedError
-        import traceback
-        import logging
-        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-        raise SMPUnclassifiedError(str(e))
-        return "N/A"
-    finally:
-        conn.close()
+try:
+    from ui.components.finding_panel import FindingDetailPanel
+except ImportError:
+    class FindingDetailPanel(QFrame):
+        """Fallback FindingDetailPanel if component is not found."""
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setObjectName("findingDetailPanel")
+            self.setFrameShape(QFrame.StyledPanel)
+            self.hide()
+            layout = QVBoxLayout(self)
+            layout.addWidget(QLabel("Finding Details Overlay Placeholder"))
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(self.hide)
+            layout.addWidget(close_btn)
 
-
-# ─── SMP Dark Professional Stylesheet ─────────────────────────────────────────
-
-APPLE_STYLESHEET = """
-/* ═══════════════════════════════════════════════════════════
-   SMP Dark Theme — Professional Edition
-   ═══════════════════════════════════════════════════════════ */
-
-/* ── Root ── */
-QMainWindow, QWidget {
-    background-color: #0D0D0D;
-    color: #E0E0E0;
-    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Inter", Arial, sans-serif;
-    font-size: 13px;
-    border: none;
-    outline: none;
-}
-
-/* ── Tooltip ── */
-QToolTip {
-    background-color: #1E1E1E;
-    color: #DDDDDD;
-    border: 1px solid #3A3A3A;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 12px;
-}
-
-/* ── Sidebar ── */
-QFrame#sidebar {
-    background-color: #0A0A0A;
-    border-right: 1px solid #1A1A1A;
-}
-
-QLabel#brand_label {
-    color: #FFFFFF;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 0px 20px;
-    background-color: transparent;
-}
-
-QLabel#brand_sub {
-    color: #555555;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    padding: 0px 20px 16px 20px;
-    background-color: transparent;
-}
-
-QPushButton#nav_btn {
-    background-color: transparent;
-    color: #666666;
-    border: none;
-    border-left: 2px solid transparent;
-    border-radius: 0px;
-    padding: 11px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    text-align: left;
-}
-QPushButton#nav_btn:hover {
-    background-color: #141414;
-    color: #AAAAAA;
-    border-left: 2px solid #333333;
-}
-QPushButton#nav_btn[active="true"] {
-    background-color: #141414;
-    color: #FFFFFF;
-    font-weight: 600;
-    border-left: 2px solid #007AFF;
-}
-
-/* ── Content Area ── */
-QFrame#content_area {
-    background-color: #0D0D0D;
-}
-
-/* ── Page Title ── */
-QLabel#page_title {
-    color: #FFFFFF;
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    padding: 4px 0px;
-}
-QLabel#page_subtitle {
-    color: #555555;
-    font-size: 12px;
-    padding: 0px 0px 8px 0px;
-    letter-spacing: 0.2px;
-}
-
-/* ── Cards ── */
-QFrame#card {
-    background-color: #141414;
-    border: 1px solid #222222;
-    border-radius: 10px;
-}
-QFrame#card_highlight {
-    background-color: #141414;
-    border: 1px solid #444444;
-    border-radius: 10px;
-}
-QFrame#kpi_card {
-    background-color: #141414;
-    border: 1px solid #222222;
-    border-radius: 10px;
-}
-
-/* ── Group Boxes ── */
-QGroupBox {
-    background-color: #141414;
-    border: 1px solid #222222;
-    border-radius: 10px;
-    margin-top: 20px;
-    padding: 20px 16px 16px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #AAAAAA;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 16px;
-    top: 8px;
-    padding: 0 8px;
-    color: #888888;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-/* ── Buttons ── */
-QPushButton {
-    background-color: #1E1E1E;
-    color: #DDDDDD;
-    border: 1px solid #333333;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    min-height: 20px;
-}
-QPushButton:hover {
-    background-color: #282828;
-    border-color: #444444;
-    color: #FFFFFF;
-}
-QPushButton:pressed {
-    background-color: #111111;
-}
-QPushButton:focus {
-    border: 1px solid #007AFF;
-    outline: none;
-}
-QPushButton:disabled {
-    background-color: #161616;
-    color: #333333;
-    border-color: #222222;
-}
-QPushButton#btn_secondary {
-    background-color: transparent;
-    color: #888888;
-    border: 1px solid #2A2A2A;
-}
-QPushButton#btn_secondary:hover {
-    background-color: #1A1A1A;
-    color: #CCCCCC;
-    border-color: #333333;
-}
-QPushButton#btn_danger {
-    background-color: #2A0D0D;
-    color: #FF6B6B;
-    border: 1px solid #3D1515;
-}
-QPushButton#btn_danger:hover {
-    background-color: #3D1515;
-    color: #FF4444;
-}
-QPushButton#btn_success {
-    background-color: #0D2A15;
-    color: #5ADB7E;
-    border: 1px solid #153D22;
-}
-QPushButton#btn_success:hover {
-    background-color: #153D22;
-    color: #44FF77;
-}
-QPushButton#btn_warning {
-    background-color: #2A1D00;
-    color: #FFAA44;
-    border: 1px solid #3D2B00;
-}
-QPushButton#btn_small {
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    min-height: 14px;
-}
-
-/* ── Inputs ── */
-QLineEdit {
-    background-color: #111111;
-    border: 1px solid #2A2A2A;
-    border-radius: 6px;
-    padding: 8px 12px;
-    color: #E0E0E0;
-    font-size: 13px;
-    selection-background-color: #444444;
-}
-QLineEdit:focus {
-    border: 1px solid #555555;
-    background-color: #161616;
-}
-QLineEdit::placeholder {
-    color: #333333;
-}
-
-QComboBox {
-    background-color: #111111;
-    border: 1px solid #2A2A2A;
-    border-radius: 6px;
-    padding: 8px 12px;
-    color: #E0E0E0;
-    font-size: 13px;
-    min-width: 120px;
-}
-QComboBox:focus {
-    border: 1px solid #555555;
-}
-QComboBox::drop-down {
-    border: none;
-    width: 24px;
-}
-QComboBox QAbstractItemView {
-    background-color: #141414;
-    border: 1px solid #2A2A2A;
-    border-radius: 6px;
-    selection-background-color: #2A2A2A;
-    selection-color: #FFFFFF;
-    padding: 4px;
-    color: #E0E0E0;
-}
-
-QCheckBox {
-    color: #AAAAAA;
-    font-size: 13px;
-    spacing: 8px;
-}
-QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    border: 1px solid #333333;
-    background-color: #111111;
-}
-QCheckBox::indicator:checked {
-    background-color: #007AFF;
-    border-color: #007AFF;
-}
-QCheckBox::indicator:hover {
-    border-color: #444444;
-}
-
-/* ── Tables ── */
-QTableWidget {
-    background-color: #111111;
-    border: 1px solid #222222;
-    border-radius: 8px;
-    gridline-color: #1A1A1A;
-    selection-background-color: #222222;
-    selection-color: #FFFFFF;
-    alternate-background-color: #131313;
-    font-size: 13px;
-    color: #CCCCCC;
-}
-QTableWidget::item {
-    padding: 6px 10px;
-    border: none;
-}
-QTableWidget::item:selected {
-    background-color: #222222;
-    color: #FFFFFF;
-}
-QHeaderView {
-    background-color: transparent;
-}
-QHeaderView::section {
-    background-color: #0D0D0D;
-    color: #555555;
-    padding: 10px 10px;
-    border: none;
-    border-bottom: 1px solid #1E1E1E;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-QHeaderView::section:first {
-    border-top-left-radius: 7px;
-}
-QHeaderView::section:last {
-    border-top-right-radius: 7px;
-}
-
-/* ── Lists ── */
-QListWidget {
-    background-color: #111111;
-    border: 1px solid #222222;
-    border-radius: 8px;
-    padding: 4px;
-    font-size: 13px;
-    color: #CCCCCC;
-}
-QListWidget::item {
-    padding: 9px 12px;
-    border-radius: 4px;
-    border-bottom: 1px solid #1A1A1A;
-    color: #CCCCCC;
-}
-QListWidget::item:last {
-    border-bottom: none;
-}
-QListWidget::item:hover {
-    background-color: #1A1A1A;
-}
-QListWidget::item:selected {
-    background-color: #222222;
-    color: #FFFFFF;
-}
-
-/* ── Text Areas ── */
-QTextEdit {
-    background-color: #0A0A0A;
-    border: 1px solid #1E1E1E;
-    border-radius: 8px;
-    font-family: "Menlo", "Monaco", "Courier New", monospace;
-    font-size: 12px;
-    color: #CCCCCC;
-    padding: 14px;
-    line-height: 1.6;
-    selection-background-color: #333333;
-}
-
-/* ── Scroll Bars ── */
-QScrollBar:vertical {
-    border: none;
-    background: transparent;
-    width: 6px;
-    margin: 0;
-}
-QScrollBar::handle:vertical {
-    background: #2A2A2A;
-    min-height: 32px;
-    border-radius: 3px;
-}
-QScrollBar::handle:vertical:hover {
-    background: #383838;
-}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-QScrollBar:horizontal {
-    border: none;
-    background: transparent;
-    height: 6px;
-    margin: 0;
-}
-QScrollBar::handle:horizontal {
-    background: #2A2A2A;
-    min-width: 32px;
-    border-radius: 3px;
-}
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
-
-/* ── Splitter ── */
-QSplitter::handle {
-    background: #1E1E1E;
-    width: 1px;
-    height: 1px;
-}
-
-/* ── Form Layout Labels ── */
-QLabel#form_label {
-    color: #888888;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-}
-
-/* ── All labels default ── */
-QLabel {
-    color: #CCCCCC;
-    background: transparent;
-}
-
-/* ── Small buttons ── */
-QPushButton#btn_small {
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    min-height: 14px;
-    background-color: #1A1A1A;
-    color: #AAAAAA;
-    border: 1px solid #2A2A2A;
-}
-QPushButton#btn_small:hover {
-    background-color: #222222;
-    color: #DDDDDD;
-}
-
-/* ── Status Badges ── */
-QLabel#badge_green {
-    color: #5ADB7E;
-    background-color: #0D2018;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-QLabel#badge_red {
-    color: #FF6B6B;
-    background-color: #2A0D0D;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-QLabel#badge_orange {
-    color: #FFAA44;
-    background-color: #2A1800;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-QLabel#badge_blue {
-    color: #88BBFF;
-    background-color: #0D1A2A;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-QLabel#badge_gray {
-    color: #888888;
-    background-color: #1A1A1A;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-/* ── Divider ── */
-QFrame#divider {
-    background-color: #1E1E1E;
-    max-height: 1px;
-    min-height: 1px;
-}
-
-/* ── Message Box ── */
-QMessageBox {
-    background-color: #141414;
-    color: #CCCCCC;
-}
-QMessageBox QLabel {
-    color: #CCCCCC;
-}
-QDialog {
-    background-color: #141414;
-    color: #CCCCCC;
-}
-"""
-
-
-
+        def show_finding(self, finding_data=None):
+            self.show()
 
 
 class DashboardLayoutMixin:
-    # ─── UI Layout ─────────────────────────────────────────────────────────────
+    """
+    Mixin class that provides the UI layout for the SMP V9.5 Dashboard.
+    The main DashboardWindow should inherit from this.
+    """
+
+    PAGE_NAMES = [
+        ('📊', 'Dashboard'),       # index 0
+        ('🎯', 'Targets'),         # index 1  
+        ('🚨', 'Active Scans'),    # index 2
+        ('🔍', 'Findings'),        # index 3
+        ('🧠', 'Intelligence'),    # index 4
+        ('🌐', 'Assets'),          # index 5
+        ('📄', 'Reports'),         # index 6
+        ('📤', 'Exporter'),        # index 7
+        ('🔧', 'Scanners'),        # index 8
+        ('⚙️', 'Settings'),        # index 9
+    ]
 
     def _setup_ui(self):
-        root = QWidget()
-        self.setCentralWidget(root)
-        root_layout = QHBoxLayout(root)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
+        """Main entry point to setup the UI."""
+        self.setObjectName("DashboardWindow")
+        if hasattr(self, 'setWindowTitle'):
+            self.setWindowTitle("SMP V9.5 - Security Management Platform")
+            self.resize(1400, 900)
 
-        # Sidebar
-        sidebar = self._build_sidebar()
-        root_layout.addWidget(sidebar)
+        # Main central widget
+        self.central_widget = QWidget()
+        self.central_widget.setObjectName("centralWidget")
+        if hasattr(self, 'setCentralWidget'):
+            self.setCentralWidget(self.central_widget)
 
-        # Content
-        self.content_stack = QStackedWidget()
-        self.content_stack.setObjectName("content_area")
+        # Main horizontal layout: Sidebar + Content
+        self.main_layout = QHBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
 
-        pages = [
-            self._build_dashboard_page,
-            self._build_brain_page,
-            self._build_targets_page,
-            self._build_intel_page,
-            self._build_settings_page,
-            self._build_prof_settings_page,
-            self._build_logs_page,
-            self._build_reports_page,
-        ]
-        for fn in pages:
-            self.content_stack.addWidget(fn())
+        # 1. Sidebar
+        self._create_sidebar()
 
-        root_layout.addWidget(self.content_stack, 1)
+        # 2. Content Stack
+        self._create_content_stack()
 
-        # Set initial page after content_stack is fully built
-        self._switch_page(0)
+        # 3. Status Bar
+        self._setup_status_bar()
 
-    def _build_sidebar(self):
-        sidebar = QFrame()
-        sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(220)
+    def _create_sidebar(self):
+        """Creates the left navigation sidebar."""
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("sidebarFrame")
+        self.sidebar.setFixedWidth(220)
+        self.sidebar.setStyleSheet("""
+            QFrame#sidebarFrame {
+                background-color: #1e1e1e;
+                border-right: 1px solid #333333;
+            }
+        """)
 
-        layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(12, 28, 12, 20)
-        layout.setSpacing(2)
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(10, 20, 10, 15)
+        sidebar_layout.setSpacing(5)
 
-        # Brand — no borders, clean text only
-        brand = QLabel("SMP")
-        brand.setObjectName("brand_label")
-        brand.setStyleSheet("color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; padding: 0 20px; border: none; background-color: transparent;")
-        layout.addWidget(brand)
-
-        brand_sub = QLabel("SECURITY PLATFORM")
-        brand_sub.setObjectName("brand_sub")
-        brand_sub.setStyleSheet("color: #444444; font-size: 10px; letter-spacing: 1.5px; padding: 0 20px 14px 20px; border: none; background-color: transparent;")
-        layout.addWidget(brand_sub)
-
-        # Divider
-        div = QFrame()
-        div.setObjectName("divider")
-        div.setFixedHeight(1)
-        layout.addWidget(div)
-        layout.addSpacing(12)
+        # Top: Logo area
+        logo_layout = QVBoxLayout()
+        logo_layout.setSpacing(2)
+        
+        self.lbl_logo = QLabel("SMP")
+        self.lbl_logo.setObjectName("lblLogo")
+        logo_font = QFont("Arial", 28, QFont.Bold)
+        self.lbl_logo.setFont(logo_font)
+        self.lbl_logo.setStyleSheet("color: #4a90e2; letter-spacing: 2px;")
+        self.lbl_logo.setAlignment(Qt.AlignCenter)
+        
+        self.lbl_subtitle = QLabel("V9.5")
+        self.lbl_subtitle.setObjectName("lblSubtitle")
+        self.lbl_subtitle.setStyleSheet("color: #888888; font-size: 12px; font-weight: bold; letter-spacing: 4px;")
+        self.lbl_subtitle.setAlignment(Qt.AlignCenter)
+        
+        logo_layout.addWidget(self.lbl_logo)
+        logo_layout.addWidget(self.lbl_subtitle)
+        
+        sidebar_layout.addLayout(logo_layout)
+        sidebar_layout.addSpacing(30)
 
         # Nav buttons
         self._nav_buttons = []
-        nav_items = [
-            ("  Dashboard", 0),
-            ("  Neural Brain", 1),
-            ("  Targets", 2),
-            ("  Threat Intel", 3),
-            ("  Settings", 4),
-            ("  Professional Settings", 5),
-            ("  Audit Logs", 6),
-            ("  Reports", 7),
-        ]
-        for label, idx in nav_items:
-            btn = QPushButton(label)
-            btn.setObjectName("nav_btn")
-            btn.setProperty("active", "false")
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.clicked.connect(lambda _, i=idx: self._switch_page(i))
-            layout.addWidget(btn)
+        for index, (icon, text) in enumerate(self.PAGE_NAMES):
+            btn = QPushButton(f"{icon}  {text}")
+            btn.setObjectName(f"navBtn_{index}")
+            btn.setCheckable(True)
+            btn.setAutoExclusive(True)
+            btn.setCursor(QCursor(Qt.PointingHandCursor))
+            btn.setStyleSheet("""
+                QPushButton {
+                    text-align: left;
+                    padding: 10px 15px;
+                    border: none;
+                    border-radius: 6px;
+                    color: #d4d4d4;
+                    font-size: 14px;
+                    font-weight: 500;
+                    background-color: transparent;
+                }
+                QPushButton:hover {
+                    background-color: #2d2d2d;
+                    color: #ffffff;
+                }
+                QPushButton:checked {
+                    background-color: #0d47a1;
+                    color: #ffffff;
+                    font-weight: bold;
+                }
+            """)
+            btn.clicked.connect(lambda checked, idx=index: self._nav_clicked(idx))
             self._nav_buttons.append(btn)
+            sidebar_layout.addWidget(btn)
 
-        layout.addStretch()
+        if self._nav_buttons:
+            self._nav_buttons[0].setChecked(True)
 
-        # Version label
-        ver = QLabel(f"{getattr(self, 'version', 'V9.4.3')} • SMP Console")
-        ver.setObjectName("brand_sub")
-        ver.setAlignment(Qt.AlignCenter)
-        layout.addWidget(ver)
+        sidebar_layout.addStretch()
 
-        return sidebar
+        # Bottom: Version Label
+        self.lbl_version_info = QLabel("V9.5 Build 2026\nby mrQhere")
+        self.lbl_version_info.setObjectName("lblVersionInfo")
+        self.lbl_version_info.setStyleSheet("color: #555555; font-size: 10px;")
+        self.lbl_version_info.setAlignment(Qt.AlignCenter)
+        sidebar_layout.addWidget(self.lbl_version_info)
 
-    def _switch_page(self, idx):
-        PAGE_NAMES = ["Dashboard", "Neural Brain", "Targets", "Threat Intel", "Settings", "Audit Logs", "Reports"]
-        page_name = PAGE_NAMES[idx] if idx < len(PAGE_NAMES) else str(idx)
-        logger.info(f"UI Navigation: switched to '{page_name}' page")
-        self.content_stack.setCurrentIndex(idx)
-        for i, btn in enumerate(self._nav_buttons):
-            btn.setProperty("active", "true" if i == idx else "false")
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+        self.main_layout.addWidget(self.sidebar)
 
-    # ─── Page: Dashboard ───────────────────────────────────────────────────────
-
-    def _build_dashboard_page(self):
-        page, layout = self._make_page()
-
-        # Header row with title + refresh button
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Dashboard", "Overview of your security monitoring platform")
-        hrow.addStretch()
-        btn_refresh = QPushButton("↻  Refresh")
-        btn_refresh.setObjectName("btn_secondary")
-        btn_refresh.setToolTip("Restart the entire application to recover from a stuck state")
-        btn_refresh.clicked.connect(self._restart_application)
-        hrow.addWidget(btn_refresh)
-        
-        btn_scan_all = QPushButton("▶  Scan All Targets")
-        btn_scan_all.setObjectName("btn_primary")
-        btn_scan_all.setToolTip("Trigger a manual scan for all enabled targets")
-        btn_scan_all.clicked.connect(self._scan_all_targets)
-        hrow.addWidget(btn_scan_all)
-        
-        btn_export = QPushButton("📦  Export All Data")
-        btn_export.setObjectName("btn_warning")
-        btn_export.setToolTip("Export all raw DB data, reports, and logs to a ZIP file")
-        btn_export.clicked.connect(self._export_all_data)
-        hrow.addWidget(btn_export)
-        
-        layout.addLayout(hrow)
-
-        # KPI Row
-        kpi_row = QHBoxLayout()
-        kpi_row.setSpacing(14)
-        self.card_targets, self.lbl_kpi_targets = self._make_kpi("MONITORED TARGETS", "0", "#007AFF")
-        self.card_intel,   self.lbl_kpi_intel   = self._make_kpi("CVE DATABASE",       "0", "#AF52DE")
-        self.card_scans,   self.lbl_kpi_scans   = self._make_kpi("ACTIVE SCANS",       "None", "#34C759")
-        self.card_status,  self.lbl_kpi_status  = self._make_kpi("EMAIL ALERTS",       "Not Set", "#FF9500")
-        for card in [self.card_targets, self.card_intel, self.card_scans, self.card_status]:
-            kpi_row.addWidget(card)
-        layout.addLayout(kpi_row)
-
-        # Bottom splitter
-        self.dashboard_splitter = QSplitter(Qt.Horizontal)
-        self.dashboard_splitter.setHandleWidth(1)
-
-        # Left: target summary table
-        left_card = self._make_card("Target Risk Summary")
-        left_layout = left_card.layout()
-        self.tbl_dashboard_targets = QTableWidget(0, 3)
-        self.tbl_dashboard_targets.setHorizontalHeaderLabels(["Target URL", "Status", "Risk"])
-        self.tbl_dashboard_targets.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.tbl_dashboard_targets.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.tbl_dashboard_targets.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.tbl_dashboard_targets.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tbl_dashboard_targets.setAlternatingRowColors(True)
-        self.tbl_dashboard_targets.verticalHeader().setVisible(False)
-        left_layout.addWidget(self.tbl_dashboard_targets)
-        self.dashboard_splitter.addWidget(left_card)
-
-        # Right: events feed
-        right_card = self._make_card("Recent Security Events")
-        right_layout = right_card.layout()
-        self.lst_dashboard_updates = QListWidget()
-        right_layout.addWidget(self.lst_dashboard_updates)
-        self.dashboard_splitter.addWidget(right_card)
-        self.dashboard_splitter.setSizes([500, 300])
-
-        layout.addWidget(self.dashboard_splitter, 1)
-
-        return page
-
-    def _scan_all_targets(self):
-        """Triggers a scan for all enabled targets."""
-        from scanners.scan_runner import is_target_scanning
-        targets = get_targets()
-        enabled_targets = [t for t in targets if t.get("status") == "Enabled" and not is_target_scanning(t["id"])]
-        
-        if not enabled_targets:
-            QMessageBox.information(self, "Scan All", "No enabled targets available to scan (or they are already scanning).")
-            return
-            
-        reply = QMessageBox.question(self, "Scan All Targets", f"Are you sure you want to trigger a manual scan for {len(enabled_targets)} targets?", QMessageBox.Yes | QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            for t in enabled_targets:
-                self.trigger_manual_scan(t)
-
-    # ─── Page: Targets ─────────────────────────────────────────────────────────
-
-    def _build_targets_page(self):
-        page, layout = self._make_page()
-
-        # Header row
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Targets", "Scan pipeline management")
-        hrow.addStretch()
-        self.btn_sync = QPushButton("↻  Sync Threat Intel")
-        self.btn_sync.setToolTip("Query NVD, CISA, and GitHub Advisories APIs now")
-        self.btn_sync.clicked.connect(self.force_intel_sync)
-        hrow.addWidget(self.btn_sync)
-        layout.addLayout(hrow)
-
-        # Add target card
-        add_card = self._make_card("Add New Target")
-        add_layout = add_card.layout()
-        
-        # Row 1: Target URL
-        add_row = QHBoxLayout()
-        self.txt_url = QLineEdit()
-        self.txt_url.setPlaceholderText("https://example.com  —  domain or IP address")
-        self.txt_url.returnPressed.connect(self.add_new_target)
-        btn_add = QPushButton("Add Target")
-        btn_add.clicked.connect(self.add_new_target)
-        add_row.addWidget(self.txt_url, 1)
-        add_row.addWidget(btn_add)
-        
-        # Row 2: Company Info for Report
-        company_row = QHBoxLayout()
-        self.txt_company_name = QLineEdit()
-        self.txt_company_name.setPlaceholderText("Target Company Name (for Report)")
-        self.txt_submitted_to = QLineEdit()
-        self.txt_submitted_to.setPlaceholderText("Submitted To (Recipient Name)")
-        company_row.addWidget(self.txt_company_name)
-        company_row.addWidget(self.txt_submitted_to)
-        
-        add_layout.addLayout(add_row)
-        add_layout.addLayout(company_row)
-        layout.addWidget(add_card)
-
-        # Targets table card
-        tbl_card = self._make_card("Configured Targets")
-        tbl_layout = tbl_card.layout()
-        self.tbl_targets = QTableWidget(0, 6)
-        self.tbl_targets.setHorizontalHeaderLabels(
-            ["URL", "Status", "Risk", "Last Scan", "Operator", "Actions"]
-        )
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        self.tbl_targets.horizontalHeader().setSectionResizeMode(5, QHeaderView.Fixed)
-        self.tbl_targets.setColumnWidth(5, 280)
-        self.tbl_targets.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tbl_targets.setAlternatingRowColors(True)
-        self.tbl_targets.verticalHeader().setVisible(False)
-        tbl_layout.addWidget(self.tbl_targets)
-
-        # Ongoing scans card — full-featured scan monitor
-        scan_card = self._make_card("")
-        scan_card_layout = scan_card.layout()
-        scan_card_layout.setSpacing(0)
-        scan_card_layout.setContentsMargins(0, 0, 0, 0)
-
-        # Header row with live indicator
-        scan_header = QWidget()
-        scan_header.setFixedHeight(44)
-        scan_header.setStyleSheet(
-            "background: #0F0F0F; border-radius: 8px 8px 0 0; "
-            "border-bottom: 1px solid #1E1E1E;"
-        )
-        scan_header_row = QHBoxLayout(scan_header)
-        scan_header_row.setContentsMargins(14, 0, 14, 0)
-
-        self.lbl_scan_pulse = QLabel("●")
-        self.lbl_scan_pulse.setStyleSheet("color: #34C759; font-size: 10px; padding-right: 6px;")
-        scan_header_row.addWidget(self.lbl_scan_pulse)
-
-        lbl_scan_title = QLabel("Active Scan Monitor")
-        lbl_scan_title.setStyleSheet(
-            "color: #CCCCCC; font-size: 12px; font-weight: 700; letter-spacing: 0.3px;"
-        )
-        scan_header_row.addWidget(lbl_scan_title)
-        scan_header_row.addStretch()
-
-        self.lbl_scan_count = QLabel("0 running")
-        self.lbl_scan_count.setStyleSheet(
-            "color: #555555; font-size: 11px; padding: 2px 8px; "
-            "background: #1A1A1A; border-radius: 8px;"
-        )
-        scan_header_row.addWidget(self.lbl_scan_count)
-        scan_card_layout.addWidget(scan_header)
-
-        # Scrollable scan list
-        self.lst_scans = QListWidget()
-        self.lst_scans.setMinimumHeight(300)
-        self.lst_scans.setStyleSheet("""
-            QListWidget {
-                background: #0D0D0D;
-                border: none;
-                border-radius: 0 0 8px 8px;
-                padding: 4px;
-                outline: none;
+    def _create_content_stack(self):
+        """Creates the main content area with a stacked widget for pages."""
+        self.content_stack = QStackedWidget()
+        self.content_stack.setObjectName("contentStack")
+        self.content_stack.setStyleSheet("""
+            QStackedWidget#contentStack {
+                background-color: #121212;
             }
-            QListWidget::item {
-                background: transparent;
-                border-radius: 6px;
-                margin: 2px 4px;
-            }
-            QListWidget::item:selected {
-                background: #141414;
-            }
-            QScrollBar:vertical {
-                background: #0D0D0D;
-                width: 4px;
-                border-radius: 2px;
-            }
-            QScrollBar::handle:vertical {
-                background: #333333;
-                border-radius: 2px;
-            }
+            QLabel { color: #e0e0e0; }
         """)
-        scan_card_layout.addWidget(self.lst_scans)
 
-        # Vertical splitter — targets on top, scan monitor below
-        self.targets_splitter = QSplitter(Qt.Vertical)
-        self.targets_splitter.setHandleWidth(4)
-        self.targets_splitter.setStyleSheet(
-            "QSplitter::handle { background: #1A1A1A; border-radius: 2px; }"
-        )
-        self.targets_splitter.addWidget(tbl_card)
-        self.targets_splitter.addWidget(scan_card)
-        self.targets_splitter.setSizes([350, 400])
-        layout.addWidget(self.targets_splitter, 1)
+        # Initialize pages
+        self._setup_page_0_dashboard()
+        self._setup_page_1_targets()
+        self._setup_page_2_active_scans()
+        self._setup_page_3_findings()
+        self._setup_page_4_intelligence()
+        self._setup_page_5_assets()
+        self._setup_page_6_reports()
+        self._setup_page_7_exporter()
+        self._setup_page_8_scanners()
+        self._setup_page_9_settings()
 
-        return page
+        self.main_layout.addWidget(self.content_stack, 1)
 
-    # ─── Page: Threat Intel ────────────────────────────────────────────────────
+    def _setup_page_0_dashboard(self):
+        page = QWidget()
+        page.setObjectName("pageDashboard")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
 
-    def _build_intel_page(self):
-        page, layout = self._make_page()
+        # Title
+        title = QLabel("Dashboard Overview")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Threat Intel", "CVE & vulnerability database")
-        hrow.addStretch()
-        self.btn_cve_refresh = QPushButton("↻  Refresh List")
-        self.btn_cve_refresh.setToolTip("Refresh current CVE list and reset sync buttons if stuck")
-        self.btn_cve_refresh.clicked.connect(self.reset_and_refresh_intel)
-        hrow.addWidget(self.btn_cve_refresh)
-
-        self.btn_cve_sync = QPushButton("⚡  Fetch CVEs")
-        self.btn_cve_sync.clicked.connect(self.force_intel_sync)
-        hrow.addWidget(self.btn_cve_sync)
-        layout.addLayout(hrow)
-
-        # Stats strip
-        self.lbl_stats = QLabel("Loading CVE stats...")
-        self.lbl_stats.setStyleSheet("color: #888888; font-size: 13px; padding: 0px 2px 6px 2px; font-weight: 500;")
+        # Top row: StatCards
+        cards_layout = QHBoxLayout()
+        cards_layout.setSpacing(15)
         
-        # CVE Chart
-        self.cve_chart = QChart()
-        self.cve_chart.setTheme(QChart.ChartThemeDark)
-        self.cve_chart.setBackgroundVisible(False)
-        self.cve_chart.legend().hide()
-        from PySide6.QtCore import QMargins
-        self.cve_chart.setMargins(QMargins(10, 10, 10, 10))
-        self.cve_chart_view = QChartView(self.cve_chart)
-        self.cve_chart_view.setRenderHint(QPainter.RenderHint.Antialiasing) # Antialiasing
-        self.cve_chart_view.setFixedHeight(300)
-        self.cve_chart_view.setMinimumWidth(400)
+        self.card_total_targets = StatCard("Total Targets", "0")
+        self.card_critical_findings = StatCard("Critical Findings", "0")
+        self.card_active_scans = StatCard("Active Scans", "0")
+        self.card_intel_count = StatCard("Intel Updates", "0")
         
-        stats_layout = QHBoxLayout()
-        stats_layout.addWidget(self.lbl_stats)
-        stats_layout.addWidget(self.cve_chart_view)
-        layout.addLayout(stats_layout)
-
-
-        # Filter bar
-        filter_card = QFrame()
-        filter_card.setObjectName("card")
-        fl = QVBoxLayout(filter_card)
-        fl.setContentsMargins(16, 12, 16, 12)
-        fl.setSpacing(8)
-        filter_card.setFixedHeight(60)
-        filter_row = QHBoxLayout()
-
-        filter_lbl = QLabel("Severity:")
-        filter_lbl.setStyleSheet("color: #888888; font-weight: 600; font-size: 13px;")
-        self.cmb_intel_severity = QComboBox()
-        self.cmb_intel_severity.addItems(["All Severities", "Critical", "High", "Medium", "Low", "Info"])
-        self.cmb_intel_severity.currentTextChanged.connect(self._on_intel_filter_changed)
-
-        search_lbl = QLabel("Search:")
-        search_lbl.setStyleSheet("color: #888888; font-weight: 600; font-size: 13px;")
-        self.txt_intel_search = QLineEdit()
-        self.txt_intel_search.setPlaceholderText("Search CVE ID, keyword, or description...")
-        self.txt_intel_search.textChanged.connect(self._on_intel_filter_changed)
-        self.txt_intel_search.returnPressed.connect(self._on_intel_filter_changed)
-
-        filter_row.addWidget(filter_lbl)
-        filter_row.addWidget(self.cmb_intel_severity)
-        filter_row.addSpacing(12)
-        filter_row.addWidget(search_lbl)
-        filter_row.addWidget(self.txt_intel_search, 1)
-        fl.addLayout(filter_row)
-        layout.addWidget(filter_card)
-
-        # CVE list card
-        list_card = self._make_card("CVE Feed")
-        list_layout = list_card.layout()
-        self.lst_intel = QListWidget()
-        self.lst_intel.setFont(QFont("Menlo", 11))
-        self.lst_intel.itemDoubleClicked.connect(self.show_cve_detail)
-        list_layout.addWidget(self.lst_intel)
-        layout.addWidget(list_card, 1)
-
-        return page
-
-    def _on_intel_filter_changed(self):
-        """Force CVE list refresh bypassing cache when filter changes."""
-        self._cache_intel_hash = None
-        self.refresh_intel_feed()
-
-    # ─── Page: Settings ────────────────────────────────────────────────────────
-
-    def _build_settings_page(self):
-        page, layout = self._make_page()
-        self._add_page_header(layout, "Settings", "Configure email alerts, reports, and backup settings")
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
-        scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-
-        scroll_content = QWidget()
-        scroll_content.setObjectName("scroll_content")
-        scroll_content.setStyleSheet("QWidget#scroll_content { background: transparent; }")
-        scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setSpacing(16)
-        scroll_layout.setContentsMargins(0, 0, 8, 0)
-
-        # ── SMTP Group ──
-        smtp_card = self._make_card("Email Notification Server (SMTP)")
-        smtp_layout = smtp_card.layout()
-
-        def make_field(label_text, widget):
-            row = QHBoxLayout()
-            lbl = QLabel(label_text)
-            lbl.setFixedWidth(200)
-            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-            row.addWidget(lbl)
-            row.addWidget(widget, 1)
-            smtp_layout.addLayout(row)
-            smtp_layout.addSpacing(4)
-
-        self.txt_smtp_host = QLineEdit()
-        self.txt_smtp_host.setPlaceholderText("smtp.gmail.com")
-        make_field("SMTP Host", self.txt_smtp_host)
-
-        self.txt_smtp_port = QLineEdit()
-        self.txt_smtp_port.setPlaceholderText("587 (TLS) or 465 (SSL)")
-        make_field("SMTP Port", self.txt_smtp_port)
-
-        self.txt_smtp_user = QLineEdit()
-        self.txt_smtp_user.setPlaceholderText("user@example.com")
-        make_field("Username (Email)", self.txt_smtp_user)
-
-        pass_row_widget = QWidget()
-        pass_row = QHBoxLayout(pass_row_widget)
-        pass_row.setContentsMargins(0, 0, 0, 0)
-        self.txt_smtp_pass = QLineEdit()
-        self.txt_smtp_pass.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_smtp_pass.setPlaceholderText("App Password or account password")
-        self.btn_show_pass = QPushButton("Show")
-        self.btn_show_pass.setObjectName("btn_secondary")
-        self.btn_show_pass.setFixedWidth(65)
-        self.btn_show_pass.setCheckable(True)
-        self.btn_show_pass.clicked.connect(self.toggle_password_visibility)
-        pass_row.addWidget(self.txt_smtp_pass, 1)
-        pass_row.addWidget(self.btn_show_pass)
-        make_field("Password", pass_row_widget)
-
-        self.txt_smtp_sender = QLineEdit()
-        self.txt_smtp_sender.setPlaceholderText("Defaults to username if blank")
-        make_field("Sender (From)", self.txt_smtp_sender)
-
-        self.txt_smtp_receiver = QLineEdit()
-        self.txt_smtp_receiver.setPlaceholderText("admin@domain.com, team@domain.com")
-        make_field("Recipients (To)", self.txt_smtp_receiver)
-
-        self.chk_smtp_ssl = QCheckBox("Use Implicit SSL/TLS  (required for port 465)")
-        smtp_layout.addWidget(self.chk_smtp_ssl)
-
-        smtp_layout.addSpacing(12)
-        self.lbl_smtp_status = QLabel("Ready")
-        self.lbl_smtp_status.setStyleSheet("color: #666666; font-style: italic; font-size: 13px;")
-        smtp_layout.addWidget(self.lbl_smtp_status)
-
-        smtp_btn_row = QHBoxLayout()
-        smtp_btn_row.addStretch()
-        self.btn_test_smtp = QPushButton("Test Connection")
-        self.btn_test_smtp.setObjectName("btn_success")
-        self.btn_test_smtp.clicked.connect(self.test_smtp_connection)
-        self.btn_save_smtp = QPushButton("Save Settings")
-        self.btn_save_smtp.clicked.connect(self.save_smtp_settings)
-        smtp_btn_row.addWidget(self.btn_test_smtp)
-        smtp_btn_row.addWidget(self.btn_save_smtp)
-        smtp_layout.addLayout(smtp_btn_row)
-        scroll_layout.addWidget(smtp_card)
-
-        # ── Report Group ──
-        report_card = self._make_card("Report & Operator Settings")
-        report_layout = report_card.layout()
-
-        def make_report_field(label_text, widget):
-            row = QHBoxLayout()
-            lbl = QLabel(label_text)
-            lbl.setFixedWidth(200)
-            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-            row.addWidget(lbl)
-            row.addWidget(widget, 1)
-            report_layout.addLayout(row)
-            report_layout.addSpacing(4)
-
-        self.txt_tester_name = QLineEdit()
-        self.txt_tester_name.setPlaceholderText("e.g. John Doe (Security Auditor)")
-        make_report_field("Tester / Operator Name", self.txt_tester_name)
-
-        self.txt_qa_reviewer = QLineEdit()
-        self.txt_qa_reviewer.setPlaceholderText("e.g. Jane Doe (QA Manager)")
-        make_report_field("QA Reviewer Name", self.txt_qa_reviewer)
-
-        self.txt_report_email = QLineEdit()
-        self.txt_report_email.setPlaceholderText("e.g. security@company.com (For auto-sending reports)")
-        make_report_field("Report Email Address", self.txt_report_email)
-
-        self.btn_check_tools = QPushButton("Check Dependencies & Tools")
-        self.btn_check_tools.setObjectName("btn_secondary")
-        self.btn_check_tools.clicked.connect(self.check_tools_dependencies)
-        report_layout.addWidget(self.btn_check_tools)
-
-        class DropLabel(QLabel):
-            def __init__(self, parent=None):
-                super().__init__("Drag & Drop Report PDF here to verify SHASUM", parent)
-                self.setAlignment(Qt.AlignCenter)
-                self.setStyleSheet("border: 2px dashed #444444; color: #888888; border-radius: 8px; font-weight: bold; background-color: #1A1A1A;")
-                self.setMinimumHeight(60)
-                self.setAcceptDrops(True)
-                self.parent_dashboard = None
-
-            def dragEnterEvent(self, event):
-                if event.mimeData().hasUrls():
-                    event.accept()
-                else:
-                    event.ignore()
-
-            def dropEvent(self, event):
-                urls = event.mimeData().urls()
-                if urls and self.parent_dashboard:
-                    file_path = urls[0].toLocalFile()
-                    self.parent_dashboard.verify_shasum(file_path)
-
-        self.shasum_drop = DropLabel(self)
-        self.shasum_drop.parent_dashboard = self
-        report_layout.addSpacing(10)
-        report_layout.addWidget(QLabel("<b style='color: #DDDDDD;'>Report Integrity Verification</b>"))
-        report_layout.addWidget(self.shasum_drop)
+        cards_layout.addWidget(self.card_total_targets)
+        cards_layout.addWidget(self.card_critical_findings)
+        cards_layout.addWidget(self.card_active_scans)
+        cards_layout.addWidget(self.card_intel_count)
         
-        scroll_layout.addWidget(report_card)
+        layout.addLayout(cards_layout)
 
-        # ── Backup & Raw Data Group ──
-        backup_card = self._make_card("Backup & Raw Data Download")
-        backup_layout = backup_card.layout()
-
-        backup_desc = QLabel(
-            "Two backup databases are maintained automatically:\n"
-            "  •  active_scans.db — all raw scan results\n"
-            "  •  cve_secondary.db — CVE database backup\n\n"
-            "Download as ZIP to export raw data for offline analysis."
-        )
-        backup_desc.setStyleSheet("color: #666666; font-size: 12px; padding: 4px 0;")
-        backup_desc.setWordWrap(True)
-        backup_layout.addWidget(backup_desc)
-
-        backup_btn_row = QHBoxLayout()
-        backup_btn_row.addStretch()
-        self.btn_backup_cve = QPushButton("⮦  Backup CVE Database")
-        self.btn_backup_cve.setObjectName("btn_secondary")
-        self.btn_backup_cve.clicked.connect(self._backup_cve_db)
-        self.btn_download_backup = QPushButton("⭳  Download Raw Data ZIP")
-        self.btn_download_backup.clicked.connect(self._download_backup_zip)
-        backup_btn_row.addWidget(self.btn_backup_cve)
-        backup_btn_row.addWidget(self.btn_download_backup)
-        backup_layout.addLayout(backup_btn_row)
-        scroll_layout.addWidget(backup_card)
-
-        scroll_layout.addStretch()
-        scroll_area.setWidget(scroll_content)
-        layout.addWidget(scroll_area, 1)
-
-        return page
-
-    # ─── Page: Professional Settings ──────────────────────────────────────────
-
-    def _build_prof_settings_page(self):
-        page, layout = self._make_page()
-        self._add_page_header(layout, "Professional Settings", "Advanced configurations, invasive scanners, and system tuning")
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
-        scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-
-        scroll_content = QWidget()
-        scroll_content.setObjectName("scroll_content_prof")
-        scroll_content.setStyleSheet("QWidget#scroll_content_prof { background: transparent; }")
-        scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setSpacing(16)
-        scroll_layout.setContentsMargins(0, 0, 8, 0)
-
-        # ── ZAP Group ──
-        zap_card = self._make_card("OWASP ZAP Scanner")
-        zap_layout = zap_card.layout()
-        self.chk_zap_enabled = QCheckBox("Enable OWASP ZAP Active Scanning (invasive — use with caution)")
-        self.chk_zap_enabled.setStyleSheet("color: #FFFFFF; font-size: 13px;")
-        zap_layout.addWidget(self.chk_zap_enabled)
-        zap_desc = QLabel("ZAP performs deep active scanning which may trigger security systems on the target.")
-        zap_desc.setStyleSheet("color: #AAAAAA; font-size: 12px; padding-top: 4px;")
-        zap_desc.setWordWrap(True)
-        zap_layout.addWidget(zap_desc)
-        scroll_layout.addWidget(zap_card)
-
-        # ── V9.4.3 — API Keys & Proxies ──
-        api_card = self._make_card(f"API Keys & Proxies — {getattr(self, 'version', 'V9.4.3')}")
-        api_layout = api_card.layout()
-
-        def make_api_field(label_text, widget):
-            row = QHBoxLayout()
-            lbl = QLabel(label_text)
-            lbl.setFixedWidth(200)
-            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-            row.addWidget(lbl)
-            row.addWidget(widget, 1)
-            api_layout.addLayout(row)
-            api_layout.addSpacing(4)
+        # Second row: Splitter
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.setObjectName("dashboardSplitter")
         
-        self.txt_github_token = QLineEdit()
-        self.txt_github_token.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
-        self.txt_github_token.setPlaceholderText("GitHub Token (Prevents 403 API rate limits)")
-        make_api_field("GitHub API Token", self.txt_github_token)
-
-        self.txt_http_proxy = QLineEdit()
-        self.txt_http_proxy.setPlaceholderText("http://127.0.0.1:8080")
-        make_api_field("HTTP Proxy", self.txt_http_proxy)
-
-        self.txt_https_proxy = QLineEdit()
-        self.txt_https_proxy.setPlaceholderText("http://127.0.0.1:8080")
-        make_api_field("HTTPS Proxy", self.txt_https_proxy)
+        # Left (60%)
+        left_container = QWidget()
+        left_layout = QVBoxLayout(left_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        lbl_overview = QLabel("Targets Overview")
+        lbl_overview.setStyleSheet("font-size: 16px; font-weight: bold;")
+        left_layout.addWidget(lbl_overview)
         
-        scroll_layout.addWidget(api_card)
-
-        # ── V9.4.3 — Scheduler Settings ──
-        scheduler_card = self._make_card(f"Scheduler Settings — {getattr(self, 'version', 'V9.4.3')}")
-        scheduler_layout = scheduler_card.layout()
-
-        def make_sched_field(label_text, widget):
-            row = QHBoxLayout()
-            lbl = QLabel(label_text)
-            lbl.setFixedWidth(200)
-            lbl.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-            row.addWidget(lbl)
-            row.addWidget(widget, 1)
-            scheduler_layout.addLayout(row)
-            scheduler_layout.addSpacing(4)
-
-        from PySide6.QtWidgets import QSpinBox
-        self.spin_scan_hour = QSpinBox()
-        self.spin_scan_hour.setRange(0, 23)
-        self.spin_scan_hour.setValue(load_settings().get("scan_schedule_hour", 2))
+        self.tbl_targets_overview = QTableWidget(0, 5)
+        self.tbl_targets_overview.setObjectName("tbl_targets_overview")
+        self.tbl_targets_overview.setHorizontalHeaderLabels(["Target", "Risk Rating", "Last Scan", "Status", "Findings"])
+        self.tbl_targets_overview.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tbl_targets_overview.setSelectionBehavior(QAbstractItemView.SelectRows)
+        left_layout.addWidget(self.tbl_targets_overview)
         
-        self.spin_scan_minute = QSpinBox()
-        self.spin_scan_minute.setRange(0, 59)
-        self.spin_scan_minute.setValue(load_settings().get("scan_schedule_minute", 0))
-
-        scan_time_row = QWidget()
-        scan_time_layout = QHBoxLayout(scan_time_row)
-        scan_time_layout.setContentsMargins(0, 0, 0, 0)
-        scan_time_layout.addWidget(QLabel("Hour (0-23):"))
-        scan_time_layout.addWidget(self.spin_scan_hour)
-        scan_time_layout.addWidget(QLabel("Minute (0-59):"))
-        scan_time_layout.addWidget(self.spin_scan_minute)
-        scan_time_layout.addStretch()
-        make_sched_field("Daily Scan Time", scan_time_row)
-
-        self.spin_intel_interval = QSpinBox()
-        self.spin_intel_interval.setRange(1, 168)
-        self.spin_intel_interval.setSuffix(" hours")
-        self.spin_intel_interval.setValue(load_settings().get("intel_sync_interval_hours", 24))
-        make_sched_field("Intel Sync Interval", self.spin_intel_interval)
-
-        btn_save_sched = QPushButton("Save Scheduler Settings")
-        btn_save_sched.setObjectName("btn_secondary")
-        def _save_sched():
-            s = load_settings()
-            s["scan_schedule_hour"] = self.spin_scan_hour.value()
-            s["scan_schedule_minute"] = self.spin_scan_minute.value()
-            s["intel_sync_interval_hours"] = self.spin_intel_interval.value()
-            save_settings(s)
-            
-            try:
-                from tools.scheduler import reschedule_jobs
-                reschedule_jobs()
-                QMessageBox.information(self, "Saved", "Scheduler settings saved and background jobs rescheduled.")
-            except Exception as e:
-                QMessageBox.warning(self, "Warning", f"Settings saved, but could not reschedule: {e}")
-
-        scheduler_layout.addWidget(btn_save_sched)
-        scroll_layout.addWidget(scheduler_card)
-
-        # ── Scan Profile ──
-        profile_card = self._make_card(f"Scan Profile — {getattr(self, 'version', 'V9.4.3')}")
-        profile_layout = profile_card.layout()
-        profile_desc = QLabel(
-            "Controls which scanner steps run. Fast = passive OSINT only. "
-            "Standard = full scan minus most invasive active tools (default). "
-            "Full = all 34 steps including Commix, Dalfox, WPScan, Masscan, ZAP."
-        )
-        profile_desc.setStyleSheet("color: #666666; font-size: 12px; padding-bottom: 8px;")
-        profile_desc.setWordWrap(True)
-        profile_layout.addWidget(profile_desc)
-
-        profile_row = QHBoxLayout()
-        lbl_profile = QLabel("Scan Profile")
-        lbl_profile.setFixedWidth(200)
-        lbl_profile.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-        self.cmb_scan_profile = QComboBox()
-        self.cmb_scan_profile.addItems(["fast", "standard", "full"])
-        self.cmb_scan_profile.setCurrentText(load_settings().get("scan_profile", "standard"))
-        profile_row.addWidget(lbl_profile)
-        profile_row.addWidget(self.cmb_scan_profile, 1)
-        profile_layout.addLayout(profile_row)
-
-        btn_save_profile = QPushButton("Save Profile")
-        btn_save_profile.setObjectName("btn_secondary")
-        def _save_profile():
-            s = load_settings()
-            s["scan_profile"] = self.cmb_scan_profile.currentText()
-            save_settings(s)
-            QMessageBox.information(self, "Saved", f"Scan profile set to: {s['scan_profile']}")
-        btn_save_profile.clicked.connect(_save_profile)
-        profile_layout.addWidget(btn_save_profile)
-        scroll_layout.addWidget(profile_card)
-
-        # ── Authenticated Scan Headers ──
-        auth_card = self._make_card(f"Authenticated Scan Headers — {getattr(self, 'version', 'V9.4.3')}")
-        auth_layout = auth_card.layout()
-        auth_desc = QLabel(
-            "Custom HTTP headers injected into Nuclei, Nikto, and Wapiti during scans. "
-            "Use for session-based or token-based authenticated scanning."
-        )
-        auth_desc.setStyleSheet("color: #666666; font-size: 12px; padding-bottom: 8px;")
-        auth_desc.setWordWrap(True)
-        auth_layout.addWidget(auth_desc)
-
-        from PySide6.QtWidgets import QTableWidget, QHeaderView as QHV
-        self.tbl_auth_headers = QTableWidget()
-        self.tbl_auth_headers.setColumnCount(2)
-        self.tbl_auth_headers.setHorizontalHeaderLabels(["Header Name", "Value"])
-        self.tbl_auth_headers.horizontalHeader().setSectionResizeMode(1, QHV.Stretch)
-        self.tbl_auth_headers.setMaximumHeight(160)
-        self.tbl_auth_headers.setStyleSheet(
-            "QTableWidget { background: #141414; color: #CCCCCC; border: 1px solid #222; border-radius: 6px; }"
-            "QHeaderView::section { background: #0D0D0D; color: #666; border: none; padding: 6px; }"
-        )
-        auth_layout.addWidget(self.tbl_auth_headers)
-
-        # Populate from existing settings
-        existing_headers = load_settings().get("auth_headers", {})
-        for hname, hval in existing_headers.items():
-            r = self.tbl_auth_headers.rowCount()
-            self.tbl_auth_headers.insertRow(r)
-            self.tbl_auth_headers.setItem(r, 0, QTableWidgetItem(hname))
-            self.tbl_auth_headers.setItem(r, 1, QTableWidgetItem(hval))
-
-        auth_btn_row = QHBoxLayout()
-        btn_add_hdr = QPushButton("+ Add Header")
-        btn_add_hdr.setObjectName("btn_secondary")
-        btn_add_hdr.clicked.connect(lambda: self.tbl_auth_headers.insertRow(self.tbl_auth_headers.rowCount()))
-        btn_rem_hdr = QPushButton("− Remove Selected")
-        btn_rem_hdr.setObjectName("btn_secondary")
-        btn_rem_hdr.clicked.connect(lambda: self.tbl_auth_headers.removeRow(self.tbl_auth_headers.currentRow()))
-        btn_save_hdrs = QPushButton("Save Headers")
-        btn_save_hdrs.clicked.connect(self._save_auth_headers)
-        auth_btn_row.addWidget(btn_add_hdr)
-        auth_btn_row.addWidget(btn_rem_hdr)
-        auth_btn_row.addStretch()
-        auth_btn_row.addWidget(btn_save_hdrs)
-        auth_layout.addLayout(auth_btn_row)
-        scroll_layout.addWidget(auth_card)
-
-        # ── Enterprise Scanners ──
-        enterprise_card = self._make_card(f"Enterprise Security Tools — {getattr(self, 'version', 'V9.4.3')}")
-        enterprise_layout = enterprise_card.layout()
-        ent_desc = QLabel(
-            "Configure advanced enterprise scanning capabilities. "
-            "Note: Cloud and Container scans can be resource-intensive."
-        )
-        ent_desc.setStyleSheet("color: #666666; font-size: 12px; padding-bottom: 8px;")
-        ent_desc.setWordWrap(True)
-        enterprise_layout.addWidget(ent_desc)
-
-        self.chk_ent_cloud = QCheckBox("Enable Cloud & Container Audit (Trivy, Prowler)")
-        self.chk_ent_cloud.setStyleSheet("color: #FFFFFF; font-size: 13px;")
-        self.chk_ent_cloud.setChecked(load_settings().get("enable_enterprise_cloud", False))
-        enterprise_layout.addWidget(self.chk_ent_cloud)
-
-        self.chk_ent_malware = QCheckBox("Enable Malware & File Analysis (ClamAV)")
-        self.chk_ent_malware.setStyleSheet("color: #FFFFFF; font-size: 13px;")
-        self.chk_ent_malware.setChecked(load_settings().get("enable_enterprise_malware", False))
-        enterprise_layout.addWidget(self.chk_ent_malware)
-
-        ent_api_row = QHBoxLayout()
-        lbl_mobsf = QLabel("MobSF API Key:")
-        lbl_mobsf.setFixedWidth(200)
-        lbl_mobsf.setStyleSheet("color: #666666; font-size: 12px; font-weight: 600;")
-        self.txt_mobsf_api = QLineEdit()
-        self.txt_mobsf_api.setPlaceholderText("Enter API Key to enable Mobile App Security scans")
-        self.txt_mobsf_api.setText(load_settings().get("mobsf_api_key", ""))
-        self.txt_mobsf_api.setEchoMode(QLineEdit.EchoMode.PasswordEchoOnEdit)
-        ent_api_row.addWidget(lbl_mobsf)
-        ent_api_row.addWidget(self.txt_mobsf_api, 1)
-        enterprise_layout.addLayout(ent_api_row)
-
-        btn_save_ent = QPushButton("Save Enterprise Settings")
-        btn_save_ent.setObjectName("btn_secondary")
-        def _save_ent():
-            s = load_settings()
-            s["enable_enterprise_cloud"] = self.chk_ent_cloud.isChecked()
-            s["enable_enterprise_malware"] = self.chk_ent_malware.isChecked()
-            s["mobsf_api_key"] = self.txt_mobsf_api.text()
-            save_settings(s)
-            QMessageBox.information(self, "Saved", "Enterprise security settings have been updated.")
-        btn_save_ent.clicked.connect(_save_ent)
-        enterprise_layout.addWidget(btn_save_ent)
-        scroll_layout.addWidget(enterprise_card)
-
-        # ── Danger Zone ──
-        danger_card = self._make_card("Danger Zone")
-        danger_layout = danger_card.layout()
-
-        danger_desc = QLabel(
-            "<b>Warning:</b> Destructive actions. Proceed with caution."
-        )
-        danger_desc.setStyleSheet("color: #ef4444; font-size: 13px; padding-bottom: 5px;")
-        danger_layout.addWidget(danger_desc)
-
-        danger_btn_row = QHBoxLayout()
-        self.btn_reset_default = QPushButton("Reset to Default")
-        self.btn_reset_default.setStyleSheet("background-color: #3b2818; color: #f97316; border: 1px solid #9a3412; font-weight: bold;")
-        self.btn_reset_default.clicked.connect(self.reset_to_default)
+        # Right (40%)
+        right_container = QWidget()
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        lbl_events = QLabel("Recent Security Events")
+        lbl_events.setStyleSheet("font-size: 16px; font-weight: bold;")
+        right_layout.addWidget(lbl_events)
         
-        self.btn_full_reset = QPushButton("Full Reset")
-        self.btn_full_reset.setStyleSheet("background-color: #450a0a; color: #ef4444; border: 1px solid #7f1d1d; font-weight: bold;")
-        self.btn_full_reset.clicked.connect(self.full_reset)
+        self.lst_recent_events = QListWidget()
+        self.lst_recent_events.setObjectName("lst_recent_events")
+        right_layout.addWidget(self.lst_recent_events)
         
-        danger_btn_row.addWidget(self.btn_reset_default)
-        danger_btn_row.addWidget(self.btn_full_reset)
-        danger_layout.addLayout(danger_btn_row)
-        scroll_layout.addWidget(danger_card)
+        splitter.addWidget(left_container)
+        splitter.addWidget(right_container)
+        splitter.setSizes([600, 400])
+        
+        layout.addWidget(splitter, 1)
 
-        scroll_layout.addStretch()
-        scroll_area.setWidget(scroll_content)
-        layout.addWidget(scroll_area, 1)
+        # Bottom
+        self.lbl_last_updated = QLabel("Last Updated: Never")
+        self.lbl_last_updated.setObjectName("lbl_last_updated")
+        self.lbl_last_updated.setStyleSheet("color: #777777;")
+        layout.addWidget(self.lbl_last_updated)
 
-        return page
+        self.content_stack.addWidget(page)
 
-    # ─── Page: Reports (V9.4.3) ──────────────────────────────────────────────────
+    def _setup_page_1_targets(self):
+        page = QWidget()
+        page.setObjectName("pageTargets")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-    def _build_reports_page(self):
-        """Reports Viewer — lists all generated HTML/PDF reports on disk."""
-        import subprocess
-        import platform
-        from PySide6.QtWidgets import QTableWidget, QHeaderView
-        from PySide6.QtGui import QColor
-        from tools.config_manager import BASE_DIR
+        # Title
+        title = QLabel("Target Management")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-        page, layout = self._make_page()
+        # Toolbar
+        toolbar_layout = QHBoxLayout()
+        
+        self.inp_target_url = QLineEdit()
+        self.inp_target_url.setObjectName("inp_target_url")
+        self.inp_target_url.setPlaceholderText("https://target.com or 192.168.1.0/24")
+        self.inp_target_url.setMinimumWidth(300)
+        
+        self.btn_add_target = QPushButton("+ Add Target")
+        self.btn_add_target.setObjectName("btn_add_target")
+        self.btn_add_target.setStyleSheet("background-color: #2e7d32; color: white; padding: 5px 15px; border-radius: 4px;")
+        
+        self.btn_delete_target = QPushButton("🗑 Remove")
+        self.btn_delete_target.setObjectName("btn_delete_target")
+        self.btn_delete_target.setStyleSheet("background-color: #c62828; color: white; padding: 5px 15px; border-radius: 4px;")
+        
+        self.btn_scan_target = QPushButton("▶ Scan Target")
+        self.btn_scan_target.setObjectName("btn_scan_target")
+        self.btn_scan_target.setStyleSheet("background-color: #1565c0; color: white; padding: 5px 15px; border-radius: 4px;")
+        
+        toolbar_layout.addWidget(self.inp_target_url)
+        toolbar_layout.addWidget(self.btn_add_target)
+        toolbar_layout.addWidget(self.btn_scan_target)
+        toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self.btn_delete_target)
+        
+        layout.addLayout(toolbar_layout)
+        layout.addSpacing(10)
 
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Reports", "Browse, open, and manage generated VAPT reports")
-        hrow.addStretch()
+        # Table
+        self.tbl_targets = QTableWidget(0, 7)
+        self.tbl_targets.setObjectName("tbl_targets")
+        self.tbl_targets.setHorizontalHeaderLabels(["ID", "URL/IP", "Status", "Last Scan", "Findings Count", "Risk Score", "Actions"])
+        self.tbl_targets.horizontalHeader().setStretchLastSection(True)
+        self.tbl_targets.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tbl_targets.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        layout.addWidget(self.tbl_targets, 1)
+        self.content_stack.addWidget(page)
 
-        btn_refresh_rep = QPushButton("↻  Refresh")
-        btn_refresh_rep.setObjectName("btn_secondary")
-        btn_refresh_rep.clicked.connect(lambda: self._refresh_reports_table())
-        hrow.addWidget(btn_refresh_rep)
-        layout.addLayout(hrow)
+    def _setup_page_2_active_scans(self):
+        page = QWidget()
+        page.setObjectName("pageActiveScans")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-        # Reports table
-        self.tbl_reports = QTableWidget()
-        self.tbl_reports.setObjectName("reports_table")
-        self.tbl_reports.setColumnCount(7)
-        self.tbl_reports.setHorizontalHeaderLabels(["#", "Filename", "Type", "Date Modified", "Size", "Hash Signature", "Action"])
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(0, 36)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(2, 60)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(3, 110)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(4, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(4, 80)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(5, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(5, 170)
-        self.tbl_reports.horizontalHeader().setSectionResizeMode(6, QHeaderView.Fixed)
-        self.tbl_reports.setColumnWidth(6, 130)
-        self.tbl_reports.setSelectionBehavior(QTableWidget.SelectRows)
-        self.tbl_reports.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.tbl_reports.setAlternatingRowColors(True)
-        self.tbl_reports.setStyleSheet("""
-            QTableWidget {
-                background-color: #0D0D0D;
-                color: #CCCCCC;
-                border: 1px solid #222222;
-                border-radius: 8px;
-                gridline-color: #1A1A1A;
-                font-size: 12px;
-            }
-            QTableWidget::item:selected {
-                background-color: #1A2A3A;
-                color: #FFFFFF;
-            }
-            QHeaderView::section {
-                background-color: #141414;
-                color: #666666;
-                border: none;
-                border-bottom: 1px solid #222222;
-                padding: 8px;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-            }
-        """)
-        layout.addWidget(self.tbl_reports, 1)
+        # Title
+        title = QLabel("Active Scans")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-        # Empty state label
-        self.lbl_no_reports = QLabel("  No reports generated yet. Run a scan to generate your first report.")
-        self.lbl_no_reports.setStyleSheet("color: #444444; font-size: 13px; padding: 40px;")
-        self.lbl_no_reports.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.lbl_no_reports)
-        self.lbl_no_reports.hide()
+        self.lbl_scan_status = QLabel("No active scans")
+        self.lbl_scan_status.setObjectName("lbl_scan_status")
+        self.lbl_scan_status.setStyleSheet("color: #aaaaaa; font-style: italic;")
+        layout.addWidget(self.lbl_scan_status)
 
-        self._refresh_reports_table()
-        return page
+        # Table
+        self.tbl_active_scans = QTableWidget(0, 6)
+        self.tbl_active_scans.setObjectName("tbl_active_scans")
+        self.tbl_active_scans.setHorizontalHeaderLabels(["Target", "Scanner", "Status", "Progress", "Started", "ETA"])
+        self.tbl_active_scans.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tbl_active_scans.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.tbl_active_scans, 1)
 
-    def _refresh_reports_table(self):
-        """Populate the Reports table from disk."""
-        import os
-        import platform
-        import subprocess
-        from tools.config_manager import BASE_DIR
-        from PySide6.QtWidgets import QTableWidgetItem, QPushButton, QWidget, QHBoxLayout
+        # Toolbar for scans
+        scan_toolbar = QHBoxLayout()
+        self.btn_pause_scan = QPushButton("⏸ Pause")
+        self.btn_pause_scan.setObjectName("btn_pause_scan")
+        
+        self.btn_stop_scan = QPushButton("🛑 Stop")
+        self.btn_stop_scan.setObjectName("btn_stop_scan")
+        self.btn_stop_scan.setStyleSheet("background-color: #c62828; color: white;")
+        
+        self.btn_view_log = QPushButton("📄 View Log")
+        self.btn_view_log.setObjectName("btn_view_log")
+        
+        scan_toolbar.addWidget(self.btn_pause_scan)
+        scan_toolbar.addWidget(self.btn_stop_scan)
+        scan_toolbar.addWidget(self.btn_view_log)
+        scan_toolbar.addStretch()
+        layout.addLayout(scan_toolbar)
 
-        report_dirs = {
-            "HTML": os.path.join(BASE_DIR, "reports", "html"),
-            "PDF":  os.path.join(BASE_DIR, "reports", "pdf"),
-        }
+        # Log view
+        log_label = QLabel("Scanner Output Log")
+        log_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        layout.addWidget(log_label)
+        
+        self.txt_scan_log = QTextEdit()
+        self.txt_scan_log.setObjectName("txt_scan_log")
+        self.txt_scan_log.setReadOnly(True)
+        self.txt_scan_log.setStyleSheet("background-color: #000000; color: #00ff00; font-family: monospace;")
+        self.txt_scan_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.txt_scan_log, 1)
 
-        entries = []
-        for rtype, rdir in report_dirs.items():
-            if not os.path.exists(rdir):
-                continue
-            for fname in os.listdir(rdir):
-                fpath = os.path.join(rdir, fname)
-                if os.path.isfile(fpath):
-                    stat = os.stat(fpath)
-                    mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
-                    size_kb = stat.st_size / 1024
-                    size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb/1024:.1f} MB"
-                    entries.append((fname, rtype, mtime, size_str, fpath))
+        self.content_stack.addWidget(page)
 
-        entries.sort(key=lambda x: x[2], reverse=True)
+    def _setup_page_3_findings(self):
+        page = QWidget()
+        page.setObjectName("pageFindings")
+        
+        # Use a container widget so we can place an overlay
+        container_layout = QVBoxLayout(page)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.findings_inner = QWidget()
+        layout = QVBoxLayout(self.findings_inner)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-        self.tbl_reports.setRowCount(0)
-        if not entries:
-            self.lbl_no_reports.show()
-            self.tbl_reports.hide()
-            return
+        # Title
+        title = QLabel("Findings & Vulnerabilities")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-        self.lbl_no_reports.hide()
-        self.tbl_reports.show()
+        # Filter toolbar
+        filter_layout = QHBoxLayout()
+        
+        self.cmb_severity = QComboBox()
+        self.cmb_severity.setObjectName("cmb_severity")
+        self.cmb_severity.addItems(['All Severities', 'Critical', 'High', 'Medium', 'Low', 'Info'])
+        
+        self.cmb_status = QComboBox()
+        self.cmb_status.setObjectName("cmb_status")
+        self.cmb_status.addItems(['All', 'Open', 'Confirmed', 'False Positive', 'Mitigated'])
+        
+        self.inp_search_findings = QLineEdit()
+        self.inp_search_findings.setObjectName("inp_search_findings")
+        self.inp_search_findings.setPlaceholderText("Search CVE, Title, Target...")
+        
+        self.btn_search_findings = QPushButton("🔍 Search")
+        self.btn_search_findings.setObjectName("btn_search_findings")
+        
+        filter_layout.addWidget(self.cmb_severity)
+        filter_layout.addWidget(self.cmb_status)
+        filter_layout.addWidget(self.inp_search_findings)
+        filter_layout.addWidget(self.btn_search_findings)
+        filter_layout.addStretch()
+        
+        layout.addLayout(filter_layout)
+        layout.addSpacing(10)
 
-        for row_idx, (fname, rtype, mtime, size_str, fpath) in enumerate(entries):
-            self.tbl_reports.insertRow(row_idx)
+        # Table
+        self.tbl_findings = QTableWidget(0, 9)
+        self.tbl_findings.setObjectName("tbl_findings")
+        self.tbl_findings.setHorizontalHeaderLabels(["Severity", "Title", "Target", "CVE", "CVSS", "EPSS", "KEV", "Scanner", "Status"])
+        self.tbl_findings.horizontalHeader().setStretchLastSection(True)
+        self.tbl_findings.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tbl_findings.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.tbl_findings, 1)
 
-            # Col 0: row number
-            num_item = QTableWidgetItem(str(row_idx + 1))
-            num_item.setTextAlignment(Qt.AlignCenter)
-            self.tbl_reports.setItem(row_idx, 0, num_item)
+        container_layout.addWidget(self.findings_inner)
 
-            # Col 1: filename (clickable-looking)
-            fname_item = QTableWidgetItem(fname)
-            fname_item.setForeground(QColor("#88BBFF"))
-            self.tbl_reports.setItem(row_idx, 1, fname_item)
+        # Setup Overlay Panel
+        self.finding_panel = FindingDetailPanel(parent=page)
+        # Assuming FindingDetailPanel handles its own sizing/positioning in its logic,
+        # but we add it to the page as a child so it can overlay.
+        
+        self.content_stack.addWidget(page)
 
-            # Col 2: type
-            type_item = QTableWidgetItem(rtype)
-            type_item.setForeground(QColor("#34C759") if rtype == "HTML" else QColor("#007AFF"))
-            type_item.setTextAlignment(Qt.AlignCenter)
-            self.tbl_reports.setItem(row_idx, 2, type_item)
+    def _setup_page_4_intelligence(self):
+        page = QWidget()
+        page.setObjectName("pageIntelligence")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-            # Col 3: date
-            self.tbl_reports.setItem(row_idx, 3, QTableWidgetItem(mtime))
+        # Title
+        title = QLabel("Threat Intelligence")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-            # Col 4: size
-            size_item = QTableWidgetItem(size_str)
-            size_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.tbl_reports.setItem(row_idx, 4, size_item)
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.setObjectName("intelSplitter")
 
-            # Col 5: SHA256 hash — compute actual file hash for real verification
-            try:
-                sha256 = hashlib.sha256()
-                with open(fpath, "rb") as _f:
-                    for _chunk in iter(lambda: _f.read(8192), b""):
-                        sha256.update(_chunk)
-                file_hash_display = sha256.hexdigest()[:16] + "…"
-                full_hash = sha256.hexdigest()
-            except Exception as e:
-                from tools.errors import SMPUnclassifiedError
-                import traceback
-                import logging
-                logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-                raise SMPUnclassifiedError(str(e))
-                file_hash_display = "N/A"
-                full_hash = ""
-            hash_item = QTableWidgetItem(f"SHA256: {file_hash_display}")
-            hash_item.setForeground(QColor("#88BBFF"))
-            hash_item.setToolTip(f"Full SHA256: {full_hash}" if full_hash else "Could not compute hash")
-            self.tbl_reports.setItem(row_idx, 5, hash_item)
+        # Left Panel: CVE Search
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        
+        search_layout = QHBoxLayout()
+        self.inp_cve_search = QLineEdit()
+        self.inp_cve_search.setObjectName("inp_cve_search")
+        self.inp_cve_search.setPlaceholderText("Search CVE (e.g. CVE-2023-12345)")
+        self.btn_cve_search = QPushButton("Search")
+        self.btn_cve_search.setObjectName("btn_cve_search")
+        search_layout.addWidget(self.inp_cve_search)
+        search_layout.addWidget(self.btn_cve_search)
+        left_layout.addLayout(search_layout)
 
-            # Col 6: Action buttons
-            action_widget = QWidget()
-            action_layout = QHBoxLayout(action_widget)
-            action_layout.setContentsMargins(4, 2, 4, 2)
-            action_layout.setSpacing(6)
+        self.tbl_cve_results = QTableWidget(0, 6)
+        self.tbl_cve_results.setObjectName("tbl_cve_results")
+        self.tbl_cve_results.setHorizontalHeaderLabels(["CVE ID", "Severity", "CVSS", "EPSS", "KEV", "Description"])
+        self.tbl_cve_results.horizontalHeader().setStretchLastSection(True)
+        self.tbl_cve_results.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        left_layout.addWidget(self.tbl_cve_results)
+        
+        # Right Panel: Stats & KEV
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(0, 0, 0, 0)
 
-            btn_open = QPushButton("Open")
-            btn_open.setFixedHeight(24)
-            btn_open.setStyleSheet("background-color: #1A3A1A; color: #34C759; border: 1px solid #1A5C1A; border-radius: 4px; font-size: 11px; padding: 0 8px;")
-            btn_open.clicked.connect(lambda _, p=fpath: self._open_report(p))
+        intel_cards_layout = QVBoxLayout()
+        self.card_total_cve = StatCard("Tracked CVEs", "0")
+        self.card_kev_count = StatCard("CISA KEV Items", "0")
+        self.card_critical_cve = StatCard("Critical CVEs", "0")
+        intel_cards_layout.addWidget(self.card_total_cve)
+        intel_cards_layout.addWidget(self.card_kev_count)
+        intel_cards_layout.addWidget(self.card_critical_cve)
+        right_layout.addLayout(intel_cards_layout)
+        
+        lbl_kev = QLabel("Recent KEV Additions")
+        lbl_kev.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        right_layout.addWidget(lbl_kev)
+        
+        self.lst_kev_recent = QListWidget()
+        self.lst_kev_recent.setObjectName("lst_kev_recent")
+        right_layout.addWidget(self.lst_kev_recent)
 
-            btn_del = QPushButton("Delete")
-            btn_del.setFixedHeight(24)
-            btn_del.setStyleSheet("background-color: #3A0A0A; color: #EF4444; border: 1px solid #7F1D1D; border-radius: 4px; font-size: 11px; padding: 0 8px;")
-            btn_del.clicked.connect(lambda _, p=fpath: self._delete_report(p))
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setSizes([700, 300])
 
-            action_layout.addWidget(btn_open)
-            action_layout.addWidget(btn_del)
-            self.tbl_reports.setCellWidget(row_idx, 6, action_widget)
+        layout.addWidget(splitter, 1)
+        self.content_stack.addWidget(page)
 
-        self.tbl_reports.resizeRowsToContents()
+    def _setup_page_5_assets(self):
+        page = QWidget()
+        page.setObjectName("pageAssets")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-
-    def _open_report(self, path):
-        """Open a report file using the system default application."""
-        import subprocess
-        import sys
-        import os
-        try:
-            if sys.platform.startswith("linux"):
-                subprocess.Popen(["xdg-open", path])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", path])
-            else:
-                os.startfile(path)
-        except Exception as e:
-            QMessageBox.warning(self, "Open Failed", f"Could not open report:\n{e}")
-
-    def _delete_report(self, path):
-        """Delete a report file after confirmation."""
-        import os
-        reply = QMessageBox.question(
-            self, "Delete Report",
-            f"Are you sure you want to permanently delete:\n{os.path.basename(path)}?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        if reply == QMessageBox.Yes:
-            try:
-                os.remove(path)
-                self._refresh_reports_table()
-            except Exception as e:
-                QMessageBox.critical(self, "Delete Failed", str(e))
-
-    # ─── Page: Logs ────────────────────────────────────────────────────────────
-
-    def _build_logs_page(self):
-
-        from PySide6.QtWidgets import QTabWidget, QToolButton
-        page, layout = self._make_page()
-
-        # Header row
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Audit Logs", "Real-time system, scanner & CVE activity trail")
-        hrow.addStretch()
-
-        self._log_autoscroll = True
-        self.btn_autoscroll = QPushButton("⬇  Auto-scroll ON")
-        self.btn_autoscroll.setObjectName("btn_secondary")
-        self.btn_autoscroll.setCheckable(True)
-        self.btn_autoscroll.setChecked(True)
-        self.btn_autoscroll.clicked.connect(self._toggle_autoscroll)
-        hrow.addWidget(self.btn_autoscroll)
-
-        btn_export = QPushButton("⭳  Export Logs")
-        btn_export.setObjectName("btn_secondary")
-        btn_export.clicked.connect(self._export_logs)
-        hrow.addWidget(btn_export)
-
-        btn_refresh_logs = QPushButton("↻  Refresh")
-        btn_refresh_logs.setObjectName("btn_secondary")
-        btn_refresh_logs.clicked.connect(self._invalidate_all_log_caches)
-        hrow.addWidget(btn_refresh_logs)
-        layout.addLayout(hrow)
-
-        # Stats bar
-        self.lbl_log_stats = QLabel("")
-        self.lbl_log_stats.setStyleSheet(
-            "color: #555555; font-size: 11px; padding: 4px 8px; letter-spacing: 0.3px;"
-            "background: transparent; border: none;"
-        )
-        layout.addWidget(self.lbl_log_stats)
-
-        # Tab style — dark theme consistent with the rest of the UI
-        TAB_STYLE = """
-            QTabWidget::pane {
-                border: 1px solid #222222;
-                border-radius: 10px;
-                background: #0D0D0D;
-                margin-top: -1px;
-            }
-            QTabBar::tab {
-                background: #141414;
-                color: #666666;
-                border: 1px solid #222222;
-                border-bottom: none;
-                border-radius: 6px 6px 0 0;
-                padding: 8px 18px;
-                font-size: 12px;
-                font-weight: 600;
-                margin-right: 2px;
-                min-width: 90px;
-                letter-spacing: 0.3px;
-            }
-            QTabBar::tab:selected {
-                background: #0D0D0D;
-                color: #DDDDDD;
-                border-bottom: 2px solid #444444;
-            }
-            QTabBar::tab:hover:!selected {
-                color: #AAAAAA;
-                background: #1A1A1A;
-            }
-        """
-
-        # Dark log text area — terminal feel
-        LOG_TEXT_STYLE = """
-            QTextEdit {
-                background-color: #080808;
-                color: #C8C8C8;
-                font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-                font-size: 12px;
-                border-radius: 6px;
-                padding: 14px;
-                border: 1px solid #1A1A1A;
-                line-height: 1.7;
-                selection-background-color: #2A2A2A;
-            }
-        """
+        # Title
+        title = QLabel("Assets & Services Inventory")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
         tabs = QTabWidget()
-        tabs.setStyleSheet(TAB_STYLE)
-        tabs.currentChanged.connect(self._on_log_tab_changed)
-        self._current_log_tab = 0
+        tabs.setObjectName("assetsTabs")
 
-        # ── Helper: build a log tab ──────────────────────────────────────────
-        def _make_log_tab(tab_title, log_widget_attr, search_attr, level_widget_attr,
-                          invalidate_fn, note_text="", with_level=False):
-            tab = QWidget()
-            tab.setObjectName(log_widget_attr + "_tab")
-            tab.setStyleSheet(f"QWidget#{log_widget_attr}_tab {{ background: transparent; }}")
-            tl = QVBoxLayout(tab)
-            tl.setContentsMargins(12, 12, 12, 8)
-            tl.setSpacing(8)
+        # Tab 1: Assets
+        tab_assets = QWidget()
+        layout_assets = QVBoxLayout(tab_assets)
+        self.tbl_assets = QTableWidget(0, 5)
+        self.tbl_assets.setObjectName("tbl_assets")
+        self.tbl_assets.setHorizontalHeaderLabels(["IP/Host", "Hostname", "OS", "Open Ports", "Last Seen"])
+        self.tbl_assets.horizontalHeader().setStretchLastSection(True)
+        self.tbl_assets.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout_assets.addWidget(self.tbl_assets)
+        tabs.addTab(tab_assets, "Assets")
 
-            # Toolbar row
-            bar = QHBoxLayout()
-
-            if with_level and level_widget_attr:
-                lbl_l = QLabel("Level:")
-                lbl_l.setStyleSheet("color: #555555; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;")
-                bar.addWidget(lbl_l)
-                lvl = QComboBox()
-                lvl.addItems(["All Levels", "INFO", "WARNING", "ERROR", "DEBUG"])
-                lvl.currentTextChanged.connect(invalidate_fn)
-                setattr(self, level_widget_attr, lvl)
-                bar.addWidget(lvl)
-                bar.addSpacing(12)
-
-            lbl_s = QLabel("Search:")
-            lbl_s.setStyleSheet("color: #555555; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;")
-            bar.addWidget(lbl_s)
-            search_box = QLineEdit()
-            search_box.setPlaceholderText(f"Filter {tab_title} entries...")
-            search_box.textChanged.connect(invalidate_fn)
-            setattr(self, search_attr, search_box)
-            bar.addWidget(search_box, 1)
-
-            bar.addSpacing(8)
-            btn_clr = QPushButton("Clear View")
-            btn_clr.setObjectName("btn_secondary")
-            bar.addWidget(btn_clr)
-
-            btn_copy = QPushButton("Copy Logs")
-            btn_copy.setObjectName("btn_secondary")
-            bar.addWidget(btn_copy)
-
-            tl.addLayout(bar)
-
-            te = QTextEdit()
-            te.setReadOnly(True)
-            te.setFont(QFont("Menlo", 12))
-            te.setStyleSheet(LOG_TEXT_STYLE)
-            setattr(self, log_widget_attr, te)
-            btn_clr.clicked.connect(lambda _, w=te: w.clear())
-            btn_copy.clicked.connect(lambda _, w=te: QApplication.clipboard().setText(w.toPlainText()))
-            tl.addWidget(te, 1)
-
-            # Bottom note
-            if note_text:
-                note = QLabel(note_text)
-                note.setStyleSheet("color: #333333; font-size: 11px; padding: 2px 0 0 0; letter-spacing: 0.2px;")
-                tl.addWidget(note)
-
-            return tab
-
-        # ── Tab 1: Master ──────────────────────────────────────────────────
-        tab_master = _make_log_tab(
-            tab_title="master log",
-            log_widget_attr="txt_logs",
-            search_attr="txt_log_search",
-            level_widget_attr="cmb_log_level",
-            invalidate_fn=self._invalidate_log_cache,
-            note_text="  All system events — sorted newest-first",
-            with_level=True
-        )
-        tabs.addTab(tab_master, "📋  Master")
-
-
-
-
-
-        # ── Tab 2: Errors ──────────────────────────────────────────────────
-        tab_err = _make_log_tab(
-            tab_title="error log",
-            log_widget_attr="txt_error_logs",
-            search_attr="txt_error_log_search",
-            level_widget_attr="cmb_error_log_level",
-            invalidate_fn=self._invalidate_error_log_cache,
-            note_text="  ERROR and CRITICAL level events across all subsystems",
-            with_level=True
-        )
-        tabs.addTab(tab_err, "⚠  Errors")
+        # Tab 2: Services
+        tab_services = QWidget()
+        layout_services = QVBoxLayout(tab_services)
+        self.tbl_services = QTableWidget(0, 7)
+        self.tbl_services.setObjectName("tbl_services")
+        self.tbl_services.setHorizontalHeaderLabels(["IP", "Port", "Protocol", "Service", "Product", "Version", "CPE"])
+        self.tbl_services.horizontalHeader().setStretchLastSection(True)
+        self.tbl_services.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout_services.addWidget(self.tbl_services)
+        tabs.addTab(tab_services, "Services")
 
         layout.addWidget(tabs, 1)
-        return page
+        self.content_stack.addWidget(page)
 
-    def _toggle_autoscroll(self, checked):
-        self._log_autoscroll = checked
-        self.btn_autoscroll.setText("⬇  Auto-scroll ON" if checked else "⬇  Auto-scroll OFF")
-
-    def _on_log_tab_changed(self, idx):
-        self._current_log_tab = idx
-        self._invalidate_all_log_caches()
-
-    def _export_logs(self):
-        from PySide6.QtWidgets import QFileDialog
-        from tools.config_manager import BASE_DIR
-        import zipfile
-        log_files = {
-            "master.log": os.path.join(BASE_DIR, "logs", "master.log"),
-            "error.log": os.path.join(BASE_DIR, "logs", "error.log"),
-        }
-        default = os.path.join(os.path.expanduser("~"), "smp_logs.zip")
-        path, _ = QFileDialog.getSaveFileName(self, "Export Logs", default, "ZIP Archive (*.zip)")
-        if not path:
-            return
-        try:
-            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
-                for name, fpath in log_files.items():
-                    if os.path.exists(fpath):
-                        zf.write(fpath, name)
-            QMessageBox.information(self, "Export Complete", f"Logs exported to:\n{path}")
-        except Exception as e:
-            QMessageBox.critical(self, "Export Failed", str(e))
-
-
-    # ─── UI Helpers ────────────────────────────────────────────────────────────
-
-    def _make_page(self):
+    def _setup_page_6_reports(self):
         page = QWidget()
-        page.setObjectName("page")
-        page.setStyleSheet("QWidget#page { background: #0D0D0D; }")
+        page.setObjectName("pageReports")
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(28, 28, 28, 20)
-        layout.setSpacing(16)
-        return page, layout
+        layout.setContentsMargins(20, 20, 20, 20)
 
-    def _add_page_header(self, layout, title, subtitle=""):
-        lbl = QLabel(title)
-        lbl.setObjectName("page_title")
-        layout.addWidget(lbl)
-        if subtitle:
-            sub = QLabel(subtitle)
-            sub.setObjectName("page_subtitle")
-            layout.addWidget(sub)
+        # Title
+        title = QLabel("Report Generation")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
 
-    def _add_page_header_inline(self, hrow, title, subtitle=""):
-        vb = QVBoxLayout()
-        vb.setSpacing(2)
-        lbl = QLabel(title)
-        lbl.setObjectName("page_title")
-        vb.addWidget(lbl)
-        if subtitle:
-            sub = QLabel(subtitle)
-            sub.setObjectName("page_subtitle")
-            vb.addWidget(sub)
-        hrow.addLayout(vb)
+        # Toolbar
+        toolbar = QHBoxLayout()
+        self.cmb_report_target = QComboBox()
+        self.cmb_report_target.setObjectName("cmb_report_target")
+        self.cmb_report_target.addItem("Select Target...")
+        self.cmb_report_target.setMinimumWidth(200)
 
-    def _make_card(self, title=""):
-        card = QGroupBox(title)
-        card.setObjectName("card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(16, 12 if title else 14, 16, 14)
-        card_layout.setSpacing(8)
-        return card
+        self.btn_gen_report = QPushButton("Generate Report")
+        self.btn_gen_report.setObjectName("btn_gen_report")
+        self.btn_gen_report.setStyleSheet("background-color: #4a148c; color: white;")
 
-    def _make_kpi(self, title, value, accent="#FFFFFF"):
-        card = QFrame()
-        card.setObjectName("kpi_card")
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(6)
+        self.btn_verify_report = QPushButton("✓ Verify")
+        self.btn_verify_report.setObjectName("btn_verify_report")
+        self.btn_verify_report.setStyleSheet("background-color: #004d40; color: white;")
 
-        title_lbl = QLabel(title)
-        title_lbl.setStyleSheet("color: #444444; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;")
-        layout.addWidget(title_lbl)
+        toolbar.addWidget(self.cmb_report_target)
+        toolbar.addWidget(self.btn_gen_report)
+        toolbar.addWidget(self.btn_verify_report)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
 
-        val_lbl = QLabel(value)
-        val_lbl.setStyleSheet(f"color: {accent}; font-size: 26px; font-weight: 300; letter-spacing: -0.5px;")
-        layout.addWidget(val_lbl)
+        # Table
+        self.tbl_reports = QTableWidget(0, 7)
+        self.tbl_reports.setObjectName("tbl_reports")
+        self.tbl_reports.setHorizontalHeaderLabels(["Report ID", "Target", "Generated", "Format", "Risk Rating", "Size", "Actions"])
+        self.tbl_reports.horizontalHeader().setStretchLastSection(True)
+        self.tbl_reports.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.tbl_reports, 1)
 
-        return card, val_lbl
-
-
-    # ─── Page: Neural Brain ───────────────────────────────────────────────────
-
-    def _build_brain_page(self):
-        page, layout = self._make_page()
+        # Preview
+        grp_preview = QGroupBox("Report Preview")
+        preview_layout = QVBoxLayout(grp_preview)
+        self.txt_report_preview = QTextEdit()
+        self.txt_report_preview.setObjectName("txt_report_preview")
+        self.txt_report_preview.setReadOnly(True)
+        self.txt_report_preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        preview_layout.addWidget(self.txt_report_preview)
         
-        # Header
-        hrow = QHBoxLayout()
-        self._add_page_header_inline(hrow, "Neural Brain", "V9 Neural Intelligence Engine — Real-time threat heuristic visualization")
-        hrow.addStretch()
-        layout.addLayout(hrow)
+        layout.addWidget(grp_preview, 1)
+        self.content_stack.addWidget(page)
+
+    def _setup_page_7_exporter(self):
+        page = QWidget()
+        page.setObjectName("pageExporter")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Title
+        title = QLabel("Enterprise Data Exporter")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
+
+        # Warning banner
+        warn_frame = QFrame()
+        warn_frame.setObjectName("warn_frame")
+        warn_frame.setStyleSheet("background-color: #3b0000; border: 1px solid #ff0000; border-radius: 4px;")
+        warn_layout = QVBoxLayout(warn_frame)
+        lbl_warn = QLabel("⚠ ENTERPRISE DATA EXPORT — All exports produce UNENCRYPTED plaintext data. Explicit legal acknowledgment required.")
+        lbl_warn.setStyleSheet("color: #ff5555; font-weight: bold; font-size: 14px;")
+        warn_layout.addWidget(lbl_warn)
+        layout.addWidget(warn_frame)
+        layout.addSpacing(10)
+
+        # Config GroupBox
+        grp_config = QGroupBox("Export Configuration")
+        grp_config.setStyleSheet("QGroupBox { font-weight: bold; }")
+        config_layout = QGridLayout(grp_config)
+
+        self.cmb_export_target = QComboBox()
+        self.cmb_export_target.setObjectName("cmb_export_target")
+        self.cmb_export_target.addItem("Select Engagement/Target...")
         
-        # Graph Widget
-        from ui.components.neural_graph import NeuralGraphWidget
-        self.neural_graph = NeuralGraphWidget()
+        self.cmb_export_format = QComboBox()
+        self.cmb_export_format.setObjectName("cmb_export_format")
+        self.cmb_export_format.addItems(['Jira JSON', 'ServiceNow CSV', 'DefectDojo JSON', 'Generic JSON', 'Markdown ZIP', 'SARIF 2.1.0'])
         
-        # AI Insights Label
-        insights_card = self._make_card("AI Insights")
-        self.insights_label = QLabel("Initializing Neural Engine...")
-        self.insights_label.setWordWrap(True)
-        self.insights_label.setStyleSheet(
-            "color: #AAAAAA; font-size: 13px; line-height: 1.6; padding: 4px;"
-        )
-        insights_card.layout().addWidget(self.insights_label)
+        config_layout.addWidget(QLabel("Target:"), 0, 0)
+        config_layout.addWidget(self.cmb_export_target, 0, 1)
+        config_layout.addWidget(QLabel("Format:"), 1, 0)
+        config_layout.addWidget(self.cmb_export_format, 1, 1)
+
+        # Checkboxes
+        chk_layout = QVBoxLayout()
+        self.chk_include_findings = QCheckBox("Include Findings")
+        self.chk_include_findings.setObjectName("chk_include_findings")
+        self.chk_include_findings.setChecked(True)
         
-        self.lbl_empty = QLabel(
-            "  No intelligence data yet.\n\n"
-            "  Run a scan to build the CVE knowledge graph.\n"
-            "  Each scan with confirmed CVEs populates this view."
-        )
-        self.lbl_empty.setStyleSheet(
-            "color: #444444; font-size: 14px; padding: 60px; "
-            "border: 1px dashed #222222; border-radius: 12px; background: #0D0D0D;"
-        )
-        self.lbl_empty.setAlignment(Qt.AlignCenter)
+        self.chk_include_assets = QCheckBox("Include Assets")
+        self.chk_include_assets.setObjectName("chk_include_assets")
         
-        layout.addWidget(self.lbl_empty, 1)
-        layout.addWidget(self.neural_graph, 1)
-        layout.addWidget(insights_card, 0)
+        self.chk_include_services = QCheckBox("Include Services")
+        self.chk_include_services.setObjectName("chk_include_services")
         
-        self.neural_graph.hide()
+        self.chk_include_evidence_hashes = QCheckBox("Include Evidence Hashes")
+        self.chk_include_evidence_hashes.setObjectName("chk_include_evidence_hashes")
         
-        def refresh_brain_data():
-            import sqlite3
-            import os
-            from intelligence.brain import GLOBAL_INTEL_DB, generate_ai_insights
-            from tools.db_manager import get_db_connection, get_findings_for_scan
+        self.chk_include_scan_timeline = QCheckBox("Include Scan Timeline")
+        self.chk_include_scan_timeline.setObjectName("chk_include_scan_timeline")
+        
+        chk_layout.addWidget(self.chk_include_findings)
+        chk_layout.addWidget(self.chk_include_assets)
+        chk_layout.addWidget(self.chk_include_services)
+        chk_layout.addWidget(self.chk_include_evidence_hashes)
+        chk_layout.addWidget(self.chk_include_scan_timeline)
+        
+        config_layout.addWidget(QLabel("Includes:"), 2, 0, Qt.AlignTop)
+        config_layout.addLayout(chk_layout, 2, 1)
+
+        # Output Dir
+        dir_layout = QHBoxLayout()
+        self.inp_export_dir = QLineEdit()
+        self.inp_export_dir.setObjectName("inp_export_dir")
+        self.btn_browse_export = QPushButton("📁 Browse")
+        self.btn_browse_export.setObjectName("btn_browse_export")
+        dir_layout.addWidget(self.inp_export_dir)
+        dir_layout.addWidget(self.btn_browse_export)
+        
+        config_layout.addWidget(QLabel("Output Dir:"), 3, 0)
+        config_layout.addLayout(dir_layout, 3, 1)
+
+        layout.addWidget(grp_config)
+
+        # Legal Notice GroupBox
+        grp_legal = QGroupBox("Legal Notice & Authorization")
+        grp_legal.setStyleSheet("QGroupBox { border: 2px solid #b71c1c; border-radius: 5px; margin-top: 1ex; font-weight: bold; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px; color: #ff5252; }")
+        legal_layout = QVBoxLayout(grp_legal)
+        
+        lbl_legal_text = QLabel("By proceeding, you acknowledge that you are authorized to export this sensitive vulnerability data.\n"
+                                "You are responsible for the secure transmission and storage of the exported files.")
+        lbl_legal_text.setStyleSheet("color: #ff8a80;")
+        legal_layout.addWidget(lbl_legal_text)
+        
+        lbl_gate = QLabel('Type "I AGREE" below to unlock export:')
+        legal_layout.addWidget(lbl_gate)
+        
+        gate_layout = QHBoxLayout()
+        self.inp_legal_gate = QLineEdit()
+        self.inp_legal_gate.setObjectName("inp_legal_gate")
+        self.inp_legal_gate.setPlaceholderText("I AGREE")
+        self.inp_legal_gate.setMaximumWidth(200)
+        
+        self.btn_export = QPushButton("Export Data")
+        self.btn_export.setObjectName("btn_export")
+        self.btn_export.setEnabled(False)
+        self.btn_export.setStyleSheet("""
+            QPushButton:disabled { background-color: #424242; color: #757575; }
+            QPushButton:enabled { background-color: #d32f2f; color: white; font-weight: bold; }
+        """)
+        
+        gate_layout.addWidget(self.inp_legal_gate)
+        gate_layout.addWidget(self.btn_export)
+        gate_layout.addStretch()
+        
+        legal_layout.addLayout(gate_layout)
+        
+        self.inp_legal_gate.textChanged.connect(lambda t: self.btn_export.setEnabled(t.strip() == 'I AGREE'))
+        
+        layout.addWidget(grp_legal)
+
+        # Export History
+        grp_history = QGroupBox("Export History")
+        history_layout = QVBoxLayout(grp_history)
+        self.tbl_export_history = QTableWidget(0, 7)
+        self.tbl_export_history.setObjectName("tbl_export_history")
+        self.tbl_export_history.setHorizontalHeaderLabels(["Export ID", "Target", "Format", "Exported By", "Timestamp", "SHA-256", "Files"])
+        self.tbl_export_history.horizontalHeader().setStretchLastSection(True)
+        self.tbl_export_history.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        history_layout.addWidget(self.tbl_export_history)
+        
+        layout.addWidget(grp_history, 1)
+
+        self.content_stack.addWidget(page)
+
+    def _setup_page_8_scanners(self):
+        page = QWidget()
+        page.setObjectName("pageScanners")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = QLabel("Scanner Registry")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
+
+        toolbar = QHBoxLayout()
+        self.cmb_scanner_filter = QComboBox()
+        self.cmb_scanner_filter.setObjectName("cmb_scanner_filter")
+        self.cmb_scanner_filter.addItems(['All Categories', 'recon', 'network', 'web', 'exploit', 'intel'])
+        
+        self.inp_scanner_search = QLineEdit()
+        self.inp_scanner_search.setObjectName("inp_scanner_search")
+        self.inp_scanner_search.setPlaceholderText("Search scanners...")
+        
+        self.btn_refresh_scanners = QPushButton("Refresh")
+        self.btn_refresh_scanners.setObjectName("btn_refresh_scanners")
+        
+        self.btn_check_tools = QPushButton("Check Tools")
+        self.btn_check_tools.setObjectName("btn_check_tools")
+        self.btn_check_tools.setStyleSheet("background-color: #0277bd; color: white;")
+        
+        toolbar.addWidget(self.cmb_scanner_filter)
+        toolbar.addWidget(self.inp_scanner_search)
+        toolbar.addWidget(self.btn_refresh_scanners)
+        toolbar.addWidget(self.btn_check_tools)
+        toolbar.addStretch()
+        
+        layout.addLayout(toolbar)
+
+        self.tbl_scanners = QTableWidget(0, 7)
+        self.tbl_scanners.setObjectName("tbl_scanners")
+        self.tbl_scanners.setHorizontalHeaderLabels(["Scanner Name", "Category", "Binary", "Version", "Status", "Timeout", "DAG Dependencies"])
+        self.tbl_scanners.horizontalHeader().setStretchLastSection(True)
+        self.tbl_scanners.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        layout.addWidget(self.tbl_scanners, 1)
+        self.content_stack.addWidget(page)
+
+    def _setup_page_9_settings(self):
+        page = QWidget()
+        page.setObjectName("pageSettings")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        title = QLabel("System Settings")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(title)
+
+        tabs = QTabWidget()
+        tabs.setObjectName("settingsTabs")
+
+        # Tab: General
+        tab_general = QWidget()
+        layout_gen = QFormLayout(tab_general)
+        self.nmap_path = QLineEdit("/usr/bin/nmap")
+        self.nmap_path.setObjectName("nmap_path")
+        self.scan_timeout = QLineEdit("3600")
+        self.scan_timeout.setObjectName("scan_timeout")
+        self.max_concurrent_scanners = QLineEdit("5")
+        self.max_concurrent_scanners.setObjectName("max_concurrent_scanners")
+        self.output_dir = QLineEdit("/var/opt/smp/output")
+        self.output_dir.setObjectName("output_dir")
+        self.operator_name = QLineEdit("admin")
+        self.operator_name.setObjectName("operator_name")
+        
+        layout_gen.addRow("Nmap Path:", self.nmap_path)
+        layout_gen.addRow("Scan Timeout (s):", self.scan_timeout)
+        layout_gen.addRow("Max Concurrent Scanners:", self.max_concurrent_scanners)
+        layout_gen.addRow("Default Output Dir:", self.output_dir)
+        layout_gen.addRow("Operator Name:", self.operator_name)
+        tabs.addTab(tab_general, "General")
+
+        # Tab: Security
+        tab_security = QWidget()
+        layout_sec = QVBoxLayout(tab_security)
+        self.btn_change_pw = QPushButton("Change Master Password")
+        self.btn_change_pw.setObjectName("btn_change_pw")
+        self.btn_export_audit = QPushButton("Export Audit Log")
+        self.btn_export_audit.setObjectName("btn_export_audit")
+        self.btn_wipe_db = QPushButton("Wipe Database")
+        self.btn_wipe_db.setObjectName("btn_wipe_db")
+        self.btn_wipe_db.setStyleSheet("background-color: #b71c1c; color: white; font-weight: bold;")
+        
+        layout_sec.addWidget(self.btn_change_pw)
+        layout_sec.addWidget(self.btn_export_audit)
+        layout_sec.addWidget(self.btn_wipe_db)
+        layout_sec.addStretch()
+        tabs.addTab(tab_security, "Security")
+
+        # Tab: API
+        tab_api = QWidget()
+        layout_api = QFormLayout(tab_api)
+        self.enable_api = QCheckBox("Enable REST API")
+        self.enable_api.setObjectName("enable_api")
+        self.api_host = QLineEdit("127.0.0.1")
+        self.api_host.setObjectName("api_host")
+        self.api_port = QLineEdit("8443")
+        self.api_port.setObjectName("api_port")
+        self.api_key = QLineEdit("********************")
+        self.api_key.setObjectName("api_key")
+        self.api_key.setReadOnly(True)
+        
+        layout_api.addRow("", self.enable_api)
+        layout_api.addRow("API Host:", self.api_host)
+        layout_api.addRow("API Port:", self.api_port)
+        layout_api.addRow("Current API Key:", self.api_key)
+        tabs.addTab(tab_api, "API")
+
+        # Tab: Notifications
+        tab_notif = QWidget()
+        layout_notif = QFormLayout(tab_notif)
+        self.enable_smtp = QCheckBox("Enable SMTP Notifications")
+        self.enable_smtp.setObjectName("enable_smtp")
+        self.smtp_host = QLineEdit("smtp.example.com")
+        self.smtp_host.setObjectName("smtp_host")
+        self.smtp_port = QLineEdit("587")
+        self.smtp_port.setObjectName("smtp_port")
+        self.smtp_user = QLineEdit("admin@example.com")
+        self.smtp_user.setObjectName("smtp_user")
+        self.smtp_password = QLineEdit()
+        self.smtp_password.setObjectName("smtp_password")
+        self.smtp_password.setEchoMode(QLineEdit.Password)
+        self.btn_test_email = QPushButton("Test Email Configuration")
+        self.btn_test_email.setObjectName("btn_test_email")
+        
+        layout_notif.addRow("", self.enable_smtp)
+        layout_notif.addRow("SMTP Host:", self.smtp_host)
+        layout_notif.addRow("SMTP Port:", self.smtp_port)
+        layout_notif.addRow("SMTP User:", self.smtp_user)
+        layout_notif.addRow("SMTP Password:", self.smtp_password)
+        layout_notif.addRow("", self.btn_test_email)
+        tabs.addTab(tab_notif, "Notifications")
+
+        # Tab: Audit Log
+        tab_audit = QWidget()
+        layout_audit = QVBoxLayout(tab_audit)
+        self.tbl_audit_log = QTableWidget(0, 4)
+        self.tbl_audit_log.setObjectName("tbl_audit_log")
+        self.tbl_audit_log.setHorizontalHeaderLabels(["Timestamp", "Level", "Message", "Scan ID"])
+        self.tbl_audit_log.horizontalHeader().setStretchLastSection(True)
+        self.tbl_audit_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout_audit.addWidget(self.tbl_audit_log)
+        tabs.addTab(tab_audit, "Audit Log")
+
+        layout.addWidget(tabs, 1)
+        self.content_stack.addWidget(page)
+
+    def _setup_status_bar(self):
+        """Setup the application status bar."""
+        if not hasattr(self, 'statusBar'):
+            return
             
-            try:
-                if not os.path.exists(GLOBAL_INTEL_DB):
-                    return
-                conn = sqlite3.connect(GLOBAL_INTEL_DB)
-                conn.row_factory = sqlite3.Row
-                rows = conn.execute(
-                    "SELECT cve_id, affected_component, severity, centrality_score "
-                    "FROM global_heuristics ORDER BY observation_count DESC LIMIT 200"
-                ).fetchall()
-                conn.close()
-                
-                if not rows:
-                    self.lbl_empty.show()
-                    self.neural_graph.hide()
-                    return
-                    
-                self.lbl_empty.hide()
-                self.neural_graph.show()
-                
-                nodes, edges = [], []
-                added_ids = set()
-                
-                for row in rows:
-                    cve = row["cve_id"]
-                    comp = row["affected_component"]
-                    sev = row["severity"]
-                    score = row["centrality_score"]
-                    
-                    if cve not in added_ids:
-                        nodes.append({"id": cve, "label": cve, "type": "cve", "severity": sev, "score": score})
-                        added_ids.add(cve)
-                    if comp not in added_ids:
-                        nodes.append({"id": comp, "label": comp, "type": "component", "severity": "Info", "score": score})
-                        added_ids.add(comp)
-                    
-                    edges.append((cve, comp))
-                    
-                self.neural_graph.load_data({"nodes": nodes, "edges": edges})
-                
-                # Update insights
-                conn_main = get_db_connection()
-                latest_row = conn_main.execute("SELECT id FROM scans WHERE status = 'Completed' ORDER BY id DESC LIMIT 1").fetchone()
-                conn_main.close()
-                if latest_row:
-                    findings = list(get_findings_for_scan(latest_row["id"]))
-                    self.insights_label.setText(generate_ai_insights(findings))
-                else:
-                    self.insights_label.setText("Intelligence Engine Active. Run a scan to generate context.")
-                    
-            except Exception as e:
-                logger.error(f"Brain refresh failed: {e}")
+        self.status_bar = self.statusBar()
+        self.status_bar.setObjectName("statusBar")
+        self.status_bar.setStyleSheet("background-color: #1a1a1a; color: #888888; border-top: 1px solid #333333;")
+        
+        self.status_version = QLabel(" SMP V9.5 ")
+        self.status_version.setStyleSheet("font-weight: bold; color: #4a90e2;")
+        self.status_bar.addWidget(self.status_version)
+        
+        self.status_operator = QLabel(" Operator: admin ")
+        self.status_bar.addPermanentWidget(self.status_operator)
+        
+        self.status_db = QLabel(" 🔒 DB Encrypted ")
+        self.status_db.setStyleSheet("color: #4caf50;")
+        self.status_bar.addPermanentWidget(self.status_db)
 
-        # Initial load
-        refresh_brain_data()
-        
-        # Setup EventBus Thread-Safe Hook
-        from PySide6.QtCore import QObject, Signal
-        class BrainHook(QObject):
-            sig_refresh = Signal()
-            def __init__(self):
-                super().__init__()
-                self.sig_refresh.connect(refresh_brain_data)
-        
-        self._brain_hook = BrainHook()
-        
-        try:
-            from tools.event_bus import EventBus
-            EventBus.subscribe("scan_completed", lambda e, d: self._brain_hook.sig_refresh.emit())
-        except ImportError:
-            pass # EventBus not available
-
-        return page
+    def _nav_clicked(self, index: int):
+        """
+        Handle navigation button clicks.
+        This method is meant to be overridden or extended by the main logic class,
+        but we provide base functionality to switch the stacked widget.
+        """
+        if hasattr(self, 'content_stack'):
+            self.content_stack.setCurrentIndex(index)
+            
+        # Update button states
+        for i, btn in enumerate(self._nav_buttons):
+            if i != index:
+                btn.setChecked(False)
 

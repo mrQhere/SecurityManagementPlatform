@@ -1,54 +1,79 @@
-# 🛠️ SMP V9.4.4 — Troubleshooting Index
+# 🛠️ SMP V9.5 — Troubleshooting & Diagnostics Reference
 
-## Step 1: Automated Self-Healing (Do this first)
+This directory contains the operational troubleshooting guides and edge-case resolution manuals for the **Security Management Platform (SMP) V9.5 Security Data Pipeline**.
 
-In V9.4.3, the vast majority of platform errors (missing binaries, locked databases, corrupted Python environments) can be repaired automatically by the SMP Self-Healing Engine. 
+---
 
-Whenever you encounter an error (or a red `SMP-xxxx` code), run the following commands:
+## ⚡ Step 1: Autonomous Self-Healing (Run First)
+
+In SMP V9.5, most common environmental faults (missing directory trees, stale process lock files, SQLite WAL lock contention, missing tool binary links) are resolved automatically by the self-healing engine.
 
 ```bash
-# 1. Activate the Python virtual environment
+# 1. Activate Python virtual environment
 source venv/bin/activate
 
-# 2. Run the Self-Healing diagnostics and auto-fix script
+# 2. Run automated self-healing diagnostics and repair
 python3 tools/troubleshoot.py --fix
 ```
 
-For a detailed breakdown of the `SMP-xxxx` error taxonomy and what actions the `--fix` script takes, read:
-👉 **[Auto-Fixes & Error Taxonomy](auto_fixes.md)**
+### Look up any error code directly:
+```bash
+python3 tools/troubleshoot.py --lookup SMP-3003
+```
 
 ---
 
-## Step 2: Manual Diagnostics
+## 📚 Categorized Troubleshooting Guides
 
-If the automated `--fix` script cannot resolve your issue, consult the manual edge-case guides below. Click the topic that matches your error.
+When an issue cannot be resolved automatically by `--fix`, consult the domain-specific guide for your error:
 
-| Category | File | Common errors covered |
-|----------|------|-----------------------|
-| 📦 [Installation](installation.md) | `installation.md` | pysqlcipher3, libxcb-cursor0 / Qt xcb crash, binary download, Go PATH, WPScan wrapper |
-| 🗄️ [Database](database.md) | `database.md` | DB locked, SQLCipher key mismatch, migration errors, CVE sync |
-| 🔬 [Scanner Errors](scanners.md) | `scanners.md` | Nmap root, Nuclei templates, ffuf false positives, timeouts |
-| 🔌 [API Errors](api.md) | `api.md` | 401/403/429, FastAPI startup, CORS, JWT secrets |
-| 📄 [Reports & SBOM](reports.md) | `reports.md` | PDF generation, SBOM empty, report verification, SMTP |
-| 🤖 [Auto Fixes](auto_fixes.md) | `auto_fixes.md` | Stale locks, temp files cleanup, reset services, flush cache |
-
-## V9.4.4 Exploit Frameworks Troubleshooting
-
-With the introduction of 15 advanced exploit frameworks (inspired by DefectDojo/Faraday), you may encounter new edge cases. Reference these fixes if the DAG encounters deadlocks during Phase 2 or Phase 3:
-
-*   **`SMP-4040` Metasploit/Impacket Timeout**: If `msfconsole` or `impacket-psexec` drops a shell, it will block the DAG. Adjust the `timeout` parameter in their respective scanner wrappers to force an exception.
-*   **`SMP-4041` OSV-Scanner Binary Incompatibility**: If `osv-scanner` fails to run, ensure Golang is properly installed and the binary was compiled natively for your architecture during `setup.sh`.
-*   **`SMP-4042` Responder Port 53 Collision**: `Responder` aggressively binds to UDP port 53. If you run `systemd-resolved` or `dnsmasq`, the scanner will crash. Stop local DNS caching before launching `Responder`.
-*   **OpenVAS Signature Loops**: If `OpenVAS` hangs during initialization, run `greenbone-nvt-sync` manually to resolve the blocking feed update.
+| Domain | Guide | Error Code Range | Key Issues Addressed |
+|---|---|---|---|
+| 🔐 **Authentication & Keys** | [api.md](api.md) | `SMP-1000` – `SMP-1009` | JWT token expiration, KEK derivation, DEK/IEK/EEK unlock, password complexity |
+| 🗄️ **Database & SQLCipher** | [database.md](database.md) | `SMP-3000` – `SMP-3007` | PRAGMA key failure, WAL lock deadlock, migration errors, backup recovery |
+| 🔬 **Scanners & DAG Engine** | [scanners.md](scanners.md) | `SMP-2000` – `SMP-2010`, `SMP-4040`–`4042` | DAG dependency cycles, Nmap raw capability, timeout budgets, port collisions |
+| 🔌 **API & WebSockets** | [api.md](api.md) | `SMP-4000` – `SMP-4002` | FastAPI 401/403/429, SlowAPI rate limiting, CORS preflight, WebSocket disconnects |
+| 📄 **Reports & Evidence** | [reports.md](reports.md) | `SMP-4010` – `SMP-4022` | Authenticity hash mismatch, WeasyPrint PDF rendering, evidence tamper alerts |
+| 📦 **Installation & Runtime** | [installation.md](installation.md) | `SMP-2002`, `SMP-4041` | `pysqlcipher3` C compilation, Qt XCB GUI crashes, Go/Node toolchains, Docker |
+| 🤖 **Autonomous Auto-Fixes** | [auto_fixes.md](auto_fixes.md) | `SMP-9000` – `SMP-9999` | Lock removal recipes, cache flushes, service restarts, emergency factory reset |
 
 ---
 
-## Quick Verification
+## 🔍 The V9.5 Diagnostic Flowchart
 
-To ensure all 90 components are healthy and the Directed Acyclic Graph (DAG) has no deadlocks:
+```
+                          ┌────────────────────────┐
+                          │     Fault Detected     │
+                          │   (UI / API / CLI)     │
+                          └───────────┬────────────┘
+                                      │
+                                      ▼
+                          ┌────────────────────────┐
+                          │ Run Automated Healing  │
+                          │ tools/troubleshoot.py  │
+                          │         --fix          │
+                          └───────────┬────────────┘
+                                      │
+                         ┌────────────┴────────────┐
+                         │                         │
+                   [Resolved ✅]              [Unresolved ❌]
+                         │                         │
+                         ▼                         ▼
+                  Resume Operations       Check Error Code Map
+                                          (ERROR_CODES.md)
+                                                   │
+                                                   ▼
+                                        Consult Specific Guide
+                                        (e.g., database.md)
+```
+
+---
+
+## 🧪 System Health Verification
+
+To run the complete 11-suite end-to-end integration and cryptographic attestation test pipeline:
 
 ```bash
 source venv/bin/activate
 python3 tools/verify_smp.py
 ```
-*(This script runs the full 11-suite testing pipeline and takes ~5 minutes to complete).*

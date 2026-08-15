@@ -8,29 +8,25 @@ logger = logging.getLogger("smp.scan.registry")
 
 _REGISTRY = {}
 
-def register_scanner(name, step_name, depends_on, binary_name, needs_binary=True, confidence=50):
+def register_scanner(name, step_name="", depends_on=None, binary_name=None, needs_binary=True, confidence=50, **kwargs):
     """
     Decorator to register a scanner function into the global DAG registry.
-    
-    @register_scanner(
-        name="Nmap", 
-        step_name="Running Nmap", 
-        depends_on=["Traceroute"], 
-        binary_name="nmap", 
-        needs_binary=True,
-        confidence=90
-    )
-    def run_nmap_scan(url): ...
     """
+    if depends_on is None:
+        depends_on = []
+    bin_name = binary_name or kwargs.get("binary", "")
+    if "binary" in kwargs and binary_name is None:
+        needs_binary = bool(bin_name)
     def decorator(func):
         _REGISTRY[name] = {
             "name": name,
-            "step_name": step_name,
+            "step_name": step_name or f"Running {name}",
             "depends_on": depends_on,
             "scan_func": func,
-            "binary_name": binary_name,
+            "binary_name": bin_name,
             "needs_binary": needs_binary,
-            "confidence": confidence
+            "confidence": confidence,
+            "severity": kwargs.get("severity", "Medium"),
         }
         return func
     return decorator

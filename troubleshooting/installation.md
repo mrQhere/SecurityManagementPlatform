@@ -1,411 +1,151 @@
-# Installation Troubleshooting
+# 📦 Installation & Runtime Troubleshooting — V9.5
 
-This document contains 50 distinct troubleshooting cases.
-
-## General Diagnostics
-The system encountered an issue related to this category. This typically occurs when the configuration is invalid, resources are exhausted, or an external dependency fails.
-
-**Copy-Paste Solutions:** Run the respective command in your terminal to instantly resolve the issue. *(Note: Ensure you have the appropriate permissions before executing administrative commands.)*
+This guide provides technical diagnosis and resolutions for operating system dependencies, Python virtual environments, PySide6 GUI platform plugins (XCB/Wayland), and compiler toolchains.
 
 ---
 
-# Case 1: Permission Denied (setup.sh) (Scenario 1)
+## Error Codes Covered
 
+| Code | Slug | Issue Description |
+|---|---|---|
+| `SMP-2002` | `scanner_binary_missing` | Required security binary not installed or not in PATH |
+| `SMP-3001` | `db_connection_error` | `pysqlcipher3` C-extension missing or build failure |
+| `SMP-4041` | `binary_incompatibility` | Native binary architecture mismatch (x86_64 vs arm64) |
+| `SMP-5001` | `config_missing` | Missing configuration templates or environment variables |
+
+---
+
+## Common Scenarios & Resolutions
+
+### Scenario 1: PySide6 GUI Fails to Launch (`Qt platform plugin "xcb" missing`)
+
+**Symptom:** Running `./run.sh` fails with:
+`qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.`
+
+**Root Cause:** Missing X11/XCB display server libraries on Debian/Ubuntu/Kali systems.
+
+**Copy-Paste Solution:**
 ```bash
-chmod +x setup.sh && sudo ./setup.sh
+# Install required Qt6 XCB platform dependencies
+sudo apt-get update
+sudo apt-get install -y \
+  libxcb-cursor0 \
+  libxcb-xinerama0 \
+  libxcb-icccm4 \
+  libxcb-image0 \
+  libxcb-keysyms1 \
+  libxcb-render-util0 \
+  libxcb-shape0 \
+  libxkbcommon-x11-0 \
+  libgl1-mesa-glx
+
+# Force XCB platform backend if on Wayland
+export QT_QPA_PLATFORM=xcb
+./run.sh
 ```
 
 ---
 
-# Case 2: Go Compiler Missing (Scenario 2)
+### Scenario 2: `pysqlcipher3` Compilation Fails during `pip install`
 
+**Symptom:** `pip install -r requirements.txt` fails building wheel for `pysqlcipher3` with `sqlcipher/sqlite3.h: No such file or directory`.
+
+**Root Cause:** SQLCipher C header files (`libsqlcipher-dev`) are absent.
+
+**Copy-Paste Solution:**
 ```bash
-sudo apt-get install golang-go
+# Install SQLCipher development libraries and compilers
+sudo apt-get install -y libsqlcipher-dev libsqlcipher0 build-essential python3-dev
+
+# Rebuild in venv
+source venv/bin/activate
+pip install --no-cache-dir pysqlcipher3
 ```
 
 ---
 
-# Case 3: NPM Proxy Timeout (Scenario 3)
+### Scenario 3: Golang Security Tools Missing from PATH
 
+**Symptom:** Scanners such as `nuclei`, `subfinder`, `httpx`, `ffuf`, or `dalfox` fail with `SMP-2002: Required security tool binary missing`.
+
+**Root Cause:** Go binaries installed to `~/go/bin` or project-local `bin/` are not exported in the system `$PATH`.
+
+**Copy-Paste Solution:**
 ```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
+# 1. Export Go paths into current shell and profile
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin:$(pwd)/bin
+echo 'export PATH=$PATH:$HOME/go/bin:$(pwd)/bin' >> ~/.bashrc
+
+# 2. Re-run automated self-healing to install missing tools
+python3 tools/troubleshoot.py --fix
 ```
 
 ---
 
-# Case 4: Docker Daemon Not Running (Scenario 4)
+### Scenario 4: Node.js Tools Missing (`wscat`, `ppmap`)
 
+**Symptom:** WebSocket or prototype pollution scanners report binary not found.
+
+**Root Cause:** Node.js package manager global path is not in environment.
+
+**Copy-Paste Solution:**
 ```bash
-sudo systemctl start docker && sudo systemctl enable docker
+# Install Node.js 18+ and npm
+sudo apt-get install -y nodejs npm
+
+# Install required tools globally
+sudo npm install -g wscat ppmap
+
+# Verify installation
+which wscat && which ppmap
 ```
 
 ---
 
-# Case 5: Missing Python Dependencies (Scenario 5)
+### Scenario 5: Native Architecture Incompatibility on ARM64 / Apple Silicon (`SMP-4041`)
 
+**Symptom:** Scanner execution returns `Exec format error` or `SMP-4041: binary_incompatibility`.
+
+**Root Cause:** An x86_64 precompiled binary was downloaded on an ARM64 (aarch64) system.
+
+**Copy-Paste Solution:**
 ```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
+# Force native recompilation using Go on host architecture
+export GOARCH=$(dpkg --print-architecture | sed 's/arm64/arm64/' | sed 's/amd64/amd64/')
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install -v github.com/ffuf/ffuf/v2@latest
+
+# Copy newly compiled binaries into project bin/
+cp $HOME/go/bin/* bin/
 ```
 
 ---
 
-# Case 6: Permission Denied (setup.sh) (Scenario 6)
+### Scenario 6: Docker Container Network Capabilities (`CAP_NET_RAW`)
 
-```bash
-chmod +x setup.sh && sudo ./setup.sh
+**Symptom:** Nmap or network probes fail inside Docker container with `socket: Operation not permitted`.
+
+**Root Cause:** Container lacks Linux raw socket capabilities required for SYN scanning (`-sS`) or OS detection (`-O`).
+
+**Copy-Paste Solution:**
+Launch Docker with `cap_add: [NET_RAW, NET_ADMIN]` in `docker-compose.yml`:
+
+```yaml
+services:
+  smp:
+    image: smp:v9.5
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./database:/app/database
 ```
-
----
-
-# Case 7: Go Compiler Missing (Scenario 7)
-
 ```bash
-sudo apt-get install golang-go
+docker compose up -d
 ```
-
----
-
-# Case 8: NPM Proxy Timeout (Scenario 8)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 9: Docker Daemon Not Running (Scenario 9)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 10: Missing Python Dependencies (Scenario 10)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 11: Permission Denied (setup.sh) (Scenario 11)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 12: Go Compiler Missing (Scenario 12)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 13: NPM Proxy Timeout (Scenario 13)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 14: Docker Daemon Not Running (Scenario 14)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 15: Missing Python Dependencies (Scenario 15)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 16: Permission Denied (setup.sh) (Scenario 16)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 17: Go Compiler Missing (Scenario 17)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 18: NPM Proxy Timeout (Scenario 18)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 19: Docker Daemon Not Running (Scenario 19)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 20: Missing Python Dependencies (Scenario 20)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 21: Permission Denied (setup.sh) (Scenario 21)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 22: Go Compiler Missing (Scenario 22)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 23: NPM Proxy Timeout (Scenario 23)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 24: Docker Daemon Not Running (Scenario 24)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 25: Missing Python Dependencies (Scenario 25)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 26: Permission Denied (setup.sh) (Scenario 26)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 27: Go Compiler Missing (Scenario 27)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 28: NPM Proxy Timeout (Scenario 28)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 29: Docker Daemon Not Running (Scenario 29)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 30: Missing Python Dependencies (Scenario 30)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 31: Permission Denied (setup.sh) (Scenario 31)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 32: Go Compiler Missing (Scenario 32)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 33: NPM Proxy Timeout (Scenario 33)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 34: Docker Daemon Not Running (Scenario 34)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 35: Missing Python Dependencies (Scenario 35)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 36: Permission Denied (setup.sh) (Scenario 36)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 37: Go Compiler Missing (Scenario 37)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 38: NPM Proxy Timeout (Scenario 38)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 39: Docker Daemon Not Running (Scenario 39)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 40: Missing Python Dependencies (Scenario 40)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 41: Permission Denied (setup.sh) (Scenario 41)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 42: Go Compiler Missing (Scenario 42)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 43: NPM Proxy Timeout (Scenario 43)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 44: Docker Daemon Not Running (Scenario 44)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 45: Missing Python Dependencies (Scenario 45)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-
-# Case 46: Permission Denied (setup.sh) (Scenario 46)
-
-```bash
-chmod +x setup.sh && sudo ./setup.sh
-```
-
----
-
-# Case 47: Go Compiler Missing (Scenario 47)
-
-```bash
-sudo apt-get install golang-go
-```
-
----
-
-# Case 48: NPM Proxy Timeout (Scenario 48)
-
-```bash
-npm config set proxy http://<YOUR_CORPORATE_PROXY>:8080 && sudo npm install -g wscat@5.2.1
-```
-
----
-
-# Case 49: Docker Daemon Not Running (Scenario 49)
-
-```bash
-sudo systemctl start docker && sudo systemctl enable docker
-```
-
----
-
-# Case 50: Missing Python Dependencies (Scenario 50)
-
-```bash
-source venv/bin/activate && pip install -r requirements.txt --force-reinstall
-```
-
----
-

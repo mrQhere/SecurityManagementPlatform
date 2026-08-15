@@ -11,6 +11,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V9.5] - 2026-08-15
+
+### Architecture Overhaul: Security Data Pipeline
+
+- **Introduced the Security Data Pipeline model** — findings are now immutable evidence-linked records, not mutable database rows.
+- **Hierarchical Key Management (KEK/DEK/IEK/EEK)** — replaced single-key encryption with a four-layer key architecture. Master password derives KEK via PBKDF2-SHA256 (600,000 iterations); KEK wraps DEK (database), IEK (intelligence), and EEK (evidence) independently.
+- **Evidence Store** — per-file AES-256-GCM encryption for all raw scanner outputs, with SHA-256 integrity checksums and JSON metadata sidecar.
+- **Typed Observation Model** — raw scanner outputs now parsed into typed observations: Asset, Port, Service, CPE, HTTP, Technology, VulnerabilityCandidate, Secret, etc.
+- **Fingerprint-based Finding Deduplication** — SHA-256 fingerprint over (asset_id, service_id, vulnerability_class, matched_cves) collapses duplicate observations without destroying evidence.
+- **ScannerAdapter Framework** — new abstract `ScannerAdapter` base class in `scanners/framework/adapter.py`; all new scanners implement this interface.
+- **Nmap First-Class Adapter** — `scanners/adapters/nmap_adapter.py` parses Nmap XML into AssetObservation, PortObservation, ServiceObservation, CPEObservation, and NSE script VulnerabilityCandidate observations.
+- **14-state Scanner State Machine** — formal state transition graph replacing ad-hoc string status values.
+- **Scope Engine** — engagement-scoped authorization engine with CIDR, IP, domain wildcard, and URL regex rule types; default-deny posture when no rules are defined.
+- **Report Generator overhaul** — `tools/report_generator.py` now produces full-length professional VAPT reports in both Markdown (PDF-renderable via weasyprint) and JSON formats, with SHA-256 authenticity hash for tamper evidence.
+- **Academic Thesis** — added `docs/thesis/SMP_THESIS_V9.5.md` with formal analysis of the pipeline architecture, cryptographic design, and algorithmic guarantees.
+- **README rewrite** — updated for V9.5 data pipeline model, new architecture diagram, and complete feature documentation.
+- **UI navigation fix** — fixed `PAGE_NAMES` index mismatch that caused an `IndexError` when navigating to the new Findings and Evidence pages.
+- **Version bump** — all version strings synchronized to `V9.5`.
+
 ## [V9.4.4] - 2026-08-12
 
 - Scaled DAG Orchestrator to support 90 independent vulnerability scanners.

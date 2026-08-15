@@ -1,0 +1,413 @@
+{
+  "schema_version": "1.0",
+  "report_id": "e49421bc-2021-4252-8030-d50e64c5b3e1",
+  "engagement_id": "ENG-2026-001",
+  "target": "10.10.50.0/24",
+  "operator": "mrQhere",
+  "generated_at": "2026-08-14T19:15:43.745607+00:00",
+  "report_generator_version": "V9.5",
+  "intelligence_version": "NVD-2026-08-15",
+  "scanner_versions": {
+    "nmap": "7.94",
+    "nuclei": "3.3.0",
+    "nikto": "2.1.6",
+    "gobuster": "3.6.0",
+    "ffuf": "2.1.0",
+    "sqlmap": "1.8.2",
+    "dalfox": "2.9.2",
+    "ssl_scanner": "SMP-1.3",
+    "headers_scanner": "SMP-1.2",
+    "jwt_scanner": "SMP-1.1"
+  },
+  "findings": [
+    {
+      "finding_id": "FND-2026-001",
+      "fingerprint": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+      "engagement_id": "ENG-2026-001",
+      "title": "SQL Injection in Login Endpoint \u2014 Authentication Bypass",
+      "vulnerability_class": "SQL Injection",
+      "cwe_id": "CWE-89",
+      "cve_id": [],
+      "asset_id": "asset-10-10-50-10",
+      "service_id": null,
+      "endpoint": "http://webserver.internal/api/v1/login",
+      "parameter": "username",
+      "severity": "Critical",
+      "confidence": 1.0,
+      "risk_score": 100.0,
+      "evidence": [
+        "EVD-001",
+        "EVD-002"
+      ],
+      "affected_observations": [
+        "OBS-001",
+        "OBS-002",
+        "OBS-003"
+      ],
+      "scanner_sources": [
+        "sqlmap",
+        "ffuf"
+      ],
+      "description": "A classic SQL Injection vulnerability was confirmed in the POST /api/v1/login endpoint. The `username` parameter is interpolated directly into the SQL query without parameterization or escaping. Using `' OR '1'='1` an unauthenticated attacker can bypass authentication and retrieve all user records. Time-based blind injection was also confirmed via `' AND SLEEP(5)--`.",
+      "remediation": "1. Replace all dynamic SQL string construction with parameterized queries (prepared statements).\n2. Apply principle of least privilege to the database account \u2014 it should not have SELECT on the users table by default.\n3. Deploy a WAF rule to detect `OR 1=1`, `SLEEP(`, `UNION SELECT` patterns.\n4. Rotate all database credentials immediately.",
+      "validation": "POST /api/v1/login with body {\"username\": \"' OR '1'='1\", \"password\": \"x\"} should return HTTP 401 after remediation.",
+      "status": "open",
+      "provenance": {
+        "kev": false,
+        "epss": 0.45
+      },
+      "first_observed_at": "2026-08-15T08:00:00",
+      "last_observed_at": "2026-08-15T08:12:00",
+      "occurrence_count": 3
+    },
+    {
+      "finding_id": "FND-2026-002",
+      "fingerprint": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
+      "engagement_id": "ENG-2026-001",
+      "title": "CVE-2021-44228 (Log4Shell) \u2014 Remote Code Execution via JNDI Lookup",
+      "vulnerability_class": "Remote Code Execution",
+      "cwe_id": "CWE-917",
+      "cve_id": [
+        "CVE-2021-44228"
+      ],
+      "asset_id": "asset-10-10-50-11",
+      "service_id": null,
+      "endpoint": "http://api.internal:8080/",
+      "parameter": "User-Agent",
+      "severity": "Critical",
+      "confidence": 0.95,
+      "risk_score": 95.0,
+      "evidence": [
+        "EVD-003",
+        "EVD-004"
+      ],
+      "affected_observations": [
+        "OBS-004",
+        "OBS-005"
+      ],
+      "scanner_sources": [
+        "nuclei"
+      ],
+      "description": "The Jetty 9.4.43 application on port 8080 incorporates Log4j 2.14.1, which is vulnerable to CVE-2021-44228 (CVSS 10.0). The `${jndi:ldap://...}` payload in the User-Agent header triggers an outbound LDAP lookup. In an air-gapped environment this confirms the vulnerable code path is reachable. Full exploitation would require an attacker-controlled LDAP server.",
+      "remediation": "1. Upgrade Log4j to 2.17.1 or later immediately.\n2. As interim mitigation: set `log4j2.formatMsgNoLookups=true` JVM flag.\n3. Block outbound LDAP (port 389/636) at the network perimeter.\n4. Review application logs for historical exploitation attempts.",
+      "validation": "Send `User-Agent: ${jndi:ldap://127.0.0.1:9999/test}` after patching and confirm no outbound LDAP connection is established.",
+      "status": "open",
+      "provenance": {
+        "kev": true,
+        "epss": 0.97,
+        "cisa_due_date": "2021-12-24"
+      },
+      "first_observed_at": "2026-08-15T08:15:00",
+      "last_observed_at": "2026-08-15T08:15:30",
+      "occurrence_count": 1
+    },
+    {
+      "finding_id": "FND-2026-003",
+      "fingerprint": "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "engagement_id": "ENG-2026-001",
+      "title": "Redis Instance Unauthenticated \u2014 No Password Set",
+      "vulnerability_class": "Authentication Bypass",
+      "cwe_id": "CWE-306",
+      "cve_id": [],
+      "asset_id": "asset-10-10-50-22",
+      "service_id": null,
+      "endpoint": "10.10.50.22:6379",
+      "parameter": null,
+      "severity": "High",
+      "confidence": 1.0,
+      "risk_score": 80.0,
+      "evidence": [
+        "EVD-005"
+      ],
+      "affected_observations": [
+        "OBS-006",
+        "OBS-007"
+      ],
+      "scanner_sources": [
+        "nmap",
+        "nuclei"
+      ],
+      "description": "The Redis 7.0.5 instance on port 6379 accepts connections without authentication. An attacker with network access can read all cached data, write arbitrary keys, and potentially escalate to RCE via Redis CONFIG SET to write SSH authorized_keys or cron jobs to the server filesystem.",
+      "remediation": "1. Set a strong password: `requirepass <strong_password>` in redis.conf.\n2. Bind Redis to localhost or a private interface: `bind 127.0.0.1`.\n3. Disable dangerous commands: `rename-command CONFIG \"\"` in redis.conf.\n4. Deploy network-level ACLs to restrict access to Redis port.",
+      "validation": "After setting requirepass, verify: `redis-cli -h 10.10.50.22 PING` returns NOAUTH Authentication required.",
+      "status": "open",
+      "provenance": {
+        "kev": false,
+        "epss": 0.62
+      },
+      "first_observed_at": "2026-08-15T08:20:00",
+      "last_observed_at": "2026-08-15T08:20:00",
+      "occurrence_count": 1
+    },
+    {
+      "finding_id": "FND-2026-006",
+      "fingerprint": "f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+      "engagement_id": "ENG-2026-001",
+      "title": "CVE-2022-22965 (Spring4Shell) \u2014 Remote Code Execution",
+      "vulnerability_class": "Remote Code Execution",
+      "cwe_id": "CWE-94",
+      "cve_id": [
+        "CVE-2022-22965"
+      ],
+      "asset_id": "asset-10-10-50-11",
+      "service_id": null,
+      "endpoint": "http://api.internal:8080/api/",
+      "parameter": "class.module.classLoader.resources.context.parent.pipeline.first.pattern",
+      "severity": "High",
+      "confidence": 0.8,
+      "risk_score": 64.0,
+      "evidence": [
+        "EVD-008"
+      ],
+      "affected_observations": [
+        "OBS-011"
+      ],
+      "scanner_sources": [
+        "nuclei"
+      ],
+      "description": "The Spring Framework version in use (5.3.15) is likely affected by CVE-2022-22965 (Spring4Shell, CVSS 9.8). The vulnerability allows a remote attacker to achieve arbitrary code execution by binding HTTP request parameters to a Java object. Full exploitation confirmed requires a specific Tomcat deployment configuration. Confidence set to 80% as the exact Spring version could not be confirmed.",
+      "remediation": "1. Upgrade Spring Framework to 5.3.18+ or 5.2.20+.\n2. Upgrade Spring Boot to 2.6.6+ or 2.5.12+.\n3. As interim mitigation, add a data binding disallow list for `class.*` parameters.\n4. Ensure Tomcat is version 9.0.62+ / 8.5.78+.",
+      "validation": "Send the CVE-specific PoC payload after patching and verify a non-exploitable response.",
+      "status": "open",
+      "provenance": {
+        "kev": true,
+        "epss": 0.89,
+        "cisa_due_date": "2022-04-25"
+      },
+      "first_observed_at": "2026-08-15T08:35:00",
+      "last_observed_at": "2026-08-15T08:35:00",
+      "occurrence_count": 1
+    },
+    {
+      "finding_id": "FND-2026-004",
+      "fingerprint": "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+      "engagement_id": "ENG-2026-001",
+      "title": "Expired TLS Certificate (Expired 2025-06-01)",
+      "vulnerability_class": "TLS / Certificate Issue",
+      "cwe_id": "CWE-298",
+      "cve_id": [],
+      "asset_id": "asset-10-10-50-10",
+      "service_id": null,
+      "endpoint": "https://webserver.internal:443",
+      "parameter": null,
+      "severity": "Medium",
+      "confidence": 1.0,
+      "risk_score": 60.0,
+      "evidence": [
+        "EVD-006"
+      ],
+      "affected_observations": [
+        "OBS-008"
+      ],
+      "scanner_sources": [
+        "ssl_scanner"
+      ],
+      "description": "The TLS certificate for webserver.internal expired on 2025-06-01. Browsers and API clients will display certificate warnings or refuse to connect (depending on `CURL_CA_BUNDLE` settings). Additionally, the certificate uses a 2048-bit RSA key which, while currently acceptable, is approaching end-of-life for high-security environments.",
+      "remediation": "1. Renew the TLS certificate immediately (Let's Encrypt or internal CA).\n2. Consider migrating to ECDSA P-256 certificates for improved performance.\n3. Configure automated certificate renewal (certbot renew --deploy-hook).\n4. Add certificate expiry monitoring to your alerting stack.",
+      "validation": "openssl s_client -connect webserver.internal:443 | openssl x509 -noout -dates should show a future expiry.",
+      "status": "open",
+      "provenance": {
+        "kev": false,
+        "epss": 0.0
+      },
+      "first_observed_at": "2026-08-15T08:25:00",
+      "last_observed_at": "2026-08-15T08:25:00",
+      "occurrence_count": 1
+    },
+    {
+      "finding_id": "FND-2026-005",
+      "fingerprint": "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+      "engagement_id": "ENG-2026-001",
+      "title": "Missing HTTP Security Headers (CSP, HSTS, X-Frame-Options)",
+      "vulnerability_class": "Security Misconfiguration",
+      "cwe_id": "CWE-16",
+      "cve_id": [],
+      "asset_id": "asset-10-10-50-10",
+      "service_id": null,
+      "endpoint": "http://webserver.internal/",
+      "parameter": null,
+      "severity": "Medium",
+      "confidence": 1.0,
+      "risk_score": 60.0,
+      "evidence": [
+        "EVD-007"
+      ],
+      "affected_observations": [
+        "OBS-009",
+        "OBS-010"
+      ],
+      "scanner_sources": [
+        "headers_scanner"
+      ],
+      "description": "The web application is missing the following recommended security headers:\n- Content-Security-Policy (CSP) \u2014 absent, allows unrestricted script execution\n- Strict-Transport-Security (HSTS) \u2014 absent, allows protocol downgrade attacks\n- X-Frame-Options \u2014 absent, allows clickjacking via iframe embedding\n- X-Content-Type-Options \u2014 absent, allows MIME-sniffing attacks\n- Referrer-Policy \u2014 absent, leaks sensitive URL parameters to third parties",
+      "remediation": "Add the following headers to the Apache/Nginx configuration:\n```\nStrict-Transport-Security: max-age=31536000; includeSubDomains; preload\nContent-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'\nX-Frame-Options: DENY\nX-Content-Type-Options: nosniff\nReferrer-Policy: strict-origin-when-cross-origin\nPermissions-Policy: geolocation=(), camera=(), microphone=()\n```",
+      "validation": "curl -I https://webserver.internal/ should show all headers present.",
+      "status": "open",
+      "provenance": {
+        "kev": false,
+        "epss": 0.0
+      },
+      "first_observed_at": "2026-08-15T08:30:00",
+      "last_observed_at": "2026-08-15T08:30:00",
+      "occurrence_count": 4
+    },
+    {
+      "finding_id": "FND-2026-007",
+      "fingerprint": "a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2",
+      "engagement_id": "ENG-2026-001",
+      "title": "Directory Listing Enabled \u2014 Source Code Exposure Risk",
+      "vulnerability_class": "Information Disclosure",
+      "cwe_id": "CWE-548",
+      "cve_id": [],
+      "asset_id": "asset-10-10-50-10",
+      "service_id": null,
+      "endpoint": "http://webserver.internal/uploads/",
+      "parameter": null,
+      "severity": "Low",
+      "confidence": 1.0,
+      "risk_score": 30.0,
+      "evidence": [
+        "EVD-009"
+      ],
+      "affected_observations": [
+        "OBS-012"
+      ],
+      "scanner_sources": [
+        "nikto",
+        "gobuster"
+      ],
+      "description": "Apache directory listing is enabled for the /uploads/ directory. This exposes the names and sizes of uploaded files to unauthenticated visitors. While not directly exploitable, it aids reconnaissance and may expose user data.",
+      "remediation": "Disable directory listing in Apache configuration:\n```\n<Directory /var/www/html/uploads>\n    Options -Indexes\n</Directory>\n```",
+      "validation": "curl http://webserver.internal/uploads/ should return HTTP 403.",
+      "status": "open",
+      "provenance": {
+        "kev": false,
+        "epss": 0.0
+      },
+      "first_observed_at": "2026-08-15T08:40:00",
+      "last_observed_at": "2026-08-15T08:40:00",
+      "occurrence_count": 2
+    }
+  ],
+  "assets": [
+    {
+      "asset_value": "10.10.50.10",
+      "asset_type": "ip",
+      "source_scanner": "nmap",
+      "confidence": 1.0
+    },
+    {
+      "asset_value": "10.10.50.11",
+      "asset_type": "ip",
+      "source_scanner": "nmap",
+      "confidence": 1.0
+    },
+    {
+      "asset_value": "10.10.50.22",
+      "asset_type": "ip",
+      "source_scanner": "nmap",
+      "confidence": 1.0
+    },
+    {
+      "asset_value": "webserver.internal",
+      "asset_type": "host",
+      "source_scanner": "nmap",
+      "confidence": 0.95
+    },
+    {
+      "asset_value": "api.internal",
+      "asset_type": "host",
+      "source_scanner": "nmap",
+      "confidence": 0.95
+    },
+    {
+      "asset_value": "db.internal",
+      "asset_type": "host",
+      "source_scanner": "nmap",
+      "confidence": 0.9
+    }
+  ],
+  "services": [
+    {
+      "port": 22,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "OpenSSH",
+      "version": "8.2p1",
+      "service_name": "ssh"
+    },
+    {
+      "port": 80,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "Apache httpd",
+      "version": "2.4.51",
+      "service_name": "http"
+    },
+    {
+      "port": 443,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "Apache httpd",
+      "version": "2.4.51",
+      "service_name": "https"
+    },
+    {
+      "port": 3306,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "MySQL",
+      "version": "8.0.28",
+      "service_name": "mysql"
+    },
+    {
+      "port": 8080,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "Jetty",
+      "version": "9.4.43",
+      "service_name": "http-proxy"
+    },
+    {
+      "port": 6379,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "Redis",
+      "version": "7.0.5",
+      "service_name": "redis"
+    },
+    {
+      "port": 5432,
+      "protocol": "tcp",
+      "state": "open",
+      "product": "PostgreSQL",
+      "version": "14.2",
+      "service_name": "postgresql"
+    }
+  ],
+  "evidence_hashes": [
+    "sha256:3d2f1a0b9c8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2",
+    "sha256:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+    "sha256:f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9",
+    "sha256:4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6",
+    "sha256:9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7",
+    "sha256:2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+    "sha256:8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+    "sha256:d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7",
+    "sha256:1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2e3d"
+  ],
+  "statistics": {
+    "total_findings": 7,
+    "by_severity": {
+      "Critical": 2,
+      "High": 2,
+      "Medium": 2,
+      "Low": 1,
+      "Info": 0
+    },
+    "unique_cves": 2,
+    "kev_findings": 2,
+    "risk_rating": "CRITICAL"
+  },
+  "authenticity_hash": "3ca9522d3612d5fb250f57fef939e55086af9580c55cc58790e60f2f11e58a1d"
+}

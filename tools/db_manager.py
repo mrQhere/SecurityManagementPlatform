@@ -5,24 +5,8 @@ try:
     from pysqlcipher3 import dbapi2 as sqlite3
     SQLCIPHER_AVAILABLE = True
 except ImportError:
-    import sys as _sys
-    _sys.stderr.write(
-        "\n"
-        "╔══════════════════════════════════════════════════════════════╗\n"
-        "║  FATAL: pysqlcipher3 is not installed.                       ║\n"
-        "║                                                              ║\n"
-        "║  SMP requires SQLCipher for encrypted-at-rest storage.       ║\n"
-        "║  Running without it would store pentest data in plaintext.   ║\n"
-        "║                                                              ║\n"
-        "║  Fix:                                                        ║\n"
-        "║    sudo apt install libsqlcipher-dev libsqlcipher0           ║\n"
-        "║    pip install pysqlcipher3                                  ║\n"
-        "║                                                              ║\n"
-        "║  Then re-run SMP.                                            ║\n"
-        "╚══════════════════════════════════════════════════════════════╝\n"
-        "\n"
-    )
-    _sys.exit(1)
+    import sqlite3  # type: ignore
+    SQLCIPHER_AVAILABLE = False
 import shutil
 import time
 import zipfile
@@ -127,6 +111,12 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
 
 def _get_conn(path, encrypt=True, **kwargs):
     """Shared helper to get a SQLCipher encrypted database connection."""
+    if encrypt and not SQLCIPHER_AVAILABLE:
+        from tools.errors import SMPDBConnectionError
+        raise SMPDBConnectionError(
+            "pysqlcipher3 is not installed. SMP requires SQLCipher for encrypted-at-rest storage.",
+            remediation="Run 'sudo apt install libsqlcipher-dev libsqlcipher0 && pip install pysqlcipher3'."
+        )
     if 'timeout' not in kwargs:
         kwargs['timeout'] = 30.0
     conn = sqlite3.connect(path, **kwargs)
