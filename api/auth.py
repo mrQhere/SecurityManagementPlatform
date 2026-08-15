@@ -1,6 +1,6 @@
 """
-API Authentication Module V9.4.3
-================================
+API Authentication Module V9.5
+==============================
 JWT token issuance and verification for the SMP API.
 
 Tokens are signed with a secret derived from the SMP master password salt,

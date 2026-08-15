@@ -36,6 +36,13 @@ try:
 except ImportError:
     _FASTAPI_AVAILABLE = False
     logger.warning("[API] FastAPI not installed. API mode unavailable.")
+    BaseModel = object
+    def validator(*args, **kwargs):
+        def dec(fn): return fn
+        return dec
+    def Field(*args, **kwargs):
+        return None
+    from tools.errors import SMPError, SMPInvalidTargetError, SMPInvalidPayloadError, SMPDatabaseError
 
 from tools.db_manager import (
     add_target, get_targets, get_active_scans, get_cve_stats, get_log_entries
@@ -46,9 +53,9 @@ from tools.db_manager import (
 app = None
 if _FASTAPI_AVAILABLE:
     app = FastAPI(
-        title="SMP API V9.4.3",
+        title="SMP API V9.5",
         description=(
-            "Security Management Platform V9.4.3 — Secured REST API\n\n"
+            "Security Management Platform V9.5 — Secured REST API\n\n"
             "All endpoints except `/api/v6/health` and `/api/v6/auth/token` "
             "require a valid JWT Bearer token.\n\n"
             "**@mrQhere — Internal Use Only**"
@@ -151,7 +158,7 @@ if _FASTAPI_AVAILABLE:
         """Health check endpoint — no authentication required."""
         return {
             "status": "ok",
-            "version": "V9.4.3",
+            "version": "V9.5",
             "platform": "Security Management Platform",
             "organization": "mrQhere",
             "timestamp": datetime.now().isoformat(),
@@ -167,13 +174,8 @@ if _FASTAPI_AVAILABLE:
             with open(meta_path) as f:
                 meta = json.load(f)
             return meta
-        except Exception as e:
-            from tools.errors import SMPUnclassifiedError
-            import traceback
-            import logging
-            logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-            raise SMPUnclassifiedError(str(e))
-            return {"version": "V9.4.3", "platform": "SMP"}
+        except Exception:
+            return {"version": "V9.5", "platform": "SMP"}
 
     @app.post("/api/v6/auth/token", tags=["Authentication"])
     def get_token(request: TokenRequest):
@@ -278,7 +280,7 @@ def start_server(host: str = "127.0.0.1", port: int = 8000):
         return
     try:
         import uvicorn
-        logger.info(f"[API] Starting SMP API V9.4.3 on http://{host}:{port}/api/v6/docs")
+        logger.info(f"[API] Starting SMP API V9.5 on http://{host}:{port}/api/v6/docs")
         uvicorn.run(app, host=host, port=port, log_level="warning")
     except ImportError:
         logger.error("[API] uvicorn not installed. Run: pip install uvicorn")
