@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SMP V9.5 — Full  Pipeline Verification & Test Suite
+SMP V9.5 — Full Pipeline Verification & Test Suite
 =============================================================
-Comprehensive 12-suite end-to-end integration and verification runner covering:
+Comprehensive 15-suite end-to-end integration and verification runner covering:
   - Suite 01: Configuration & Metadata Manager (V9.5)
   - Suite 02: Cryptographic Key Hierarchy (KEK/DEK/IEK/EEK)
   - Suite 03: Database Pipeline & CRUD Operations
@@ -15,6 +15,9 @@ Comprehensive 12-suite end-to-end integration and verification runner covering:
   - Suite 10: Threat Intelligence & Offline CVE Correlation
   - Suite 11: Finding Deduplication & Risk Scoring Formula
   - Suite 12: Report Generation & Authenticity Attestation
+  - Suite 13: CI Environment & Lint Gate
+  - Suite 14: Workflow Manifest Validation
+  - Suite 15: API Pydantic v2 Compliance
 
 Usage:
     python3 tools/verify_smp.py
@@ -22,14 +25,18 @@ Usage:
 """
 
 import os
+import re
 import sys
 import json
 import shutil
+import subprocess
 import tempfile
 import hashlib
 import unittest
 from datetime import datetime, timezone
 from typing import Dict, Any, List
+
+CI_MODE = os.environ.get("SMP_CI", "0") == "1"
 
 # Terminal colors
 BLD = "\033[1m"
@@ -444,18 +451,116 @@ class TestSMPComponents(unittest.TestCase):
         self.assertIn("SQL Injection in Login", md_report)
 
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Suite 13: CI Environment & Lint Gate
+    # ─────────────────────────────────────────────────────────────────────────
+    def test_13_ci_environment_and_lint_gate(self):
+        """Verify required system tools are present and ruff lint passes in CI."""
+        # Check for essential system tools expected by CI
+        required_tools = ["python3", "git"]
+        for tool in required_tools:
+            self.assertIsNotNone(
+                shutil.which(tool),
+                f"Required tool '{tool}' not found in PATH"
+            )
+
+        # Verify ruff is available (CI lint step depends on it)
+        ruff_bin = shutil.which("ruff")
+        if ruff_bin is None:
+            self.skipTest("ruff not installed — skipping lint gate")
+
+        result = subprocess.run(
+            [
+                ruff_bin, "check", BASE_DIR,
+                "--select", "E,F",
+                "--ignore", "E501,F401,E402,E701,E741",
+                "--exclude", "venv,__pycache__",
+                "--quiet",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"Ruff lint failed — CI will reject this commit:\n{result.stdout.strip()}"
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Suite 14: Workflow Manifest Validation
+    # ─────────────────────────────────────────────────────────────────────────
+    def test_14_workflow_manifest_validation(self):
+        """Verify CI workflow YAML files exist and reference valid Python version."""
+        workflows_dir = os.path.join(BASE_DIR, ".github", "workflows")
+        self.assertTrue(
+            os.path.isdir(workflows_dir),
+            ".github/workflows directory must exist"
+        )
+
+        yaml_files = [f for f in os.listdir(workflows_dir) if f.endswith(".yml")]
+        self.assertGreater(len(yaml_files), 0, "At least one CI workflow must be defined")
+
+        ci_yaml = os.path.join(workflows_dir, "ci.yml")
+        self.assertTrue(os.path.exists(ci_yaml), ".github/workflows/ci.yml must exist")
+
+        with open(ci_yaml, "r", encoding="utf-8") as fh:
+            content = fh.read()
+
+        # Must reference a concrete Python version
+        self.assertRegex(content, r'python-version.*3\.\d+',
+                         "ci.yml must specify a Python version")
+        # Must reference the pytest step
+        self.assertIn("pytest", content, "ci.yml must include a pytest test step")
+        # Must set SMP_CI env flag
+        self.assertIn("SMP_CI", content, "ci.yml must export SMP_CI=1 to tests")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Suite 15: API Pydantic v2 Compliance
+    # ─────────────────────────────────────────────────────────────────────────
+    def test_15_api_pydantic_v2_compliance(self):
+        """Verify api/server.py does not use deprecated Pydantic v1 @validator."""
+        server_path = os.path.join(BASE_DIR, "api", "server.py")
+        self.assertTrue(os.path.exists(server_path), "api/server.py must exist")
+
+        with open(server_path, "r", encoding="utf-8") as fh:
+            source = fh.read()
+
+        # Confirm no bare @validator decorators (Pydantic v1 style)
+        v1_pattern = re.compile(r'^\s*@validator\(', re.MULTILINE)
+        self.assertIsNone(
+            v1_pattern.search(source),
+            "api/server.py must not use deprecated Pydantic v1 @validator — "
+            "use @field_validator with @classmethod instead"
+        )
+
+        # Confirm @field_validator is present (Pydantic v2 style)
+        self.assertIn(
+            "@field_validator",
+            source,
+            "api/server.py must use Pydantic v2 @field_validator"
+        )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CLI Test Runner
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
     print(f"\n{BLD}{CYN}══════════════════════════════════════════════════════════════════════{RST}")
-    print(f"{BLD}{CYN}       SMP V9.5 — Full  Pipeline Verification Runner         {RST}")
+    print(f"{BLD}{CYN}       SMP V9.5 — Full Pipeline Verification Runner         {RST}")
+    if CI_MODE:
+        print(f"{BLD}{YEL}       ⚙  Running in CI mode (SMP_CI=1)                       {RST}")
     print(f"{BLD}{CYN}══════════════════════════════════════════════════════════════════════{RST}\n")
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSMPComponents)
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
+
+    if not result.wasSuccessful():
+        print(f"\n{BLD}{RED}✖  {result.failures.__len__()} failure(s), "
+              f"{result.errors.__len__()} error(s){RST}")
+        if CI_MODE:
+            print(f"{YEL}  Hint: Check the SMP-9001–9005 error codes in ERROR_CODES.md{RST}")
+            print(f"{YEL}  Hint: Run 'python3 tools/troubleshoot.py' for diagnostics{RST}")
 
     sys.exit(0 if result.wasSuccessful() else 1)
 

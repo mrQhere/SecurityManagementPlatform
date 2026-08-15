@@ -11,7 +11,7 @@ class ObservationParser(ABC):
     def validate_observation(self, observation: Dict) -> bool:
         """Validate observation against schema."""
         try:
-            obs = Observation(observation)
+            Observation(observation)
             return True
         except Exception:
             return False

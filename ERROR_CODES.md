@@ -118,11 +118,16 @@ All REST API endpoints, CLI diagnostics (`tools/troubleshoot.py`), DAG orchestra
 
 ---
 
-## 9xxx — Unclassified & System Failures
+## 9xxx — Installation, Bootstrap & System Failures
 
 | Code | Slug | Description | Root Cause | Remediation Action |
 |---|---|---|---|---|
 | **SMP-9000** | `unclassified_error` | Base unclassified internal exception | Uncaught exception in core engine | Check `logs/smp.log` for full Python traceback. |
+| **SMP-9001** | `network_route_unreachable` | Pre-flight network route / mirror unreachable | Outbound HTTPS blocked by firewall/proxy or DNS failure | Check internet connectivity, configure `https_proxy`, or use `./setup.sh --skip-tools`. |
+| **SMP-9002** | `pkg_manager_lock_contention` | Package manager (dpkg/apt/dnf) lock held | Background updater / unattended-upgrades holding lock | Wait for background updater or run `sudo killall apt apt-get dpkg && sudo dpkg --configure -a`. |
+| **SMP-9003** | `tool_bootstrap_failure` | Security binary bootstrap / extraction failed | Corrupt download, network interruption, or disk full | Run `python3 tools/troubleshoot.py --fix` or manually place binary in `./bin/`. |
+| **SMP-9004** | `preflight_check_failure` | Pre-flight environment preconditions unmet | Unsupported architecture or non-root permissions | Ensure required build dependencies are installed and user has sudo access. |
+| **SMP-9005** | `python_env_bootstrap_failure` | Python venv or dependency installation failed | Missing `python3-venv`/`python3-dev` or pip error | Run `sudo apt install python3-dev python3-venv build-essential` and rerun `./setup.sh`. |
 | **SMP-9999** | `unexpected_error` | Fatal system runtime crash | Kernel signal, unhandled exception, or unexpected environment fault | Run `python3 tools/troubleshoot.py --fix` and review `logs/key_audit.log`. |
 
 ---

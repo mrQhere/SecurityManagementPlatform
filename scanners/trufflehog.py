@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "trufflehog")
     
     if get_setting("scan_profile", "standard") not in ["standard", "full"] and "standard" == "full":
-        logger.info(f"[trufflehog] Skipping — requires 'full' profile")
+        logger.info("[trufflehog] Skipping — requires 'full' profile")
         return []
 
     cmd = ["trufflehog", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[trufflehog] Binary not found, skipping.")
+        logger.warning("[trufflehog] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[trufflehog] Timed out.")
+        logger.warning("[trufflehog] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[trufflehog] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[trufflehog] Output recorded but no direct vulns parsed.")
+        logger.debug("[trufflehog] Output recorded but no direct vulns parsed.")
         
     return findings

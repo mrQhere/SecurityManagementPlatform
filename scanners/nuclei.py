@@ -1,9 +1,10 @@
 from scanners.core.registry import register_scanner
 import os
 import json
+import shutil
 import subprocess
 import logging
-from tools.config_manager import load_settings
+from tools.config_manager import BASE_DIR, load_settings
 from tools.db_manager import add_log_entry
 
 logger = logging.getLogger("smp.scan")
@@ -20,6 +21,25 @@ def run_nuclei_scan(url, settings: dict = None):
     settings = load_settings()
     nuclei_bin = settings.get("nuclei_path", "nuclei")
 
+    # Robust binary resolution (check PATH, then local bin/)
+    if not shutil.which(nuclei_bin):
+        local_bin = os.path.join(BASE_DIR, "bin", "nuclei")
+        if os.path.isfile(local_bin) and os.access(local_bin, os.X_OK):
+            nuclei_bin = local_bin
+
+    # Ensure templates are initialized if missing
+    user_home = os.path.expanduser("~")
+    tpl_paths = [
+        os.path.join(user_home, "nuclei-templates"),
+        os.path.join(user_home, ".local", "nuclei-templates"),
+    ]
+    if not any(os.path.isdir(p) for p in tpl_paths):
+        try:
+            logger.info("Initializing Nuclei templates...")
+            subprocess.run([nuclei_bin, "-update-templates", "-duc", "-ni"], capture_output=True, timeout=120)
+        except Exception as e:
+            logger.debug(f"Template init attempt note: {e}")
+
     logger.info(f"Nuclei Started: {url}")
     add_log_entry("INFO", f"Nuclei Started: {url}")
 
@@ -28,6 +48,8 @@ def run_nuclei_scan(url, settings: dict = None):
         "-jsonl",                    # JSON Lines output (one finding per line)
         "-silent",                   # suppress banner/progress to stderr
         "-no-color",                 # no ANSI in output
+        "-duc",                      # disable automatic update check (prevents hanging / slow startup)
+        "-ni",                       # disable interactive prompts
         "-retries", "2",             # retry failed requests
         "-timeout", "15",            # per-request timeout
         "-rl", "10",                 # rate limit — 10 req/s (safe but fast)

@@ -150,23 +150,18 @@ This gives you the full source tree including all scanner modules, the UI, the A
 
 **What `setup.sh` does, in order:**
 
-1. **Detects your OS and architecture** — reads `/etc/os-release` and `uname -m` to determine the correct package manager and CPU architecture (`x86_64` or `arm64`).
-2. **Updates the package index** — runs `apt update`, `dnf makecache`, `pacman -Sy`, `brew update`, or equivalent. Retries up to 5 times on network failure.
-3. **Installs system packages** — installs only what is missing (checks first with `dpkg -s`, `rpm -q`, `pacman -Q`, etc.):
+1. **Pre-Flight Network Route Verification** — probes outbound HTTPS connectivity to key repository and distribution endpoints (`github.com`, `raw.githubusercontent.com`, `pypi.org`, `go.dev`). If a route is unreachable due to firewall/proxy policies or DNS latency, SMP triggers its automated troubleshooter or outputs an actionable diagnostic card.
+2. **Detects your OS and architecture** — reads `/etc/os-release` and `uname -m` to determine the correct package manager (`apt`, `dnf`, `pacman`, `zypper`, `brew`) and CPU architecture (`x86_64` or `arm64`).
+3. **Automated Lock Management & Package Index Update** — automatically resolves stale DPKG/APT locks (`/var/lib/dpkg/lock-frontend`) from background system updaters and updates the package index with exponential retry logic.
+4. **Installs missing system packages** — checks with `dpkg -s`, `rpm -q`, `pacman -Q`, or `brew list` and installs only absent packages:
    - `python3`, `python3-pip`, `python3-venv`, `python3-dev`
    - `libsqlcipher-dev`, `libsqlcipher0` (or `sqlcipher`, `sqlcipher-devel` depending on distro)
    - `build-essential` / `base-devel` / `@development-tools`
    - `nmap`, `nikto`, `ruby`, `perl`, `git`, `nodejs`, `npm`, `cargo`
-4. **Compiles SQLCipher from source** (if no pre-built library is found) — clones `sqlcipher/sqlcipher`, compiles with `DSQLITE_HAS_CODEC`, installs to `/usr/local`, and runs `ldconfig`.
-5. **Creates a Python virtual environment** at `venv/` (unless `--no-venv` is passed).
-6. **Installs Python dependencies** from `requirements.txt` into the venv. Key packages include:
-   - `PySide6` — GUI framework
-   - `pysqlcipher3` — encrypted SQLite driver
-   - `fastapi`, `uvicorn`, `slowapi` — headless API server
-   - `cryptography` — AES-256-GCM key derivation and evidence encryption
-   - `pydantic` — typed data models (Observation, Finding schemas)
-   - `sslyze`, `sqlmap`, `python-owasp-zap-v2.4`, `shodan` — embedded security tools
-7. **Downloads pinned Go security tool binaries** directly from their official GitHub Release pages. SHA-256 hashes are verified after every download. Tools are extracted into the local `bin/` directory:
+5. **Compiles SQLCipher from source** (if no pre-built library is found) — clones `sqlcipher/sqlcipher`, compiles with `DSQLITE_HAS_CODEC`, installs to `/usr/local`, and runs `ldconfig`.
+6. **Creates and configures Python virtual environment** at `venv/` (unless `--no-venv` is passed) and updates `pip`.
+7. **Installs Python dependencies** from `requirements.txt` into the venv (including `pysqlcipher3`, `PySide6`, `fastapi`, `cryptography`, `pydantic`, `sslyze`, `playwright`).
+8. **Downloads pre-compiled Go security tool binaries** directly from official GitHub Release pages with cryptographic SHA-256 validation (executing in ~12 seconds):
 
 | Tool | Version | Source | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -180,11 +175,8 @@ This gives you the full source tree including all scanner modules, the UI, the A
 | `dalfox` | v2.10.0 | hahwul/dalfox | XSS parameter analysis |
 | `race-the-web` | v1.0.3 | The-Z-Labs/race-the-web | Race condition exploitation |
 
-8. **Installs Node.js tools** via `npm` (globally, into the repo's local `node_modules`):
-   - `ppmap` — prototype pollution payload mapper
-   - `wscat` — WebSocket testing client
-
-9. **Logs all output** to `setup.log` in the repository root. The terminal shows a live spinner with coloured output (`✔`, `⚠`, `✘`).
+9. **Installs Node.js tools** via `npm` (`ppmap`, `wscat`).
+10. **Zero-Friction Self-Healing & Context-Enriched Error Dumps** — If any installation step fails, the installer automatically triggers `tools/troubleshoot.py --fix` and attempts auto-recovery. If the error persists, it displays a structured terminal error card with the canonical SMP error code (`SMP-9001` to `SMP-9005`), root cause analysis, and **the entire source code snippet of the failing function** with line numbers.
 
 **Optional flags:**
 
@@ -194,7 +186,7 @@ This gives you the full source tree including all scanner modules, the UI, the A
 ./setup.sh --help         # Print usage
 ```
 
-**Typical install time:** 2–5 minutes on a fast connection. SQLCipher source compilation adds ~1 minute on slower machines.
+**Typical install time:** 1–3 minutes on a fast connection. Pre-compiled binary direct downloads install in ~12 seconds.
 
 ---
 
@@ -1619,6 +1611,41 @@ evaluating complex OVAL definitions.
 **Resolution:**
 1. Ensure the "Remote Registry" service is set to 'Automatic' and is running on the target Windows machines.
 2. Verify the scanning service account is a member of the local Administrators group or has explicitly been granted read permissions to the required registry paths via Group Policy.
+
+---
+
+## 5.7 Installation, Bootstrap & System Errors (9xxx)
+
+### SMP-9001: Pre-Flight Network Route or Repository Unreachable
+**Description:** Outbound HTTPS route verification failed to reach key download mirrors (`github.com`, `raw.githubusercontent.com`, `pypi.org`, `go.dev`).
+**Root Cause:** Corporate firewall, egress filtering, proxy authorization requirement, or DNS failure preventing HTTPS connections during `./setup.sh`.
+**Resolution:**
+1. Verify outbound internet connectivity: `curl -I https://github.com`
+2. If behind an HTTP proxy, export proxy environment variables: `export https_proxy=http://proxy.corp.internal:8080`
+3. If operating in an air-gapped environment, use the offline bypass flag: `./setup.sh --skip-tools`
+
+### SMP-9002: Package Manager or DPKG Lock Contention
+**Description:** The host package manager (`apt`, `dnf`, `pacman`) failed to acquire its lock file.
+**Root Cause:** Background update services (e.g. `unattended-upgrades`, `apt-daily.service`) holding `/var/lib/dpkg/lock-frontend` or `/var/lib/apt/lists/lock`.
+**Resolution:**
+1. Check for active package manager processes: `sudo fuser /var/lib/dpkg/lock`
+2. Safely terminate stale locks: `sudo killall apt apt-get dpkg && sudo dpkg --configure -a`
+3. Run the automated troubleshooter to repair package state: `python3 tools/troubleshoot.py --fix`
+
+### SMP-9003: Security Binary Bootstrap or Extraction Failure
+**Description:** An official pre-compiled binary download failed to download, unpack, or pass cryptographic SHA-256 validation.
+**Root Cause:** Interrupted network stream, disk exhaustion, or corrupted release archive.
+**Resolution:**
+1. Run automated self-healing to retry binary extraction: `python3 tools/troubleshoot.py --fix`
+2. Manually download the binary from the URL listed in the error card and copy to `./bin/<tool_name>`.
+
+### SMP-9005: Python Virtualenv or Dependency Bootstrap Failure
+**Description:** Failed to initialize Python virtual environment (`venv/`) or install Python requirements via `pip`.
+**Root Cause:** Missing `python3-venv` or `python3-dev` packages, or missing C compiler headers for native extensions (e.g., `libsqlcipher-dev`).
+**Resolution:**
+1. Install native development headers: `sudo apt install python3-dev python3-venv build-essential libsqlcipher-dev`
+2. Upgrade `pip` manually: `python3 -m pip install --upgrade pip`
+3. Re-run installer: `./setup.sh`
 
 ---
 

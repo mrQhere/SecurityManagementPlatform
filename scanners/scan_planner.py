@@ -7,10 +7,11 @@ class ScopeViolationError(Exception):
     pass
 
 class ScanPlanner:
-    def __init__(self, engagement_id: str, target: str, scan_policy: ScanPolicy):
+    def __init__(self, engagement_id: str, target: str, scan_policy: ScanPolicy, auth_id: str = None):
         self.engagement_id = engagement_id
         self.target = target
         self.policy = scan_policy
+        self.auth_id = auth_id
         self.scope_engine = ScopeEngine(engagement_id)
         
     def create_plan(self) -> Dict[str, Any]:
@@ -19,6 +20,16 @@ class ScanPlanner:
         allowed, reason = self.scope_engine.is_allowed(self.target, self.policy.data["activity_level_limit"])
         if not allowed:
             raise ScopeViolationError(reason)
+            
+        # 1.5. Validate authorization for intrusive scans
+        if self.policy.data.get("activity_level_limit", ActivityLevel.PASSIVE) >= ActivityLevel.INTRUSIVE:
+            from tools.errors import SMPAuthError
+            if not self.auth_id:
+                raise SMPAuthError("auth_id is required for intrusive scans")
+            from core.authorization import AuthorizationTracker
+            tracker = AuthorizationTracker()
+            if not tracker.is_valid(self.auth_id):
+                raise SMPAuthError(f"Authorization {self.auth_id} is invalid, expired, or revoked.")
             
         # 2. Asset discovery phase
         asset_plan = self._plan_asset_discovery()

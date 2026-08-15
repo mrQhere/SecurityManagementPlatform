@@ -26,12 +26,40 @@ class OutputFormat(str, Enum):
     TXT = "txt"
     CSV = "csv"
 
+_ACTIVITY_ORDER = {
+    "PASSIVE": 1,
+    "LOW_IMPACT_ACTIVE": 2,
+    "ACTIVE": 3,
+    "INTRUSIVE": 4,
+    "DESTRUCTIVE": 5,
+}
+
 class ActivityLevel(str, Enum):
     PASSIVE = "PASSIVE"
     LOW_IMPACT_ACTIVE = "LOW_IMPACT_ACTIVE"
     ACTIVE = "ACTIVE"
     INTRUSIVE = "INTRUSIVE"
     DESTRUCTIVE = "DESTRUCTIVE"
+
+    def _rank(self, other):
+        val = other.value if isinstance(other, Enum) else str(other)
+        return _ACTIVITY_ORDER.get(self.value, 0), _ACTIVITY_ORDER.get(val, 0)
+
+    def __ge__(self, other):
+        s, o = self._rank(other)
+        return s >= o
+
+    def __gt__(self, other):
+        s, o = self._rank(other)
+        return s > o
+
+    def __le__(self, other):
+        s, o = self._rank(other)
+        return s <= o
+
+    def __lt__(self, other):
+        s, o = self._rank(other)
+        return s < o
 
 class ScannerManifest(BaseModel):
     id: str

@@ -107,3 +107,12 @@ jobs:
           SMP_CI: "1"
           PYTHONPATH: ${{ github.workspace }}
 
+      - name: Run unit test suite (pytest)
+        run: |
+          source venv/bin/activate
+          pip install pytest --quiet
+          pytest tests/ -v
+        env:
+          SMP_CI: "1"
+          PYTHONPATH: ${{ github.workspace }}
+

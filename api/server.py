@@ -30,14 +30,14 @@ try:
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
-    from pydantic import BaseModel, HttpUrl, validator, Field
+    from pydantic import BaseModel, HttpUrl, field_validator, Field
     from tools.errors import SMPError, SMPInvalidTargetError, SMPInvalidPayloadError, SMPDatabaseError
     _FASTAPI_AVAILABLE = True
 except ImportError:
     _FASTAPI_AVAILABLE = False
     logger.warning("[API] FastAPI not installed. API mode unavailable.")
     BaseModel = object
-    def validator(*args, **kwargs):
+    def field_validator(*args, **kwargs):
         def dec(fn): return fn
         return dec
     def Field(*args, **kwargs):
@@ -133,7 +133,8 @@ class TargetCreate(BaseModel):
     company_name: str = ""
     submitted_to: str = ""
 
-    @validator("url")
+    @field_validator("url")
+    @classmethod
     def validate_url(cls, v):
         if not v.startswith("http://") and not v.startswith("https://"):
             raise SMPInvalidTargetError("URL must start with http:// or https://")
@@ -143,7 +144,8 @@ class TokenRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=1)
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         if not v.isalnum():
             raise SMPInvalidPayloadError("Username must be alphanumeric.")
@@ -214,7 +216,7 @@ if _FASTAPI_AVAILABLE:
         except Exception as e:
             logger.error(f"[API] list_targets error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch targets: {e}")
+            raise SMPDatabaseError("Failed to fetch targets.")
 
     @app.post("/api/v6/target", tags=["Targets"])
     def create_target(target: TargetCreate, user: str = Depends(_get_current_user)):
@@ -232,8 +234,9 @@ if _FASTAPI_AVAILABLE:
             scans = get_active_scans()
             return {"scans": scans, "count": len(scans)}
         except Exception as e:
+            logger.error(f"[API] list_scans error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch scans: {e}")
+            raise SMPDatabaseError("Failed to fetch scans.")
 
     @app.get("/api/v6/findings", tags=["Findings"])
     def list_findings(scan_id: int, user: str = Depends(_get_current_user)):
@@ -246,8 +249,9 @@ if _FASTAPI_AVAILABLE:
             findings = get_findings_for_scan(scan_id)
             return {"findings": list(findings), "scan_id": scan_id, "count": len(list(findings))}
         except Exception as e:
+            logger.error(f"[API] list_findings error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch findings: {e}")
+            raise SMPDatabaseError("Failed to fetch findings.")
 
     @app.get("/api/v6/cve/stats", tags=["Intelligence"])
     def cve_stats(user: str = Depends(_get_current_user)):
@@ -256,8 +260,9 @@ if _FASTAPI_AVAILABLE:
             stats = get_cve_stats()
             return stats
         except Exception as e:
+            logger.error(f"[API] cve_stats error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch stats: {e}")
+            raise SMPDatabaseError("Failed to fetch stats.")
 
     @app.get("/api/v6/risk/score", tags=["Risk"])
     def risk_scores(user: str = Depends(_get_current_user)):
@@ -267,9 +272,9 @@ if _FASTAPI_AVAILABLE:
             scores = get_risk_scores_all_targets()
             return {"risk_scores": scores}
         except Exception as e:
-            logger.warning(f"[API] risk_scores: {e}")
+            logger.warning(f"[API] risk_scores error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch risk scores: {e}")
+            raise SMPDatabaseError("Failed to fetch risk scores.")
 
 
 def start_server(host: str = "127.0.0.1", port: int = 8000):

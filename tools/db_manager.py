@@ -60,8 +60,9 @@ def _encrypt_and_compress_data(data_str: str) -> str:
         fernet = Fernet(fernet_key)
         final_data = fernet.encrypt(compressed)
     except Exception as e:
+        logger.error(f"Encryption failed: {e}")
         from tools.errors import SMPDatabaseError
-        raise SMPDatabaseError(f"Encryption failed: {e}")
+        raise SMPDatabaseError("Encryption failed.")
         
     # 3. Save to file
     raw_dir = os.path.join(BASE_DIR, "database", "raw_outputs")
@@ -101,8 +102,9 @@ def _decrypt_and_decompress_data(filepath: str) -> str:
             fernet = Fernet(fernet_key)
             compressed = fernet.decrypt(encrypted_data)
         except Exception as e:
+            logger.error(f"Decryption failed: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Decryption failed: {e}")
+            raise SMPDatabaseError("Decryption failed.")
             
         return gzip.decompress(compressed).decode("utf-8")
     except sqlite3.Error as e:
@@ -615,6 +617,36 @@ def _initialize_db_schema(conn):
             dns_ip TEXT,
             recorded_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE
+        );
+    """)
+
+    # authorizations table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS authorizations (
+            auth_id TEXT PRIMARY KEY,
+            engagement_id TEXT NOT NULL,
+            target TEXT NOT NULL,
+            authorized_by TEXT NOT NULL,
+            authorized_at TEXT NOT NULL,
+            expires_at TEXT,
+            scope TEXT NOT NULL,
+            limitations TEXT,
+            status TEXT NOT NULL
+        );
+    """)
+
+    # authorizations table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS authorizations (
+            auth_id TEXT PRIMARY KEY,
+            engagement_id TEXT NOT NULL,
+            target TEXT NOT NULL,
+            authorized_by TEXT NOT NULL,
+            authorized_at TEXT NOT NULL,
+            expires_at TEXT,
+            scope TEXT NOT NULL,
+            limitations TEXT,
+            status TEXT NOT NULL
         );
     """)
 
@@ -2431,3 +2463,59 @@ def get_scan_trend_deltas(target_url, current_scan_id):
     finally:
         if conn:
             conn.close()
+
+def add_authorization(auth_data: dict) -> bool:
+    conn = get_db_connection()
+    try:
+        limitations_json = json.dumps(auth_data.get("limitations", []))
+        conn.execute(
+            """INSERT INTO authorizations (auth_id, engagement_id, target, authorized_by, authorized_at, expires_at, scope, limitations, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (auth_data["auth_id"], auth_data["engagement_id"], auth_data["target"],
+             auth_data["authorized_by"], auth_data["authorized_at"], auth_data.get("expires_at"),
+             auth_data["scope"], limitations_json, auth_data["status"])
+        )
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Failed to add authorization: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_authorization(auth_id: str) -> dict:
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT * FROM authorizations WHERE auth_id = ?", (auth_id,)).fetchone()
+        if row:
+            res = dict(row)
+            res["limitations"] = json.loads(res["limitations"]) if res["limitations"] else []
+            return res
+        return None
+    finally:
+        conn.close()
+
+def update_authorization_status(auth_id: str, status: str) -> bool:
+    conn = get_db_connection()
+    try:
+        conn.execute("UPDATE authorizations SET status = ? WHERE auth_id = ?", (status, auth_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Failed to update authorization status: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_authorizations_for_engagement(engagement_id: str) -> list:
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("SELECT * FROM authorizations WHERE engagement_id = ?", (engagement_id,)).fetchall()
+        result = []
+        for row in rows:
+            res = dict(row)
+            res["limitations"] = json.loads(res["limitations"]) if res["limitations"] else []
+            result.append(res)
+        return result
+    finally:
+        conn.close()

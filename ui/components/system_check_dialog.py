@@ -191,7 +191,7 @@ class SystemCheckDialog(QDialog):
                 missing.append(rf)
                 
         if missing:
-            self.arch_content.setText(f"Missing core modules:\n" + "\n".join(missing))
+            self.arch_content.setText("Missing core modules:\n" + "\n".join(missing))
             self.arch_content.setStyleSheet("color: #F87171;")
         else:
             self.arch_content.setText("All core modules present.")

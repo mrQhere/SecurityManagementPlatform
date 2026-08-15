@@ -28,7 +28,7 @@ repository: "https://github.com/mrQhere/SecurityManagementPlatform"
 6. Cryptographic Key Hierarchy: PBKDF2, KEK, DEK, AES-256-GCM
 7. Finding Deduplication & Fingerprinting
 8. The PySide6 UI Decoupling & Event Architecture
-9. Enterprise Export, Legal Gating & Non-Repudiation
+9. Enterprise Export, Legal Gating, Bootstrap Determinism & Non-Repudiation
 10. Conclusion & Future Work
 11. Bibliography
 
@@ -2218,6 +2218,35 @@ response protocol mandates a complete cryptographic verification of the ledger,
 utilizing off-site backup snapshots and external cryptographic witnesses to
 identify the point of divergence. The strict handling of SMP-4050 errors
 underscores the platform's commitment to absolute audit reliability.
+
+## 9.6 Zero-Friction Bootstrap Determinism, Pre-Flight Probing, and Source-Level Fault Localization
+
+### 9.6.1 Theoretical Foundations of Bootstrap Determinism
+In distributed vulnerability management systems, deployment pipeline failures represent a non-trivial source of systemic friction. Traditional installer scripts operate non-deterministically: they assume uninhibited egress routing, unmanaged package manager mutex locks, and flawless transient network paths. In air-gapped, sovereign, or enterprise network zones, this naive execution model results in cascading unhandled exceptions, orphaned daemon locks, and ambiguous failure states.
+
+SMP V9.5 formalizes the bootstrap pipeline through a deterministic state machine model. Let the installer state space be represented as a finite set $S = \{S_{\text{init}}, S_{\text{probe}}, S_{\text{pkg}}, S_{\text{venv}}, S_{\text{tools}}, S_{\text{ready}}, S_{\text{fault}}\}$. Transition between states is conditioned upon bounded pre-flight verification:
+$$\delta(S_{\text{probe}}, \text{Reachability}(E)) = \begin{cases} S_{\text{pkg}} & \text{if } \forall e \in E, \ \text{RTT}(e) \le \tau_{\text{max}} \\ S_{\text{heal}} & \text{if } \exists e \in E, \ \text{RTT}(e) > \tau_{\text{max}} \end{cases}$$
+where $E = \{\text{github.com}, \text{raw.githubusercontent.com}, \text{pypi.org}, \text{go.dev}\}$ represents the canonical set of distribution endpoints, and $\tau_{\text{max}} = 4.0\text{s}$ enforces strict reachability bounds without stalling runtime progress.
+
+### 9.6.2 Autonomous Self-Healing and Lock Contention Resolution
+When resource contention (such as `dpkg` / `apt` mutex lock starvation over `/var/lib/dpkg/lock-frontend`) or transient connectivity degradation is identified, SMP V9.5 prevents fatal abortion by launching its integrated Self-Healing Engine (`tools/troubleshoot.py --fix`).
+
+The self-healing protocol executes the following deterministic remediation pipeline:
+1. **Lock Identification & State Reclamation**: Identifies stale PIDs holding filesystem mutexes via `/proc` and `fuser`, waits for graceful thread completion, or terminates orphaned processes holding unreleased locks followed by `dpkg --configure -a`.
+2. **Dynamic Route Fallback**: Detects unreachable binary hosts and automatically shifts execution to local mirror archives or gracefully invokes offline air-gapped isolation flags (`--skip-tools`).
+3. **Cryptographic Integrity Enforcement**: Performs SHA-256 pre-verification on downloaded pre-compiled binary payloads, rejecting any mutated or truncated assets prior to filesystem extraction.
+
+### 9.6.3 Context-Enriched Source-Level Fault Localization
+If automated remediation fails after $k$ bounded retry iterations, SMP V9.5 enforces total diagnostic transparency. Rather than emitting cryptic numerical exit codes, the platform activates its Context-Enriched Source Extractor (`report_error_with_code`).
+
+The diagnostic engine correlates the failure event with the structured SMP V9.5 error taxonomy (`SMP-9001` through `SMP-9005`, `SMP-2002`, `SMP-3001`), and performs real-time Abstract Syntax Tree (AST) / source slicing on `setup.sh`. The terminal output renders:
+- The canonical error identifier and cryptographic category slug.
+- The precise failed function symbol and execution stage.
+- A highlighted, line-numbered source code excerpt of the exact code block that triggered the failure.
+- Recent log output buffers extracted from `setup.log`.
+- Immediate, copy-pasteable remediation procedures and diagnostic lookup commands (`python3 tools/troubleshoot.py --lookup <CODE>`).
+
+This closes the semantic gap between installer execution and systems troubleshooting, achieving zero operational friction for security teams deploying across diverse Linux and macOS architectures.
 
 ---
 

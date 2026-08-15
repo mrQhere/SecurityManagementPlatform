@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "ssrfmap")
     
     if get_setting("scan_profile", "standard") not in ["full", "full"] and "full" == "full":
-        logger.info(f"[ssrfmap] Skipping — requires 'full' profile")
+        logger.info("[ssrfmap] Skipping — requires 'full' profile")
         return []
 
     cmd = ["ssrfmap", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[ssrfmap] Binary not found, skipping.")
+        logger.warning("[ssrfmap] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[ssrfmap] Timed out.")
+        logger.warning("[ssrfmap] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[ssrfmap] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[ssrfmap] Output recorded but no direct vulns parsed.")
+        logger.debug("[ssrfmap] Output recorded but no direct vulns parsed.")
         
     return findings

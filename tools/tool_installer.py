@@ -22,6 +22,10 @@ os.makedirs(bin_dir, exist_ok=True)
 if bin_dir not in os.environ["PATH"].split(os.path.pathsep):
     os.environ["PATH"] = bin_dir + os.path.pathsep + os.environ["PATH"]
 
+go_bin_dir = os.path.expanduser("~/go/bin")
+if os.path.isdir(go_bin_dir) and go_bin_dir not in os.environ["PATH"].split(os.path.pathsep):
+    os.environ["PATH"] = os.environ["PATH"] + os.path.pathsep + go_bin_dir
+
 logger = logging.getLogger("smp")
 
 # ── Tool registry ─────────────────────────────────────────────────────────────
@@ -53,14 +57,12 @@ TOOLS = [
     ("Traceroute",  "traceroute",  "apt",  "traceroute"),
     ("Masscan",     "masscan",     "apt",  "masscan"),
 
-    # Go binaries — built from source if Go is available, else binary download
-    ("Nuclei",    "nuclei",    "go",  "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"),
-    ("Subfinder", "subfinder", "go",  "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"),
-    ("HTTPx",     "httpx",     "go",  "github.com/projectdiscovery/httpx/cmd/httpx@latest"),
-    ("ffuf",      "ffuf",      "go",  "github.com/ffuf/ffuf/v2@latest"),
-    ("Gitleaks",  "gitleaks",  "go",  "github.com/gitleaks/gitleaks/v8/cmd/gitleaks@latest"),
-
-    # Binary downloads (pre-built — no Go needed)
+    # Pre-compiled security binaries (fast direct downloads — no Go compiler needed)
+    ("Nuclei",    "nuclei",    "binary",  ""),
+    ("Subfinder", "subfinder", "binary",  ""),
+    ("HTTPx",     "httpx",     "binary",  ""),
+    ("ffuf",      "ffuf",      "binary",  ""),
+    ("Gitleaks",  "gitleaks",  "binary",  ""),
     ("Dalfox",    "dalfox",    "binary",  ""),
     ("DNSx",      "dnsx",      "binary",  ""),
     ("Katana",    "katana",    "binary",  ""),
@@ -438,72 +440,130 @@ def _download_missing_tools_locally(missing):
     bin_dir = os.path.join(BASE_DIR, "bin")
     os.makedirs(bin_dir, exist_ok=True)
 
+    system_os = platform.system()
     machine = platform.machine().lower()
     is_arm64 = "arm64" in machine or "aarch64" in machine
 
     # ── Complete download URL registry ────────────────────────────────────────
     urls_amd64 = {
-        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_amd64.zip",
-        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_amd64.zip",
-        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_amd64.zip",
+        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip",
+        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_amd64.zip",
+        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_amd64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.3/gitleaks_8.18.2_linux_x64.tar.gz",
-        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_amd64.zip",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_amd64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip",
-        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_amd64.tar.gz",
+        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz",
         "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/tags/1.3.2.zip",
         # Source-based tools
-        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
-        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
-        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
-        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
-        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
+        "cloud-enum":   "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":  "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester": "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":     "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":       "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.5  binaries
+        # V9.5 binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/x86_64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.72.0/trivy_0.72.0_Linux-64bit.tar.gz",
     }
     urls_arm64 = {
-        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.0/nuclei_3.3.0_linux_arm64.zip",
-        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.6/subfinder_2.6.6_linux_arm64.zip",
-        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.6.6/httpx_1.6.6_linux_arm64.zip",
+        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_arm64.zip",
+        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_arm64.zip",
+        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_arm64.zip",
         "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz",
         "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
-        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v9.4.3/gitleaks_8.18.2_linux_arm64.tar.gz",
-        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.1/katana_1.1.1_linux_arm64.zip",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz",
+        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_linux_arm64.zip",
         "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip",
-        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.9.3/dalfox_2.9.3_linux_arm64.tar.gz",
+        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz",
         "Masscan":      "https://github.com/robertdavidgraham/masscan/archive/refs/tags/1.3.2.zip",
-        "cloud-enum":       "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
-        "ParamSpider":      "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
-        "theHarvester":     "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
-        "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
-        "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
+        "cloud-enum":   "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":  "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester": "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":     "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":       "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.5  binaries
+        # V9.5 binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_arm64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/aarch64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_arm64.tar.gz",
         "Trivy":        "https://github.com/aquasecurity/trivy/releases/download/v0.53.0/trivy_0.53.0_Linux-ARM64.tar.gz",
     }
-    urls = urls_arm64 if is_arm64 else urls_amd64
+    urls_darwin_amd64 = {
+        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_macOS_amd64.zip",
+        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_macOS_amd64.zip",
+        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.7.0/httpx_1.7.0_macOS_amd64.zip",
+        "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_macOS_amd64.tar.gz",
+        "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_x64.tar.gz",
+        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_macOS_amd64.zip",
+        "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_macOS_amd64.zip",
+        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.10.0/dalfox_2.10.0_darwin_amd64.tar.gz",
+        "cloud-enum":   "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":  "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester": "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":     "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":       "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
+    }
+    urls_darwin_arm64 = {
+        "Nuclei":       "https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_macOS_arm64.zip",
+        "Subfinder":    "https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_macOS_arm64.zip",
+        "HTTPx":        "https://github.com/projectdiscovery/httpx/releases/download/v1.7.0/httpx_1.7.0_macOS_arm64.zip",
+        "ffuf":         "https://github.com/ffuf/ffuf/releases/download/v2.1.0/ffuf_2.1.0_macOS_arm64.tar.gz",
+        "Nikto":        "https://github.com/sullo/nikto/archive/refs/tags/2.5.0.zip",
+        "Gitleaks":     "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz",
+        "Katana":       "https://github.com/projectdiscovery/katana/releases/download/v1.1.2/katana_1.1.2_macOS_arm64.zip",
+        "DNSx":         "https://github.com/projectdiscovery/dnsx/releases/download/v1.2.1/dnsx_1.2.1_macOS_arm64.zip",
+        "Dalfox":       "https://github.com/hahwul/dalfox/releases/download/v2.10.0/dalfox_2.10.0_darwin_arm64.tar.gz",
+        "cloud-enum":   "https://github.com/initstring/cloud_enum/archive/refs/tags/v0.2.zip",
+        "ParamSpider":  "https://github.com/devanshbatham/ParamSpider/archive/refs/tags/v1.0.1.zip",
+        "theHarvester": "https://github.com/laramies/theHarvester/archive/refs/tags/v3.0.5.zip",
+        "jwt_tool":     "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
+        "WPScan":       "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
+    }
+
+    if system_os == "Darwin":
+        urls = urls_darwin_arm64 if is_arm64 else urls_darwin_amd64
+    else:
+        urls = urls_arm64 if is_arm64 else urls_amd64
 
     # ── V9.5 — Security: Download SHA256 Checksums ────────────────────────────
-    # Add checksums to verify integrity before extraction
-    checksums = {
-        "Nuclei": "235f264d32e47e1ccf58d534e2eb4d0d4eeb47f1cae1ebb30a584b8b52565202",
-        "Subfinder": "6fda32fe1f5750e63fa07c112b1b615d033e425c6dc6659ed8ec61035eb8eba2",
-        "HTTPx": "d069a6bbcc0d6b3c5bedc0322f7b996b2587481ae69162b17941b67d7e42cd2d",
-        "Masscan": "527ef2043429e7d2f1bc7453a8d73944d07beb1a414e6ffb26e2cbffcdbc41d7",
-        "cloud-enum": "734136665c0b1200d8702b8bc74e011e51ae87b4c66781a3c50a8a9784cf1cdc",
-        "ParamSpider": "30396ab75b70a771da1774a209cc3a8315914f15aa68a54f1c7456a224fc4fdb",
+    checksums_amd64 = {
+        "Nuclei":       "dfecedc31364d70b7291b347c74fd4d1d3185d30301c025b7490717d29daf28a",
+        "Subfinder":    "d40d13de32260b736afe8863e6ec26066164b2585ccdeaf9f4d2481fef6e7e32",
+        "HTTPx":        "9c6f72eb57ec59b670ab30f33e288853b119a930e07b6a441bd022ce6125e565",
+        "ffuf":         "fc2c82736c14dcbea4daf3d3cf3878c1c4773008ba45c2bc0fceba7d17b40bb5",
+        "Gitleaks":     "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+        "Katana":       "710205030c3d07a23d86fe11dac595a3c681ab5fa8daad679c752cbfd4ee0425",
+        "DNSx":         "7ff88172c1b108d0ccb25a315bcf3f267be4b9d360586b7e9f8799ad89727478",
+        "Dalfox":       "dc11d28cdd6479fe7659084d5cdbda965b8b134c2a530fd5c056733a22954e76",
+        "Masscan":      "527ef2043429e7d2f1bc7453a8d73944d07beb1a414e6ffb26e2cbffcdbc41d7",
+        "cloud-enum":   "734136665c0b1200d8702b8bc74e011e51ae87b4c66781a3c50a8a9784cf1cdc",
+        "ParamSpider":  "30396ab75b70a771da1774a209cc3a8315914f15aa68a54f1c7456a224fc4fdb",
         "theHarvester": "a9a29b993a92380c55abca12b122cc1e20e9bcb2d2f78b62508219ea93d9f923",
-        "jwt_tool": "0a61f2029c98b17e2cc017b2a5c7df13f71272591cf211b435b44adf8d517d07",
-        "WPScan": "f733f46bc9c630d1c7013f90fd739c0c035d048056c9b63052058fb5869e30e2",
+        "jwt_tool":     "0a61f2029c98b17e2cc017b2a5c7df13f71272591cf211b435b44adf8d517d07",
+        "WPScan":       "f733f46bc9c630d1c7013f90fd739c0c035d048056c9b63052058fb5869e30e2",
     }
+    checksums_arm64 = {
+        "Nuclei":       "f4040212673de766919fe2a9deeb77a307865124701f2f6a4ae8f4dc7b3c18e9",
+        "Subfinder":    "39ab55ae373d3778378e259f296ced94310569e8deb73b52e5cb38420401f76c",
+        "HTTPx":        "340f4d1bed70e7babe0670d54d40c4a78adc8aae22ed8170a8d297b0d4fa8bcd",
+        "ffuf":         "6ae920d09d5202762fca21967a460c6fb88135bdfa806bee4d3d2c430dcedeea",
+        "Gitleaks":     "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+        "Katana":       "b8d7e4072db19ea81d25dffbd0d8246b3e9d7ed14cb5de70ee7c1cee8e7fa551",
+        "DNSx":         "fb96e9178c1b1e68a589b66398f268fc3836eb2c21fd346d11bb4f81cfa39044",
+        "Dalfox":       "4a229aac3d82364b27f9a74971ad8599a523d5baefc124b394526c0d5ff41f7e",
+        "Masscan":      "527ef2043429e7d2f1bc7453a8d73944d07beb1a414e6ffb26e2cbffcdbc41d7",
+        "cloud-enum":   "734136665c0b1200d8702b8bc74e011e51ae87b4c66781a3c50a8a9784cf1cdc",
+        "ParamSpider":  "30396ab75b70a771da1774a209cc3a8315914f15aa68a54f1c7456a224fc4fdb",
+        "theHarvester": "a9a29b993a92380c55abca12b122cc1e20e9bcb2d2f78b62508219ea93d9f923",
+        "jwt_tool":     "0a61f2029c98b17e2cc017b2a5c7df13f71272591cf211b435b44adf8d517d07",
+        "WPScan":       "f733f46bc9c630d1c7013f90fd739c0c035d048056c9b63052058fb5869e30e2",
+    }
+    checksums = checksums_arm64 if is_arm64 else checksums_amd64
     
     downloaded_any = False
 
@@ -774,6 +834,13 @@ def _download_missing_tools_locally(missing):
                     os.chmod(target, 0o755)
                     logger.info(f"[Installer] {name} binary installed to {target}")
                     downloaded_any = True
+
+                    if binary_name_lower == "nuclei":
+                        try:
+                            logger.info("[Installer] Pre-caching Nuclei templates...")
+                            subprocess.run([target, "-update-templates", "-duc", "-ni"], capture_output=True, timeout=120)
+                        except Exception as nerr:
+                            logger.debug(f"[Installer] Nuclei template setup note: {nerr}")
                 else:
                     logger.warning(f"[Installer] Could not find '{binary_name_lower}' in downloaded archive for {name}.")
 

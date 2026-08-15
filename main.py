@@ -5,7 +5,8 @@ import os
 import sys
 import signal
 import argparse
-import fcntl
+if os.name != "nt":
+    import fcntl
 import atexit
 import json
 
@@ -17,6 +18,8 @@ LOCK_FILE = '/tmp/.smp_runtime.lock'
 lock_fd = None
 
 def single_instance_lock():
+    if os.name == "nt":
+        return
     global lock_fd
     try:
         lock_fd = open(LOCK_FILE, 'w')
@@ -26,6 +29,8 @@ def single_instance_lock():
         sys.exit(1)
 
 def release_lock():
+    if os.name == "nt":
+        return
     global lock_fd
     if lock_fd:
         try:
@@ -42,9 +47,8 @@ def graceful_shutdown(signum, frame):
 
 def start_api_mode():
     try:
-        import uvicorn
-        from api.server import app
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        from api.server import start_server
+        start_server()
     except ImportError:
         print("Error: Required API packages (FastAPI/uvicorn) not installed.")
         sys.exit(1)

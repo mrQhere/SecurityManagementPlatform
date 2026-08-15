@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "nosqlmap")
     
     if get_setting("scan_profile", "standard") not in ["full", "full"] and "full" == "full":
-        logger.info(f"[nosqlmap] Skipping — requires 'full' profile")
+        logger.info("[nosqlmap] Skipping — requires 'full' profile")
         return []
 
     cmd = ["nosqlmap", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[nosqlmap] Binary not found, skipping.")
+        logger.warning("[nosqlmap] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[nosqlmap] Timed out.")
+        logger.warning("[nosqlmap] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[nosqlmap] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[nosqlmap] Output recorded but no direct vulns parsed.")
+        logger.debug("[nosqlmap] Output recorded but no direct vulns parsed.")
         
     return findings

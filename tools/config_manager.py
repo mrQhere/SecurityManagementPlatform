@@ -141,8 +141,10 @@ def load_settings():
             merged.update(settings)
             return merged
     except json.JSONDecodeError as e:
+        import logging
+        logging.getLogger('smp').error(f"Configuration file {path} is malformed: {e}")
         from tools.errors import SMPConfigError
-        raise SMPConfigError(f"Configuration file {path} is malformed: {e}")
+        raise SMPConfigError("Configuration file is malformed.")
     except Exception as e:
         from tools.errors import SMPUnclassifiedError
         import traceback

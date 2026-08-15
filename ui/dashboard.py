@@ -2,7 +2,8 @@
 SMP V9.5 — Main Dashboard Window
 Combines DashboardLayoutMixin and DashboardLogicMixin via multiple inheritance.
 """
-import os, sys
+import os
+import sys
 from PySide6.QtWidgets import QMainWindow, QApplication
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QFont
