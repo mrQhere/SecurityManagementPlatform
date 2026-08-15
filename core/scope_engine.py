@@ -18,8 +18,34 @@ class ScopeEngine:
 
     def _load_scope_rules(self) -> List[ScopeRule]:
         """Load and cache scope rules for engagement."""
-        # Stub: Normally this would query the database
-        return []
+        from tools.db_manager import get_authorizations_for_engagement
+        from core.authorization import AuthStatus
+        
+        rules = []
+        authorizations = get_authorizations_for_engagement(self.engagement_id)
+        
+        # Only use active authorizations
+        active_auths = [a for a in authorizations if a["status"] == AuthStatus.ACTIVE.value]
+        
+        for auth in active_auths:
+            scope = auth["scope"]
+            rule_id = auth["auth_id"]
+            
+            # Determine rule type based on scope string
+            if "/" in scope:
+                rule_type = "cidr"
+            elif scope.startswith("*."):
+                rule_type = "domain"
+            elif re.match(r'^\d+\.\d+\.\d+\.\d+$', scope):
+                rule_type = "ip"
+            elif scope.startswith("http"):
+                rule_type = "url"
+            else:
+                rule_type = "domain"
+                
+            rules.append(ScopeRule(rule_id=rule_id, rule_type=rule_type, rule_value=scope, action="allow", priority=100))
+            
+        return rules
 
     def _check_ip_in_cidr(self, target_ip: str, cidr: str) -> bool:
         try:

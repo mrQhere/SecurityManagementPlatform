@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "cloudsplaining")
     
     if get_setting("scan_profile", "standard") not in ["full", "full"] and "full" == "full":
-        logger.info(f"[cloudsplaining] Skipping — requires 'full' profile")
+        logger.info("[cloudsplaining] Skipping — requires 'full' profile")
         return []
 
     cmd = ["cloudsplaining", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[cloudsplaining] Binary not found, skipping.")
+        logger.warning("[cloudsplaining] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[cloudsplaining] Timed out.")
+        logger.warning("[cloudsplaining] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[cloudsplaining] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[cloudsplaining] Output recorded but no direct vulns parsed.")
+        logger.debug("[cloudsplaining] Output recorded but no direct vulns parsed.")
         
     return findings

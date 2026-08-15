@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "gau")
     
     if get_setting("scan_profile", "standard") not in ["standard", "full"] and "standard" == "full":
-        logger.info(f"[gau] Skipping — requires 'full' profile")
+        logger.info("[gau] Skipping — requires 'full' profile")
         return []
 
     cmd = ["gau", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[gau] Binary not found, skipping.")
+        logger.warning("[gau] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[gau] Timed out.")
+        logger.warning("[gau] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[gau] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[gau] Output recorded but no direct vulns parsed.")
+        logger.debug("[gau] Output recorded but no direct vulns parsed.")
         
     return findings

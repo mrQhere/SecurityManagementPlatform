@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "droopescan")
     
     if get_setting("scan_profile", "standard") not in ["standard", "full"] and "standard" == "full":
-        logger.info(f"[droopescan] Skipping — requires 'full' profile")
+        logger.info("[droopescan] Skipping — requires 'full' profile")
         return []
 
     cmd = ["droopescan", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[droopescan] Binary not found, skipping.")
+        logger.warning("[droopescan] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[droopescan] Timed out.")
+        logger.warning("[droopescan] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[droopescan] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[droopescan] Output recorded but no direct vulns parsed.")
+        logger.debug("[droopescan] Output recorded but no direct vulns parsed.")
         
     return findings

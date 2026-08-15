@@ -21,9 +21,6 @@ class AuthorizationSchema(BaseModel):
     status: AuthStatus = Field(default=AuthStatus.ACTIVE)
 
 class AuthorizationTracker:
-    def __init__(self):
-        self.authorizations = {}
-
     def track_authorization(self, data: dict) -> str:
         model = AuthorizationSchema(**data)
         serialized = model.model_dump()
@@ -31,19 +28,22 @@ class AuthorizationTracker:
         if serialized["expires_at"]:
             serialized["expires_at"] = serialized["expires_at"].isoformat()
             
+        from tools.db_manager import add_authorization
         auth_id = serialized["auth_id"]
-        self.authorizations[auth_id] = serialized
+        add_authorization(serialized)
         return auth_id
 
     def get_authorization(self, auth_id: str) -> Optional[dict]:
-        return self.authorizations.get(auth_id)
+        from tools.db_manager import get_authorization as db_get_auth
+        return db_get_auth(auth_id)
 
     def revoke_authorization(self, auth_id: str):
-        if auth_id in self.authorizations:
-            self.authorizations[auth_id]["status"] = AuthStatus.REVOKED.value
+        from tools.db_manager import update_authorization_status
+        update_authorization_status(auth_id, AuthStatus.REVOKED.value)
 
     def is_valid(self, auth_id: str) -> bool:
-        auth = self.authorizations.get(auth_id)
+        from tools.db_manager import get_authorization as db_get_auth, update_authorization_status
+        auth = db_get_auth(auth_id)
         if not auth:
             return False
             
@@ -53,7 +53,7 @@ class AuthorizationTracker:
         if auth["expires_at"]:
             expires_at = datetime.fromisoformat(auth["expires_at"])
             if datetime.utcnow() > expires_at:
-                auth["status"] = AuthStatus.EXPIRED.value
+                update_authorization_status(auth_id, AuthStatus.EXPIRED.value)
                 return False
                 
         return True

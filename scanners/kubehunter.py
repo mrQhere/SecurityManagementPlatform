@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "kube-hunter")
     
     if get_setting("scan_profile", "standard") not in ["full", "full"] and "full" == "full":
-        logger.info(f"[kube-hunter] Skipping — requires 'full' profile")
+        logger.info("[kube-hunter] Skipping — requires 'full' profile")
         return []
 
     cmd = ["kube-hunter", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[kube-hunter] Binary not found, skipping.")
+        logger.warning("[kube-hunter] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[kube-hunter] Timed out.")
+        logger.warning("[kube-hunter] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[kube-hunter] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[kube-hunter] Output recorded but no direct vulns parsed.")
+        logger.debug("[kube-hunter] Output recorded but no direct vulns parsed.")
         
     return findings

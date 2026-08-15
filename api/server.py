@@ -214,7 +214,7 @@ if _FASTAPI_AVAILABLE:
         except Exception as e:
             logger.error(f"[API] list_targets error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch targets: {e}")
+            raise SMPDatabaseError("Failed to fetch targets.")
 
     @app.post("/api/v6/target", tags=["Targets"])
     def create_target(target: TargetCreate, user: str = Depends(_get_current_user)):
@@ -232,8 +232,9 @@ if _FASTAPI_AVAILABLE:
             scans = get_active_scans()
             return {"scans": scans, "count": len(scans)}
         except Exception as e:
+            logger.error(f"[API] list_scans error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch scans: {e}")
+            raise SMPDatabaseError("Failed to fetch scans.")
 
     @app.get("/api/v6/findings", tags=["Findings"])
     def list_findings(scan_id: int, user: str = Depends(_get_current_user)):
@@ -246,8 +247,9 @@ if _FASTAPI_AVAILABLE:
             findings = get_findings_for_scan(scan_id)
             return {"findings": list(findings), "scan_id": scan_id, "count": len(list(findings))}
         except Exception as e:
+            logger.error(f"[API] list_findings error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch findings: {e}")
+            raise SMPDatabaseError("Failed to fetch findings.")
 
     @app.get("/api/v6/cve/stats", tags=["Intelligence"])
     def cve_stats(user: str = Depends(_get_current_user)):
@@ -256,8 +258,9 @@ if _FASTAPI_AVAILABLE:
             stats = get_cve_stats()
             return stats
         except Exception as e:
+            logger.error(f"[API] cve_stats error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch stats: {e}")
+            raise SMPDatabaseError("Failed to fetch stats.")
 
     @app.get("/api/v6/risk/score", tags=["Risk"])
     def risk_scores(user: str = Depends(_get_current_user)):
@@ -267,9 +270,9 @@ if _FASTAPI_AVAILABLE:
             scores = get_risk_scores_all_targets()
             return {"risk_scores": scores}
         except Exception as e:
-            logger.warning(f"[API] risk_scores: {e}")
+            logger.warning(f"[API] risk_scores error: {e}")
             from tools.errors import SMPDatabaseError
-            raise SMPDatabaseError(f"Failed to fetch risk scores: {e}")
+            raise SMPDatabaseError("Failed to fetch risk scores.")
 
 
 def start_server(host: str = "127.0.0.1", port: int = 8000):

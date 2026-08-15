@@ -92,7 +92,7 @@ def _extract_text_from_pdf(path: str) -> str:
         with open(path, "rb") as f:
             data = f.read()
         return data.decode("latin-1", errors="replace")
-    except Exception as e:
+    except Exception:
         return ""
 
 

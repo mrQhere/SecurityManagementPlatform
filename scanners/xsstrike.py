@@ -33,7 +33,7 @@ def scan(target_url: str, scan_id: int, settings: dict):
     emit_scanner_start(scan_id, "xsstrike")
     
     if get_setting("scan_profile", "standard") not in ["full", "full"] and "full" == "full":
-        logger.info(f"[xsstrike] Skipping — requires 'full' profile")
+        logger.info("[xsstrike] Skipping — requires 'full' profile")
         return []
 
     cmd = ["xsstrike", target_url]
@@ -44,10 +44,10 @@ def scan(target_url: str, scan_id: int, settings: dict):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     except FileNotFoundError:
-        logger.warning(f"[xsstrike] Binary not found, skipping.")
+        logger.warning("[xsstrike] Binary not found, skipping.")
         return None
     except subprocess.TimeoutExpired:
-        logger.warning(f"[xsstrike] Timed out.")
+        logger.warning("[xsstrike] Timed out.")
         return []
     except Exception as e:
         logger.error(f"[xsstrike] Error: {e}")
@@ -66,6 +66,6 @@ def scan(target_url: str, scan_id: int, settings: dict):
                 })
                 
     if not findings and result.stdout:
-        logger.debug(f"[xsstrike] Output recorded but no direct vulns parsed.")
+        logger.debug("[xsstrike] Output recorded but no direct vulns parsed.")
         
     return findings

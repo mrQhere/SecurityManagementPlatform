@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QMessageBox, QFileDialog, QProgressDialog, QTableWidgetItem, QHeaderView
+    QMessageBox, QFileDialog, QProgressDialog, QTableWidgetItem, QHeaderView, QDialog, QInputDialog
 )
 from PySide6.QtCore import QThread, Signal, Qt, QTimer
 from PySide6.QtGui import QColor, QBrush, QIcon
@@ -268,8 +268,8 @@ class DashboardLogicMixin:
         if not db: return
         try:
             # Example logic
-            targets = db.get_targets()
-            findings = db.get_all_findings()
+            db.get_targets()
+            db.get_all_findings()
             # Update UI elements here if they exist
         except Exception as e:
             print(f"Error loading overview: {e}")
@@ -303,7 +303,7 @@ class DashboardLogicMixin:
                 self.tbl_active_scans.setItem(i, 1, QTableWidgetItem(s.get('target', '')))
                 self.tbl_active_scans.setItem(i, 2, QTableWidgetItem(s.get('progress', '0%')))
                 self.tbl_active_scans.setItem(i, 3, QTableWidgetItem(s.get('status', '')))
-        except Exception as e:
+        except Exception:
             pass
 
     def _load_findings_page(self, severity_filter=None, status_filter=None, search=None):
@@ -330,7 +330,7 @@ class DashboardLogicMixin:
                 self.tbl_findings.setItem(i, 1, QTableWidgetItem(f.get('title', '')))
                 self._set_table_item_severity(self.tbl_findings, i, 2, f.get('severity', 'Info'))
                 self.tbl_findings.setItem(i, 3, QTableWidgetItem(f.get('status', '')))
-        except Exception as e:
+        except Exception:
             pass
 
     def _load_intelligence_page(self):
@@ -353,7 +353,7 @@ class DashboardLogicMixin:
                 self.tbl_reports.setItem(i, 0, QTableWidgetItem(f.name))
                 self.tbl_reports.setItem(i, 1, QTableWidgetItem(str(f.stat().st_size)))
                 self.tbl_reports.setItem(i, 2, QTableWidgetItem(datetime.fromtimestamp(f.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')))
-        except Exception as e:
+        except Exception:
             pass
 
     def _load_exporter_page(self):

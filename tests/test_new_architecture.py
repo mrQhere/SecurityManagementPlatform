@@ -22,15 +22,16 @@ def test_state_machine():
     sm.transition_to(ScannerState.STARTED)
     assert sm.current_state == ScannerState.STARTED
 
-def test_scope_engine():
+def test_scope_engine(monkeypatch):
+    monkeypatch.setattr("tools.db_manager.get_authorizations_for_engagement", lambda x: [])
     engine = ScopeEngine("engagement_1")
     engine.rules = [ScopeRule("1", "domain", "example.com", "allow", 100)]
     from core.scanner_manifest import ActivityLevel
     allowed, _ = engine.is_allowed("example.com", ActivityLevel.ACTIVE)
-    assert allowed == True
+    assert allowed
     
     allowed, _ = engine.is_allowed("other.com", ActivityLevel.ACTIVE)
-    assert allowed == False
+    assert not allowed
 
 def test_scan_policy():
     policy = ScanPolicy({
@@ -38,5 +39,5 @@ def test_scan_policy():
         "name": "Default",
         "scanner_allowlist": ["nmap"]
     })
-    assert policy.is_scanner_allowed("nmap") == True
-    assert policy.is_scanner_allowed("nuclei") == False
+    assert policy.is_scanner_allowed("nmap")
+    assert not policy.is_scanner_allowed("nuclei")
