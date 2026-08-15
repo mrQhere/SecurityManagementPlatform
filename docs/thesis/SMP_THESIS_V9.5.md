@@ -1,3 +1,37 @@
+---
+title: "Security Management Platform V9.5: Architectural Evolution of a Local-First, Zero-Cloud Vulnerability Intelligence Pipeline"
+author: "mrQhere"
+date: "August 2026"
+version: "V9.5"
+repository: "https://github.com/mrQhere/SecurityManagementPlatform"
+---
+
+# Security Management Platform V9.5
+## Architectural Evolution of a Local-First, Zero-Cloud Vulnerability Intelligence Pipeline
+
+**Author:** mrQhere  
+**Repository:** https://github.com/mrQhere/SecurityManagementPlatform  
+**Version:** 9.5.0  
+**Date:** August 2026  
+
+---
+## Table of Contents
+
+1. Abstract
+2. Introduction
+   - 2.1 Background and Motivation
+   - 2.2 Problem Statement
+   - 2.3 Research Objectives
+3. Architectural Evolution: V1 Through V4 (Monolithic Era)
+4. Architectural Evolution: V5 Through V8 (Async Era)
+5. V9.5 — The DAG Orchestration Engine & Observation Model
+6. Cryptographic Key Hierarchy: PBKDF2, KEK, DEK, AES-256-GCM
+7. Finding Deduplication & Fingerprinting
+8. The PySide6 UI Decoupling & Event Architecture
+9. Enterprise Export, Legal Gating & Non-Repudiation
+10. Conclusion & Future Work
+11. Bibliography
+
 # Abstract
 
 The rapid proliferation of networked assets, ephemeral cloud workloads, and

@@ -1,11 +1,36 @@
+```
+███████╗███╗   ███╗██████╗     ██╗   ██╗ █████╗     ███████╗
+██╔════╝████╗ ████║██╔══██╗    ██║   ██║██╔══██╗    ╚════██║
+███████╗██╔████╔██║██████╔╝    ██║   ██║╚██████║        ██╔╝
+╚════██║██║╚██╔╝██║██╔═══╝     ╚██╗ ██╔╝ ╚═══██║       ██╔╝
+███████║██║ ╚═╝ ██║██║          ╚████╔╝  █████╔╝        ██║
+╚══════╝╚═╝     ╚═╝╚═╝           ╚═══╝   ╚════╝         ╚═╝
+  Security Management Platform V9.5  ·  by mrQhere
+  Local-first · Zero-cloud · AES-256 Encrypted at Rest
+  github.com/mrQhere/SecurityManagementPlatform
+```
+
 # Security Management Platform V9.5 (SMP V9.5) User Guide: Part 1 - Introduction and Setup
+
+## Table of Contents
+1. [Introduction & User Tiers](#1-introduction)
+2. [Installation & System Requirements](#2-installation--system-requirements)
+3. [First Launch — Encryption Setup](#3-first-launch--encryption-setup)
+4. [Dashboard Reference (All 10 Pages)](#4-dashboard-reference)
+5. [Running Your First Scan](#5-running-your-first-scan)
+6. [Scanner Reference & Tuning](#6-scanner-reference--tuning)
+7. [Writing Custom Scanners](#7-writing-custom-scanners)
+8. [Enterprise Data Export & Legal Gate](#8-enterprise-data-export--legal-gate)
+9. [Advanced Tuning & Performance](#9-advanced-tuning--performance)
+10. [Headless API Reference](#10-headless-api-reference)
+11. [Troubleshooting & Error Codes](#11-troubleshooting--error-codes)
 
 ## 1. Introduction
 
 Welcome to the Security Management Platform V9.5 (SMP V9.5), the premier
 enterprise-grade solution for comprehensive security orchestration, automation,
 and response (SOAR). Whether you are taking your first steps into the world of
-cybersecurity, managing an established Security Operations Center (SOC), or
+cybersecurity, managing an established penetration testing engagement, or
 conducting advanced threat research, SMP V9.5 is designed to meet your needs
 with unparalleled flexibility, power, and security.
 
@@ -33,7 +58,7 @@ As you gain proficiency, SMP V9.5 reveals its underlying architecture, granting 
 
 For intermediate to advanced users, the platform offers:
 - **Custom Playbook Creation:** Move beyond templates by designing intricate,
-multi-step automated response playbooks using our drag-and-drop visual editor or
+multi-step automated response playbooks using our  or
 via our robust Python API.
 - **Advanced Threat Hunting:** Utilize our proprietary query language to sift
 through terabytes of log data across your entire enterprise infrastructure in
@@ -53,7 +78,7 @@ captures every system call, network request, and memory modification.
 analyze volatile memory dumps, allowing you to uncover sophisticated fileless
 malware and rootkits.
 - **Threat Intelligence Export:** easily package your findings, Indicators of
-Compromise (IoCs), and custom detection rules into standard formats (STIX/TAXII)
+Compromise (IoCs), and custom detection rules into standard formats 
 for distribution to the broader security community.
 
 ---
@@ -1390,7 +1415,7 @@ scale data offloading.
 ## 5.6 Category 5xxx: Threat Intelligence
 
 These errors relate to the ingestion, parsing, and utilization of external
-threat intelligence feeds, including STIX/TAXII integrations, MISP, and
+threat intelligence feeds, including  integrations, MISP, and
 commercial feed providers.
 
 ### SMP-5001: Feed Sync Failed

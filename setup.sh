@@ -313,17 +313,23 @@ if ! $SKIP_TOOLS; then
     else
         GO_VER="1.22.6"
         GOARCH="amd64"; is_arm && GOARCH="arm64"
+        GO_OS="linux"
+        [[ "$OS" == "Darwin" ]] && GO_OS="darwin"
         case "$DISTRO" in
             debian|rhel|fedora|opensuse)
                 spin "Installing Go via package manager" pkg_install golang || true ;;
+            macos)
+                brew install go || true ;;
         esac
         if ! have go; then
-            info "Downloading Go $GO_VER from go.dev"
-            curl -fsSL "https://go.dev/dl/go${GO_VER}.linux-${GOARCH}.tar.gz" \
+            info "Downloading Go $GO_VER from go.dev ($GO_OS/$GOARCH)"
+            curl -fsSL "https://go.dev/dl/go${GO_VER}.${GO_OS}-${GOARCH}.tar.gz" \
                 | sudo tar -C /usr/local -xz >> "$LOG_FILE" 2>&1
             export PATH="$PATH:/usr/local/go/bin"
-            grep -q '/usr/local/go/bin' ~/.bashrc 2>/dev/null || \
-                echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+            PROFILE_FILE="${HOME}/.bashrc"
+            [[ "$OS" == "Darwin" ]] && PROFILE_FILE="${HOME}/.zprofile"
+            grep -q '/usr/local/go/bin' "$PROFILE_FILE" 2>/dev/null || \
+                echo 'export PATH=$PATH:/usr/local/go/bin' >> "$PROFILE_FILE"
             ok "Go $GO_VER installed"
         fi
     fi
@@ -425,55 +431,89 @@ else
     }
 
     # ── Pinned versions (update these when new releases ship) ────────────────
-    # Format: name | url_amd64 | url_arm64
-    declare -A T_AMD T_ARM T_GO T_SHA_AMD T_SHA_ARM
+    # Format: URL arrays keyed by tool name, separate AMD64 / ARM64 / macOS entries
+    declare -A T_AMD T_ARM T_MAC_AMD T_MAC_ARM T_GO T_SHA_AMD T_SHA_ARM
     BASE_PD="https://github.com/projectdiscovery"
     BASE_FF="https://github.com/ffuf/ffuf/releases/download"
     BASE_GL="https://github.com/gitleaks/gitleaks/releases/download"
     BASE_DX="https://github.com/hahwul/dalfox/releases/download"
 
+    # nuclei
     T_AMD[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_amd64.zip"
     T_ARM[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_linux_arm64.zip"
+    T_MAC_AMD[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_macos_amd64.zip"
+    T_MAC_ARM[nuclei]="https://github.com/projectdiscovery/nuclei/releases/download/v3.3.9/nuclei_3.3.9_macos_arm64.zip"
     T_GO[nuclei]="github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.9"
-    T_SHA_AMD[nuclei]="d346332ecae03c622a5ec2ef02e0ee3e877478673322bf25b6a715694a5bd008"
 
+    # subfinder
     T_AMD[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_amd64.zip"
     T_ARM[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_linux_arm64.zip"
+    T_MAC_AMD[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_macos_amd64.zip"
+    T_MAC_ARM[subfinder]="https://github.com/projectdiscovery/subfinder/releases/download/v2.6.8/subfinder_2.6.8_macos_arm64.zip"
     T_GO[subfinder]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.8"
-    T_SHA_AMD[subfinder]="ec4a1a361bc4a6750da782e4f0163351f041ff91a58641a9eb538c8c50e04b4c"
 
+    # httpx
     T_AMD[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_amd64.zip"
     T_ARM[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_linux_arm64.zip"
+    T_MAC_AMD[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_macos_amd64.zip"
+    T_MAC_ARM[httpx]="$BASE_PD/httpx/releases/download/v1.7.0/httpx_1.7.0_macos_arm64.zip"
     T_GO[httpx]="github.com/projectdiscovery/httpx/cmd/httpx@v1.7.0"
 
+    # katana
     T_AMD[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_linux_amd64.zip"
     T_ARM[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_linux_arm64.zip"
+    T_MAC_AMD[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_macos_amd64.zip"
+    T_MAC_ARM[katana]="$BASE_PD/katana/releases/download/v1.1.2/katana_1.1.2_macos_arm64.zip"
     T_GO[katana]="github.com/projectdiscovery/katana/cmd/katana@v1.1.2"
 
+    # dnsx
     T_AMD[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_amd64.zip"
     T_ARM[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_linux_arm64.zip"
+    T_MAC_AMD[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_macos_amd64.zip"
+    T_MAC_ARM[dnsx]="$BASE_PD/dnsx/releases/download/v1.2.1/dnsx_1.2.1_macos_arm64.zip"
     T_GO[dnsx]="github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1"
 
+    # ffuf
     T_AMD[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_amd64.tar.gz"
     T_ARM[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_linux_arm64.tar.gz"
+    T_MAC_AMD[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_macos_amd64.tar.gz"
+    T_MAC_ARM[ffuf]="$BASE_FF/v2.1.0/ffuf_2.1.0_macos_arm64.tar.gz"
     T_GO[ffuf]="github.com/ffuf/ffuf/v2@v2.1.0"
 
-    T_AMD[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+    # gitleaks — note: official releases use 'linux_amd64' (not x64)
+    T_AMD[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_linux_amd64.tar.gz"
     T_ARM[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
+    T_MAC_AMD[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_darwin_amd64.tar.gz"
+    T_MAC_ARM[gitleaks]="$BASE_GL/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz"
     T_GO[gitleaks]="github.com/gitleaks/gitleaks/v8/cmd/gitleaks@v8.30.1"
 
+    # dalfox
     T_AMD[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_amd64.tar.gz"
     T_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_linux_arm64.tar.gz"
+    T_MAC_AMD[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_darwin_amd64.tar.gz"
+    T_MAC_ARM[dalfox]="$BASE_DX/v2.10.0/dalfox_2.10.0_darwin_arm64.tar.gz"
     T_GO[dalfox]="github.com/hahwul/dalfox/v2@v2.10.0"
 
+    # race-the-web (Linux only; macOS falls through to go install)
     T_AMD[race-the-web]="https://github.com/TheHackerDev/race-the-web/releases/download/2.0.1/race-the-web_2.0.1_lin64.bin"
     T_ARM[race-the-web]="https://github.com/TheHackerDev/race-the-web/releases/download/2.0.1/race-the-web_2.0.1_lin64.bin"
     T_GO[race-the-web]="github.com/TheHackerDev/race-the-web@v2.0.1"
 
+    # Select the right URL based on OS
+    _bin_url() {
+        local name="$1"
+        if [[ "$OS" == "Darwin" ]]; then
+            is_arm && echo "${T_MAC_ARM[$name]:-}" || echo "${T_MAC_AMD[$name]:-}"
+        else
+            is_arm && echo "${T_ARM[$name]:-}" || echo "${T_AMD[$name]:-}"
+        fi
+    }
+
     for name in nuclei subfinder httpx katana dnsx ffuf gitleaks dalfox race-the-web; do
         if have "$name"; then ok "$name installed"; continue; fi
-        if spin "Downloading $name" \
-           download_binary "$name" "${T_AMD[$name]}" "${T_ARM[$name]}"; then
+        url="$(_bin_url "$name")"
+        if [[ -n "$url" ]] && spin "Downloading $name" \
+           download_binary "$name" "$url" "$url"; then
             continue
         fi
         # Fallback: go install (pinned)
