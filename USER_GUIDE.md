@@ -24,6 +24,8 @@
 9. [Advanced Tuning & Performance](#9-advanced-tuning--performance)
 10. [Headless API Reference](#10-headless-api-reference)
 11. [Troubleshooting & Error Codes](#11-troubleshooting--error-codes)
+12. [Deep Technical Architecture & End-to-End Operational Lifecycle (For Researchers)](#12-deep-technical-architecture--end-to-end-operational-lifecycle)
+13. [How to Tweak, Extend, and Reconfigure the Entire SMP Structure](#13-how-to-tweak-extend-and-reconfigure-the-entire-smp-structure)
 
 ## 1. Introduction
 
@@ -1515,5 +1517,445 @@ Restart the SMP services to apply the change: `systemctl restart smp-core smp-en
 
 ## 5.9 Conclusion
 Effective troubleshooting in complex environments requires a systematic and patient approach: accurately identify the error code, understand the surrounding context from the system logs, and apply the appropriate resolution methodically. By familiarizing yourself with these common error categories and their typical root causes, administrators can maintain a highly resilient, reliable, and effective security management platform.
+
+---
+
+## 12. Deep Technical Architecture & End-to-End Operational Lifecycle (For Researchers)
+
+This section provides security researchers, cryptographers, and core developers with an exhaustive, mathematical, and structural breakdown of the Security Management Platform (SMP V9.5).
+
+### 12.1 High-Level Architecture Pipeline
+
+SMP V9.5 is architected as a local-first, zero-cloud security data pipeline. Rather than treating scanner output as raw text or direct database rows, SMP models all discoveries as immutable, cryptographically verifiable observation objects that flow through strict policy and deduplication engines before being encrypted at rest.
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 SMP V9.5 ARCHITECTURE                                  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+                                         │
+             ┌───────────────────────────┴───────────────────────────┐
+             ▼                                                       ▼
+  [ GUI Mode (PySide6 MVC) ]                              [ Headless API Mode (FastAPI) ]
+  • main.py → splash_screen.py                            • main.py --api
+  • password_dialog.py (4-Layer KEK/DEK)                  • api/server.py (/api/v6/)
+  • dashboard_layout.py + dashboard_logic.py              • api/auth.py (JWT Bearer)
+             │                                                       │
+             └───────────────────────────┬───────────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │          ENGAGEMENT & SCOPE ENGINE            │
+                 │ • core/authorization.py • core/scope_engine.py │
+                 │ • tools/responsibility_manager.py             │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │       DAG ORCHESTRATION & RESILIENCE          │
+                 │ • scanners/core/dag.py (Kahn's Topo-Sort)     │
+                 │ • scanners/core/registry.py (90 Scanners)     │
+                 │ • scanners/framework/ (Sandbox, Timeout)      │
+                 │ • tools/mac_changer.py (OUI Preservation)     │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │     IMMUTABLE OBSERVATIONS & THREAT INTEL     │
+                 │ • core/observation.py (Typed Observations)    │
+                 │ • intelligence/cve_correlator.py (CPE Match)  │
+                 │ • intelligence/epss.py • intelligence/cisa.py │
+                 │ • intelligence/brain.py (Local Heuristics)    │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │        DEDUPLICATION & RISK SCORING           │
+                 │ • tools/finding_deduplicator.py (SHA-256 FP)  │
+                 │ • tools/risk_scorer.py (Logarithmic Weights)  │
+                 │ • tools/compliance_mapper.py (NIST/ISO/PCI)   │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │      STORAGE, REPORTING & DATA EXPORT         │
+                 │ • tools/db_manager.py (SQLCipher AES-256)     │
+                 │ • tools/report_generator.py (RFC 8785 Hash)   │
+                 │ • tools/data_exporter.py (Legal Gate "I AGREE")│
+                 └───────────────────────────────────────────────┘
+```
+
+### 12.2 Complete File & Component Taxonomy (All 186 Modules)
+
+The platform is structured into modular layers, each with strict separation of concerns:
+
+| Layer / Directory | Key Files | Description & Responsibility |
+| :--- | :--- | :--- |
+| **Entry & Core** | `main.py`, `run.sh`, `setup.sh` | Process orchestration, single-instance runtime lock (`/tmp/.smp_runtime.lock`), multi-OS binary installation, cross-distro environment setup. |
+| **Pipeline Schema** | `core/observation.py`, `core/finding.py`, `core/evidence.py`, `core/scanner_manifest.py` | Pydantic immutable data contracts defining `AssetObservation`, `PortObservation`, `ServiceObservation`, `CPEObservation`, `VulnerabilityObservation`, `SecretObservation`, and encrypted raw evidence payloads. |
+| **Execution Governance** | `core/scope_engine.py`, `core/authorization.py`, `core/state_machine.py`, `core/scan_policy.py` | Strict scope boundaries (CIDR, wildcard domain, regex), default-deny policy, 14-state formal finite state machine, and written authorization ledger. |
+| **DAG Orchestration** | `scanners/core/dag.py`, `scanners/core/registry.py`, `scanners/core/plugin.py`, `scanners/framework/` | Kahn's topological sort dependency resolution, dynamic plugin discovery for 90 scanners, process sandboxing, CPU/RAM resource limits, and retry logic. |
+| **Scanners (90 modules)** | `scanners/*.py` | Modular plugins covering passive OSINT, active port scanning, web vulnerability fuzzing, API testing, container security, secret discovery, and exploit verification. |
+| **Cryptographic Storage** | `tools/encryption_manager.py`, `tools/db_manager.py` | 4-layer PBKDF2-HMAC-SHA256 (600,000 iterations) hierarchical key model (KEK/DEK/IEK/EEK) with SQLCipher AES-256 encrypted relational storage. |
+| **Threat Intelligence** | `intelligence/cve_correlator.py`, `intelligence/epss.py`, `intelligence/cisa.py`, `intelligence/brain.py` | Offline CPE version range evaluation, Levenshtein distance banner matching, CISA KEV exploitation bonuses ($2.0\times$), FIRST EPSS exploit likelihood probabilities, and heuristic attack-path correlation. |
+| **Deduplication & Risk** | `tools/finding_deduplicator.py`, `tools/risk_scorer.py`, `tools/compliance_mapper.py` | SHA-256 composite fingerprint deduplication, logarithmic risk score aggregation (0–100 scale), and regulatory framework mapping (NIST 800-53, ISO 27001, PCI-DSS v4.0). |
+| **Reporting & Export** | `tools/report_generator.py`, `tools/verify_report.py`, `tools/data_exporter.py` | RFC 8785 canonical JSON, Markdown, and PDF report compilation with SHA-256 authenticity signatures; multi-format enterprise ticketing exports with mandatory typed legal gate. |
+| **UI Presentation** | `ui/dashboard.py`, `ui/views/dashboard_layout.py`, `ui/controllers/dashboard_logic.py`, `ui/theme.py`, `ui/style.qss`, `ui/components/` | Decoupled Model-View-Controller (MVC) architecture with 10 tabbed navigation views, custom dark design tokens, and specialized interactive dialogs. |
+| **API Backend** | `api/server.py`, `api/auth.py` | Secured FastAPI server with JWT Bearer authentication, SlowAPI IP rate limiting, and OpenAPI/Swagger documentation. |
+
+---
+
+### 12.3 Phase-by-Phase End-to-End Operational Lifecycle
+
+#### Phase 1: Environment Provisioning & Supply-Chain Validation
+1. **Command**: `./setup.sh`
+2. **Execution**:
+   - Analyzes host operating system (`Debian`, `Ubuntu`, `Arch`, `Fedora`, `RHEL`, `openSUSE`, `macOS/Darwin`) and CPU architecture (`x86_64` vs `arm64`).
+   - Installs system compilation prerequisites: `libsqlite3-dev`, `libsqlcipher-dev`, `python3-dev`, `libxcb-cursor0`, `git`, `curl`, `jq`.
+   - Downloads pinned Go security tool binaries (`nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`).
+   - Validates cryptographic SHA-256 hashes against trusted release manifests to prevent supply-chain tampering.
+   - Creates an isolated Python virtual environment (`venv/`) and installs pinned dependencies from `requirements.txt`.
+
+#### Phase 2: Launch & Cryptographic Key Derivation
+1. **Command**: `./run.sh` or `python3 main.py`
+2. **Execution**:
+   - Obtains an exclusive non-blocking file lock on `/tmp/.smp_runtime.lock` via `fcntl.flock()`. If another instance is running, execution halts immediately with error `SMP-1001`.
+   - Renders `SplashScreen` (`ui/views/splash_screen.py`).
+   - Prompts `PasswordDialog` (`ui/components/password_dialog.py`).
+   - **4-Layer Cryptographic Key Hierarchy**:
+     1. Operator inputs the Master Password.
+     2. `tools/encryption_manager.py` applies **PBKDF2-HMAC-SHA256 with 600,000 iterations** over a 32-byte cryptographic salt to derive the **Key Encryption Key (KEK)**:
+        $$\text{KEK} = \text{PBKDF2}(\text{HMAC-SHA256}, \text{Password}, \text{Salt}, 600000, 32)$$
+     3. The KEK unwraps three isolated 256-bit sub-keys:
+        - **DEK (Database Encryption Key)**: Unlocks `database/security.db` and `database/redundancy.db` via SQLCipher.
+        - **IEK (Intelligence Encryption Key)**: Unlocks private intelligence records.
+        - **EEK (Evidence Encryption Key)**: Encrypts raw tool artifacts in `database/raw_outputs/`.
+     4. In-memory keys are held exclusively inside `KeyStore` and never written to disk in unencrypted form.
+
+#### Phase 3: Target Onboarding, Scope Engine & Legal Attestation
+1. Operator navigates to the **Targets** tab and submits a URL or network CIDR (e.g. `https://target.corp` or `192.168.1.0/24`).
+2. **Legal Attestation Gate**:
+   - `ResponsibilityDialog` (`ui/components/responsibility_dialog.py`) opens.
+   - The operator must scroll to the end of the legal terms and type:
+     > *"I accept full legal responsibility for scanning this target."*
+   - Once confirmed, `tools/responsibility_manager.py` logs the attestation timestamp, operator ID, and target hash into the encrypted audit ledger.
+3. **Scope Engine**:
+   - `core/scope_engine.py` compiles the target boundaries into active CIDR, wildcard domain (`*.target.corp`), and URL rules.
+   - Any packet or request targeted outside these boundaries is intercepted and aborted with `ScopeViolationError` (`SMP-2001`).
+
+#### Phase 4: Pre-Flight Health Check & OPSEC Anonymization
+1. Operator initiates scanning by clicking **"Scan Target"**.
+2. **System Health Verification**:
+   - `SystemCheckDialog` (`ui/components/system_check_dialog.py`) queries `tools/system_checker.py`.
+   - Validates that CPU usage is below 80%, free RAM is at least 1,024 MB, free disk space is at least 2,048 MB, and required tool binaries are executable in `$PATH`.
+3. **MAC Address Randomization**:
+   - If enabled in `settings.json`, `tools/mac_changer.py` reads the primary network interface OUI (first 3 bytes) and randomizes only the lower 3 bytes:
+     $$\text{MAC}_{\text{new}} = \text{OUI}_{\text{vendor}} \parallel \text{RandomBytes}(3)$$
+   - This prevents network intrusion detection systems (NIDS) from flagging suspicious vendor mismatches on the local broadcast domain.
+
+#### Phase 5: DAG Graph Orchestration & Parallel Scan Waves
+1. `ui/controllers/dashboard_logic.py` spawns an asynchronous `ScanWorker` thread.
+2. `scanners/core/registry.py` discovers all 90 scanners and supplies their manifests to `scanners/core/dag.py`.
+3. `DAGOrchestrator` computes the topological dependency order using Kahn's algorithm:
+   - **Wave 1 (Passive Reconnaissance)**: `Whois` $\to$ `CRT.sh` $\to$ `HackerTarget` $\to$ `Subfinder` $\to$ `Amass` $\to$ `DNSx`
+   - **Wave 2 (Active Host & Service Probing)**: `HTTPx` $\to$ `Nmap` $\to$ `Masscan` $\to$ `SSL/TLS Scanner` $\to$ `Security Headers` $\to$ `Tech Fingerprint`
+   - **Wave 3 (Content Enumeration & CMS Analysis)**: `Katana` $\to$ `Nikto` $\to$ `WPScan` $\to$ `Robots.txt` $\to$ `CORS Scanner` $\to$ `Dirb` $\to$ `Gobuster`
+   - **Wave 4 (Targeted Exploitation & Fuzzing)**: `Nuclei` $\to$ `FFUF` $\to$ `SQLMap` $\to$ `Dalfox` $\to$ `Commix` $\to$ `IDOR Scanner` $\to$ `Race-the-Web` $\to$ `Gitleaks`
+4. `scanners/framework/` wraps every tool process in a sandboxed execution harness with strict timeouts (`timeout.py`), retry handling (`retry.py`), and cooling pauses (`scan_runner.py:get_cooling_delay()`) to prevent thermal throttling.
+
+#### Phase 6: Observation Model Parsing & Threat Intelligence Correlation
+1. Raw tool output (JSON, XML, text) is stored in the encrypted Evidence Store (`core/evidence.py`) and tagged with a SHA-256 hash.
+2. The output is parsed into structured, immutable `Observation` objects (`core/observation.py`).
+3. `intelligence/cve_correlator.py` extracts service banners and Common Platform Enumeration (CPE) strings, querying `database/cve.db` using Levenshtein distance string matching:
+   - Evaluates vulnerability version ranges (`<=`, `>=`, `<`, `>`, `==`).
+   - If the CVE is in the CISA KEV catalog (`intelligence/cisa.py`), a **$2.0\times$ risk multiplier** is assigned.
+   - The FIRST EPSS probability score (`intelligence/epss.py`) is attached to represent real-world exploitation probability.
+4. `intelligence/brain.py` correlates cross-scanner evidence and synthesizes multi-stage attack paths.
+
+#### Phase 7: Finding Deduplication, Risk Scoring & Alerts
+1. **Composite Fingerprinting**:
+   - `tools/finding_deduplicator.py` calculates a canonical SHA-256 hash across the finding's core attributes:
+     $$\text{Fingerprint} = \text{SHA256}(\text{Target} \parallel \text{Port/Service} \parallel \text{VulnClass} \parallel \text{CVE\_ID})$$
+   - Duplicate findings from different scanners (e.g. Nikto and Nuclei both flagging `X-Frame-Options`) are merged into a single verified finding with combined evidence references.
+2. **Logarithmic Risk Calculation**:
+   - `tools/risk_scorer.py` evaluates all findings using a logarithmic damping curve to prevent low-severity alert volume from skewing the overall target risk score (0–100 scale).
+3. **Compliance Mapping**:
+   - `tools/compliance_mapper.py` maps technical findings directly to regulatory controls in **NIST SP 800-53 Rev 5**, **ISO/IEC 27001:2022**, and **PCI-DSS v4.0**.
+4. **Signaling & Alerts**:
+   - Events are broadcast over `tools/event_bus.py` and local UDP socket port 5005, updating the PySide6 UI and triggering SMTP email alerts via `tools/alert_engine.py` for Critical and High vulnerabilities.
+
+#### Phase 8: Cryptographic Reporting & Enterprise Data Export
+1. **Report Generation**:
+   - `tools/report_generator.py` compiles the engagement findings, asset inventory, compliance mappings, and evidence hashes into machine-readable JSON and formatted Markdown.
+   - Calculates the **RFC 8785 Canonical SHA-256 signature** over the report contents and embeds the authenticity hash into the header.
+2. **Report Verification**:
+   - Any stakeholder can verify that the report has not been altered using the standalone verification tool:
+     ```bash
+     python3 tools/verify_report.py reports/scan_1.json
+     ```
+3. **Enterprise Ticketing Export**:
+   - In Page 7 ("Exporter"), the operator selects an export format (`Jira JSON`, `ServiceNow CSV`, `DefectDojo JSON`, `Generic JSON`, `Markdown ZIP`, or `SARIF 2.1.0`).
+   - `ExportGateDialog` (`ui/components/export_gate_dialog.py`) prompts the operator to type `"I AGREE"`.
+   - `tools/data_exporter.py` prepends unencrypted plaintext warning headers to every exported file and writes an immutable `ExportAuditRecord` into the audit log.
+
+#### Phase 9: Application Teardown & Key Zeroing
+1. When the operator closes the window (`DashboardWindow.closeEvent`):
+   - All active `ScanWorker` threads and sandboxed subprocesses are signaled to terminate (`SIGTERM`).
+   - UDP socket listener threads and polling timers are stopped.
+   - SQLite WAL caches are checkpointed and flushed to disk.
+   - `tools/encryption_manager.py:clear_keys()` overwrites all in-memory cryptographic keys with zeroes:
+     $$\text{KeyStore.keys} \leftarrow \emptyset$$
+   - The single-instance lock file `/tmp/.smp_runtime.lock` is released and unlinked.
+
+---
+
+## 13. How to Tweak, Extend, and Reconfigure the Entire SMP Structure
+
+SMP V9.5 was designed from the ground up to be fully extensible. Every engine, algorithm, threshold, and interface can be customized.
+
+### 13.1 Writing & Registering a New Scanner
+
+To add a new vulnerability scanner, create a new Python file in `scanners/` (e.g. `scanners/custom_fuzzer.py`).
+
+#### Method A: Using the `@register_scanner` Decorator (Recommended)
+```python
+"""
+Custom API Fuzzer — SMP V9.5 Scanner Plugin
+"""
+import subprocess
+import logging
+from scanners.core.registry import register_scanner
+from tools.config_manager import load_settings
+from tools.db_manager import add_finding
+
+logger = logging.getLogger("smp.scan")
+
+@register_scanner(
+    name="Custom API Fuzzer",
+    step_name="Running Custom API Fuzzer",
+    depends_on=["HTTPx", "Katana"],  # Scanners that must finish before this runs
+    binary_name="ffuf",               # Binary checked in PATH (optional)
+    needs_binary=True,
+    confidence=90,
+    severity="High"
+)
+def run_custom_fuzzer(target_url: str, scan_id: int = None, settings: dict = None):
+    """
+    Executes custom API fuzzing against discovered endpoints.
+    """
+    logger.info(f"[Custom API Fuzzer] Starting fuzzing against {target_url}")
+    settings = settings or load_settings()
+    
+    findings = []
+    cmd = ["ffuf", "-u", f"{target_url}/FUZZ", "-w", "/usr/share/wordlists/api_routes.txt", "-mc", "200,401,403"]
+    
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if res.returncode == 0 and "Status: 200" in res.stdout:
+            findings.append({
+                "severity": "Medium",
+                "title": "Exposed Unauthenticated API Endpoint",
+                "description": f"Discovered reachable API route during fuzzing: {res.stdout[:200]}",
+                "confidence": 90,
+                "remediation": "Apply authentication middleware to API endpoints.",
+                "scanner": "Custom API Fuzzer"
+            })
+            if scan_id is not None:
+                add_finding(
+                    scan_id=scan_id,
+                    severity="Medium",
+                    title="Exposed Unauthenticated API Endpoint",
+                    description=res.stdout[:500],
+                    source_tool="Custom API Fuzzer",
+                    confidence=90,
+                    recommendation="Apply authentication middleware to API endpoints."
+                )
+    except Exception as e:
+        logger.error(f"[Custom API Fuzzer] Error during execution: {e}")
+        
+    return findings
+```
+
+#### Method B: Using `PLUGIN_META` Zero-Config Auto-Discovery
+```python
+PLUGIN_META = {
+    "name": "CloudAudit",
+    "binary": "prowler",
+    "severity": "High",
+    "step_name": "Auditing Cloud Configurations",
+    "depends_on": ["HTTPx"],
+    "confidence": 95,
+    "enabled": True
+}
+
+def scan(target_url: str, scan_id: int, settings: dict):
+    # Execution logic here
+    return []
+```
+
+---
+
+### 13.2 Tweaking DAG Concurrency & Execution Flow
+
+To customize scanner parallelization and queue behavior, modify `scanners/core/dag.py`:
+
+1. **Adjust Max Concurrent Workers**:
+   In `DAGOrchestrator.__init__()`:
+   ```python
+   # Default is 3 parallel workers. Increase for high-core workstations:
+   self.max_workers = max_workers  # e.g., change to 6 or 8
+   ```
+
+2. **Adjust Inter-Request Rate Limiting**:
+   In `scanners/core/dag.py`:
+   ```python
+   # Delay in seconds between scanner dispatches:
+   _INTER_REQUEST_DELAY = 0.5  # Adjust lower (0.1) for speed or higher (2.0) for stealth
+   ```
+
+3. **Adjust CPU Cooling Thresholds**:
+   In `scanners/scan_runner.py`:
+   ```python
+   def get_cooling_delay():
+       # System temperature and CPU load monitoring logic
+       # Adjust delay thresholds (e.g. pause for 5s if CPU > 85%)
+   ```
+
+---
+
+### 13.3 Tweaking the Risk Scoring Algorithm
+
+To customize how vulnerability risk scores (0–100) are calculated, modify `tools/risk_scorer.py`:
+
+1. **Modify Severity Base Weights**:
+   ```python
+   _SEVERITY_LOG_WEIGHTS = {
+       "Critical": 60,   # Adjust base impact for Critical findings
+       "High":     25,   # Adjust base impact for High findings
+       "Medium":   8,    # Adjust base impact for Medium findings
+       "Low":      2,    # Adjust base impact for Low findings
+       "Info":     0.1,  # Adjust base impact for Informational findings
+   }
+   ```
+
+2. **Modify CISA KEV & EPSS Multipliers**:
+   ```python
+   # CISA KEV active exploitation multiplier:
+   if finding.get("is_kev"):
+       weight *= 2.0  # Increase to 2.5 or 3.0 for higher exploit weighting
+
+   # EPSS Probability Factor:
+   epss = float(finding.get("epss_score", 0.0))
+   if epss > 0.5:
+       weight *= (1.0 + epss)
+   ```
+
+3. **Modify Minimum Confidence Threshold**:
+   ```python
+   # Filter out low-confidence scanner outputs from risk score:
+   if finding.get("confidence", 100) < 60:
+       continue  # Adjust threshold to 70 or 80 for stricter scoring
+   ```
+
+---
+
+### 13.4 Adding Custom Compliance Frameworks
+
+To add a new regulatory framework (e.g. HIPAA, CIS Benchmarks, SOC 2 Type II), update `tools/compliance_mapper.py`:
+
+```python
+COMPLIANCE_FRAMEWORKS["HIPAA"] = {
+    "SQL Injection": ["164.312(a)(1) Access Control", "164.312(e)(1) Transmission Security"],
+    "Cross-Site Scripting": ["164.312(c)(1) Data Integrity"],
+    "Weak SSL/TLS": ["164.312(e)(2)(ii) Encryption in Transit"],
+    "Exposed Admin Panel": ["164.308(a)(1)(ii)(B) Risk Management"],
+    "Default Credentials": ["164.312(d) Authentication"],
+}
+```
+
+---
+
+### 13.5 Tweaking the Threat Intelligence Correlation Engine
+
+To customize how CPE strings and CVE databases are matched, modify `intelligence/cve_correlator.py`:
+
+1. **Adjust Levenshtein Similarity Threshold**:
+   ```python
+   # Minimum similarity score required to correlate service banner to a CVE (0.0 - 1.0):
+   SIMILARITY_THRESHOLD = 0.85  # Increase to 0.95 to reduce false positives
+   ```
+
+2. **Custom Version Comparison Logic**:
+   Update `_matches_version_range(service_version, cve_version_spec)` to support custom version formatting schemes (e.g. git commit hashes or internal build tags).
+
+---
+
+### 13.6 Tweaking Cryptographic Parameters
+
+To customize encryption key derivation, modify `tools/encryption_manager.py`:
+
+```python
+# Number of PBKDF2 iterations for Master Password -> KEK:
+_PBKDF2_ITERATIONS = 600000  # Increase to 1,000,000 for higher security margin
+
+# AES-256-GCM Nonce and Tag lengths:
+_NONCE_SIZE = 12  # Standard 96-bit GCM nonce
+_TAG_SIZE = 16    # 128-bit authentication tag
+```
+
+---
+
+### 13.7 Adding Custom Enterprise Export Formats
+
+To add a new export target (e.g. GitLab Issues, Splunk HEC, or Tenable SC), add a new builder method in `tools/data_exporter.py`:
+
+```python
+class ExportFormat(str, Enum):
+    JIRA_JSON = "JIRA_JSON"
+    SERVICENOW_CSV = "SERVICENOW_CSV"
+    DEFECTDOJO_JSON = "DEFECTDOJO_JSON"
+    GENERIC_JSON = "GENERIC_JSON"
+    MARKDOWN_ZIP = "MARKDOWN_ZIP"
+    SARIF = "SARIF"
+    GITLAB_ISSUES = "GITLAB_ISSUES"  # New format
+
+def _build_gitlab_issues(self, findings: list, engagement_meta: dict) -> list:
+    issues = []
+    for f in findings:
+        issues.append({
+            "title": f"[{f.get('severity')}] {f.get('title')}",
+            "description": f"{f.get('description')}\n\n**Remediation:** {f.get('remediation')}",
+            "labels": ["security", f.get("severity", "Info").lower()],
+            "confidential": True
+        })
+    return issues
+```
+
+---
+
+### 13.8 Tweaking UI Styling & Layout Pages
+
+1. **Theme Colors**:
+   Modify `ui/theme.py`:
+   ```python
+   COLORS = {
+       "bg_base": "#0D0F14",        # Main canvas background
+       "bg_card": "#151820",        # Card surface background
+       "accent_cyan": "#00D4FF",    # Accent glow and active border
+       "sev_critical": "#FF3D5A",   # Critical severity badge color
+       "sev_high": "#FF8C42",       # High severity badge color
+       "sev_medium": "#FFD700",     # Medium severity badge color
+       "sev_low": "#00C9A7",        # Low severity badge color
+   }
+   ```
+
+2. **Custom QSS Rules**:
+   Update `ui/style.qss` to customize widget scrollbars, table hover states, and input focus highlights.
+
+3. **Adding a New Navigation Page**:
+   In `ui/views/dashboard_layout.py`:
+   - Add the page tuple to `PAGE_NAMES`: `('🛰️', 'Telemetry')`.
+   - Build a new `QWidget` container and add it to `self.content_stack.addWidget(page_widget)`.
+   - In `ui/controllers/dashboard_logic.py`, add `_load_telemetry_page(self)` and connect its signals.
+
 
 
