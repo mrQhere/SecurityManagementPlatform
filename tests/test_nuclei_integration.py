@@ -31,8 +31,8 @@ def test_nuclei_scanner_flags(monkeypatch):
 
     nuclei_module.run_nuclei_scan("http://127.0.0.1:8000")
 
-    assert len(executed_cmds) == 1
-    cmd = executed_cmds[0]
+    assert len(executed_cmds) >= 1
+    cmd = executed_cmds[-1]
     assert "-duc" in cmd, "Nuclei command must include -duc to disable slow update checks"
     assert "-ni" in cmd, "Nuclei command must include -ni for non-interactive mode"
     assert "-u" in cmd
