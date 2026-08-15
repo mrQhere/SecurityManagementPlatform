@@ -32,9 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **High-Performance UI Components** — Built reusable widgets: `StatCard`, `FindingDetailPanel` (slide-in finding inspector), `ExportGateDialog`, `PasswordDialog`, `ResponsibilityDialog`, and `SystemCheckDialog`.
 - **Theme Engine & QSS Style System** — Custom dark-theme engine (`ui/theme.py`, `ui/style.qss`) tailored for cybersecurity operations.
 
-### Enterprise Data Exporter & Legal Gate
+### Data Exporter & Legal Gate
 
-- **Multi-Format Enterprise Ticketing Exporter** — `tools/data_exporter.py` supporting Jira JSON, ServiceNow CSV, DefectDojo JSON, Generic JSON, Markdown ZIP, and SARIF 2.1.0 formats.
+- **Multi-Format Ticketing Exporter** — `tools/data_exporter.py` supporting Jira JSON, ServiceNow CSV, DefectDojo JSON, Generic JSON, Markdown ZIP, and SARIF 2.1.0 formats.
 - **Mandatory Typed Legal Gate** — Enforced typed `"I AGREE"` acknowledgment dialog (`ui/components/export_gate_dialog.py`) for plaintext data exports with permanent non-repudiation audit logging (`SMP-4050`, `SMP-4051`, `SMP-4052`).
 
 ### Comprehensive Manual & Academic Thesis
@@ -57,28 +57,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Artifact Cleanup** — Removed stale download archives and redundant directories.
 - **Verification** — 100% pass across 186 modules, 12/12 `verify_smp.py` suites, and 7/7 `pytest` test suites.
 
-## [V9.4.4] - 2026-08-12
+## [V9.5] - 2026-08-12
 
 - Scaled DAG Orchestrator to support 90 independent vulnerability scanners.
 - Pulled extensive open-source parity from DefectDojo/Faraday, integrating 15 new advanced scanners (Metasploit, OpenVAS, Impacket, SQLNinja, RouterSploit, Responder, Arachni, Bandit, OSV-Scanner, etc.).
-- Developed the Enterprise Target Data Exporter: 1-click ZIP export of AES-encrypted database findings, reports, and logs strictly filtered by website target.
+- Developed the Target Data Exporter: 1-click ZIP export of AES-encrypted database findings, reports, and logs strictly filtered by website target.
 - Resolved Trivy APT repository errors (`zena` codename missing) by refactoring `setup.sh` to use the official raw installation binaries, ensuring cross-distro compatibility.
 - Auto-cleanup of broken `/etc/apt/sources.list.d/trivy.list` to prevent repeated apt-get failures.
 - Expanded Academic Thesis to document the theoretical rationale behind scaling the local-first engine and consolidating disjointed vulnerability management platforms.
 - Hardened DAG exception handling (`tools/errors.py`) with specific timeouts (`SMP-4040`), binary mismatches (`SMP-4041`), and port collisions (`SMP-4042`).
 - Expanded Troubleshooting guide (`troubleshooting/README.md`) to explicitly cover OpenVAS signature loops and Responder port 53 collisions.
 
-## [V9.4.3] - 2026-08-11
+## [V9.5] - 2026-08-11
 
 - Implemented 3-Phase Parallel Scanner Architecture with intermediate Brain Intelligence Interleaving (Phase 1 Recon, Phase 2 Active Vuln Testers, Phase 3 Deep Exploitation).
 - Added 4 modern web vulnerability scanners with strict semver dependency pinning:
-  - `ppmap` (v1.0.0): Prototype Pollution vulnerability tester.
-  - `wscat` (v9.4.4): WebSocket endpoint discovery and connection probing.
-  - `race-the-web` (v1.0.3): Go binary for TOCTOU and Race Condition vulnerability testing.
-  - `idor-scanner`: IDOR/BOLA scanner with optional dual-token (AuthMatrix) session testing capabilities.
+ - `ppmap` (v1.0.0): Prototype Pollution vulnerability tester.
+ - `wscat` (v9.4.4): WebSocket endpoint discovery and connection probing.
+ - `race-the-web` (v1.0.3): Go binary for TOCTOU and Race Condition vulnerability testing.
+ - `idor-scanner`: IDOR/BOLA scanner with optional dual-token (AuthMatrix) session testing capabilities.
 - Upgraded Neural Correlation Engine (`intelligence/brain.py`):
-  - Enforced authentic findings processing with zero synthetic data or forged CVEs.
-  - Built V10 Local LLM foundation (`_query_local_llm()` adapter stub for Ollama/Llama.cpp, falling back safely to TF-IDF heuristics).
+ - Enforced authentic findings processing with zero synthetic data or forged CVEs.
+ - Built V10 Local LLM foundation (`_query_local_llm()` adapter stub for Ollama/Llama.cpp, falling back safely to TF-IDF heuristics).
 - Updated `setup.sh` with Node.js package management (`npm`, `wscat`, `ppmap`) and Go binary releases (`race-the-web`).
 - Profile-gated scanner execution (`osint` mode runs purely passive tools, while `standard` and `full` modes run multi-phase parallel scanning with brain interleaving).
 - Fixed `scan_id` kwarg crash in `scan_runner.py` that caused scanner plugins to fail.
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added full system wipe/factory reset instructions to the User Guide for recovering from lost master passwords.
 - Massively expanded offensive capabilities by adding 20 new vulnerability scanners to the DAG orchestration pipeline (including TruffleHog, Semgrep, Checkov, KubeHunter, XSStrike, Naabu, Hakrawler, SSLyze, CORScanner, and more).
 
-## [V9.4.2] - 2026-08-08
+## [V9.5] - 2026-08-08
 
 - Fixed `wpscan` installation in `setup.sh` by adding `sudo` to the `gem install` command to prevent file permission errors.
 - Added a retry loop in `setup.sh` for `apt update` and `apt install` to handle temporary dpkg lock failures on fresh VMs.
@@ -100,5 +100,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected CVSS label in PDF reports from "CVSS v9.4.4" to "CVSS v3.1" (SMP version was leaking into standard label).
 - Corrected PCI-DSS label in PDF reports from "PCI-DSS v9.4.4" to "PCI-DSS v4.0".
 - Fixed README license badge showing "Proprietary" — now correctly shows "MIT".
-- Synchronized all V9.3.x stale version strings to V9.4.4 across tools, scanners, UI, and docs.
+- Synchronized all V9.5.x stale version strings to V9.5 across tools, scanners, UI, and docs.
 - Updated .env.example to document all env vars SMP actually reads (added SMP_CI, QT_LOGGING_RULES, XDG_SESSION_TYPE, NO_PROXY).

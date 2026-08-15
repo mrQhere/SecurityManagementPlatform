@@ -33,12 +33,12 @@ This guide provides technical diagnosis and copy-paste remediation procedures fo
 ```bash
 # Obtain a fresh Bearer token using your master password
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v6/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"password": "YOUR_MASTER_PASSWORD"}' | jq -r .access_token)
+ -H "Content-Type: application/json" \
+ -d '{"password": "YOUR_MASTER_PASSWORD"}' | jq -r .access_token)
 
 # Verify token by calling system status
 curl -s http://localhost:8000/api/v6/system/status \
-  -H "Authorization: Bearer $TOKEN" | jq .
+ -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ---
@@ -57,7 +57,7 @@ python3 main.py --api
 
 # Option B: Whitelist client IP in config/settings.json
 jq '.api.rate_limit_whitelist += ["192.168.1.50", "127.0.0.1"]' config/settings.json > config/settings.tmp \
-  && mv config/settings.tmp config/settings.json
+ && mv config/settings.tmp config/settings.json
 ```
 
 ---
@@ -72,8 +72,8 @@ jq '.api.rate_limit_whitelist += ["192.168.1.50", "127.0.0.1"]' config/settings.
 ```bash
 # Authenticate and unlock the in-memory KeyStore
 curl -X POST http://localhost:8000/api/v6/auth/unlock \
-  -H "Content-Type: application/json" \
-  -d '{"master_password": "YOUR_MASTER_PASSWORD"}'
+ -H "Content-Type: application/json" \
+ -d '{"master_password": "YOUR_MASTER_PASSWORD"}'
 ```
 
 ---
@@ -88,13 +88,13 @@ curl -X POST http://localhost:8000/api/v6/auth/unlock \
 ```bash
 # Correct format: Always include scheme and valid host
 curl -X POST http://localhost:8000/api/v6/targets \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "target": "https://target-organization.internal",
-    "company_name": "Target Org",
-    "submitted_to": "Security Operations Team"
-  }'
+ -H "Authorization: Bearer $TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "target": "https://target-organization.internal",
+ "company_name": "Target Org",
+ "submitted_to": "Security Operations Team"
+ }'
 ```
 
 ---
@@ -109,13 +109,13 @@ curl -X POST http://localhost:8000/api/v6/targets \
 ```bash
 # Pass attestation=true in the scan launch payload
 curl -X POST http://localhost:8000/api/v6/scans \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "target_id": 1,
-    "scan_type": "standard",
-    "attestation": true
-  }'
+ -H "Authorization: Bearer $TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{
+ "target_id": 1,
+ "scan_type": "standard",
+ "attestation": true
+ }'
 ```
 
 ---
@@ -146,13 +146,13 @@ Add WebSocket upgrade directives to `/etc/nginx/sites-available/smp`:
 
 ```nginx
 location /api/v6/ws/ {
-    proxy_pass http://127.0.0.1:8000;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_read_timeout 86400s;
-    proxy_send_timeout 86400s;
+ proxy_pass http://127.0.0.1:8000;
+ proxy_http_version 1.1;
+ proxy_set_header Upgrade $http_upgrade;
+ proxy_set_header Connection "upgrade";
+ proxy_set_header Host $host;
+ proxy_read_timeout 86400s;
+ proxy_send_timeout 86400s;
 }
 ```
 ```bash

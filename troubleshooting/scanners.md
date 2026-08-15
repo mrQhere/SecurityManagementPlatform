@@ -54,9 +54,9 @@ from scanners.core.dag import build_scanner_dag, validate_dag_acyclic
 dag = build_scanner_dag()
 is_valid, cycle = validate_dag_acyclic(dag)
 if not is_valid:
-    print('Cycle detected involving scanners:', cycle)
+ print('Cycle detected involving scanners:', cycle)
 else:
-    print('DAG is valid and acyclic.')
+ print('DAG is valid and acyclic.')
 "
 ```
 
@@ -107,11 +107,11 @@ nuclei -validate
 ```bash
 # Configure automatic calibration and filter size in scanner profile
 ffuf -w /usr/share/wordlists/dirb/common.txt \
-  -u http://target.internal/FUZZ \
-  -ac \
-  -t 20 \
-  -p 0.1 \
-  -o work/ffuf_out.json -of json
+ -u http://target.internal/FUZZ \
+ -ac \
+ -t 20 \
+ -p 0.1 \
+ -o work/ffuf_out.json -of json
 ```
 
 ---

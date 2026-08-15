@@ -42,29 +42,29 @@ When an issue cannot be resolved automatically by `--fix`, consult the domain-sp
 ## 🔍 The V9.5 Diagnostic Flowchart
 
 ```
-                          ┌────────────────────────┐
-                          │     Fault Detected     │
-                          │   (UI / API / CLI)     │
-                          └───────────┬────────────┘
-                                      │
-                                      ▼
-                          ┌────────────────────────┐
-                          │ Run Automated Healing  │
-                          │ tools/troubleshoot.py  │
-                          │         --fix          │
-                          └───────────┬────────────┘
-                                      │
-                         ┌────────────┴────────────┐
-                         │                         │
-                   [Resolved ✅]              [Unresolved ❌]
-                         │                         │
-                         ▼                         ▼
-                  Resume Operations       Check Error Code Map
-                                          (ERROR_CODES.md)
-                                                   │
-                                                   ▼
-                                        Consult Specific Guide
-                                        (e.g., database.md)
+ ┌────────────────────────┐
+ │ Fault Detected │
+ │ (UI / API / CLI) │
+ └───────────┬────────────┘
+ │
+ ▼
+ ┌────────────────────────┐
+ │ Run Automated Healing │
+ │ tools/troubleshoot.py │
+ │ --fix │
+ └───────────┬────────────┘
+ │
+ ┌────────────┴────────────┐
+ │ │
+ [Resolved ✅] [Unresolved ❌]
+ │ │
+ ▼ ▼
+ Resume Operations Check Error Code Map
+ (ERROR_CODES.md)
+ │
+ ▼
+ Consult Specific Guide
+ (e.g., database.md)
 ```
 
 ---

@@ -625,7 +625,7 @@ class DashboardLayoutMixin:
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Title
-        title = QLabel("Enterprise Data Exporter")
+        title = QLabel("Data Exporter")
         title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
         layout.addWidget(title)
 
@@ -634,7 +634,7 @@ class DashboardLayoutMixin:
         warn_frame.setObjectName("warn_frame")
         warn_frame.setStyleSheet("background-color: #3b0000; border: 1px solid #ff0000; border-radius: 4px;")
         warn_layout = QVBoxLayout(warn_frame)
-        lbl_warn = QLabel("⚠ ENTERPRISE DATA EXPORT — All exports produce UNENCRYPTED plaintext data. Explicit legal acknowledgment required.")
+        lbl_warn = QLabel("⚠  DATA EXPORT — All exports produce UNENCRYPTED plaintext data. Explicit legal acknowledgment required.")
         lbl_warn.setStyleSheet("color: #ff5555; font-weight: bold; font-size: 14px;")
         warn_layout.addWidget(lbl_warn)
         layout.addWidget(warn_frame)

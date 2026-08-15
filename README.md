@@ -1,32 +1,32 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" />
+ <img src="https://github.com/user-attachments/assets/3fb78ea7-973b-4a41-a95b-b0bb4651eb2f" alt="SMP Banner" width="100%" />
 
-  <br />
+ <br />
 
-  <h1>Security Management Platform (SMP)</h1>
-  <p><b>The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine</b></p>
+ <h1>Security Management Platform (SMP)</h1>
+ <p><b>The Zero-Cloud, Local-First, Encrypted-at-Rest VAPT Intelligence Engine</b></p>
 
-  <p>
-    <a href="https://github.com/mrQhere/SecurityManagementPlatform/actions"><img src="https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge" alt="Build Status" /></a>
-    <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" /></a>
-    <a href="SECURITY.md"><img src="https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock" alt="Security" /></a>
-  </p>
+ <p>
+ <a href="https://github.com/mrQhere/SecurityManagementPlatform/actions"><img src="https://img.shields.io/github/actions/workflow/status/mrQhere/SecurityManagementPlatform/ci.yml?style=for-the-badge" alt="Build Status" /></a>
+ <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python" alt="Python" /></a>
+ <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License" /></a>
+ <a href="SECURITY.md"><img src="https://img.shields.io/badge/Encryption-AES--256-critical?style=for-the-badge&logo=lock" alt="Security" /></a>
+ </p>
 
-  <p>
-    <a href="#-overview"><b>Overview</b></a> •
-    <a href="#-key-features"><b>Features</b></a> •
-    <a href="#-quick-start"><b>Quick Start</b></a> •
-    <a href="#-architecture"><b>Architecture</b></a> •
-    <a href="#-documentation"><b>Documentation</b></a>
-  </p>
+ <p>
+ <a href="#-overview"><b>Overview</b></a> •
+ <a href="#-key-features"><b>Features</b></a> •
+ <a href="#-quick-start"><b>Quick Start</b></a> •
+ <a href="#-architecture"><b>Architecture</b></a> •
+ <a href="#-documentation"><b>Documentation</b></a>
+ </p>
 </div>
 
 ---
 
 ## 🛡️ Overview
 
-The **Security Management Platform (SMP)** is an enterprise-grade Vulnerability Assessment and Penetration Testing (VAPT) orchestrator designed for high-compliance, air-gapped environments.
+The **Security Management Platform (SMP)** is a Vulnerability Assessment and Penetration Testing (VAPT) orchestrator designed for high-compliance, air-gapped environments.
 
 > **Current Version**: `V9.5` — Major architecture rebuild introducing the **Security Data Pipeline**, evidence-preserving deduplication, offline CVE intelligence, and cryptographically-signed VAPT reports.
 
@@ -113,65 +113,65 @@ SMP V9.5 implements a **layered security-data pipeline** with strict separation 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    SMP V9.5 Architecture                     │
+│ SMP V9.5 Architecture │
 └─────────────────────────────────────────────────────────────┘
 
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  PySide6 UI  │   │  FastAPI API │   │  CLI Tools   │
-└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
-       └──────────────────┼──────────────────┘
-                          │
-               ┌──────────▼──────────┐
-               │  Application Layer   │
-               │  Engagement / Scope  │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼─────┐    ┌─────────▼──────┐   ┌───────▼──────┐
-│  Scope   │    │  Scan Planner  │   │  Scheduler   │
-│  Engine  │    │  (DAG Builder) │   │  (Kahn's)    │
-└────┬─────┘    └─────────┬──────┘   └───────┬──────┘
-     └────────────────────┼──────────────────┘
-                          │
-               ┌──────────▼──────────┐
-               │  Execution Sandbox   │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼────────┐  ┌────────▼────────┐  ┌───────▼──────┐
-│  86+ Scanner│  │  Observation    │  │  Evidence    │
-│  Adapters   │  │  Parsers        │  │  Store       │
-└─────────────┘  └────────┬────────┘  │  (AES-256    │
-                          │           │   per-file)  │
-                          │           └──────────────┘
-               ┌──────────▼──────────┐
-               │   Finding Engine     │
-               │  (Fingerprint Dedup) │
-               └──────────┬──────────┘
-                          │
-     ┌────────────────────┼───────────────────┐
-     │                    │                   │
-┌────▼────────┐  ┌────────▼────────┐  ┌───────▼──────┐
-│  Vuln Intel │  │  Report         │  │  Risk Engine │
-│  (NVD/KEV/  │  │  Generator      │  │              │
-│   EPSS)     │  │  (PDF/MD/JSON)  │  │              │
-└─────────────┘  └─────────────────┘  └──────────────┘
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ PySide6 UI │ │ FastAPI API │ │ CLI Tools │
+└──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+ └──────────────────┼──────────────────┘
+ │
+ ┌──────────▼──────────┐
+ │ Application Layer │
+ │ Engagement / Scope │
+ └──────────┬──────────┘
+ │
+ ┌────────────────────┼───────────────────┐
+ │ │ │
+┌────▼─────┐ ┌─────────▼──────┐ ┌───────▼──────┐
+│ Scope │ │ Scan Planner │ │ Scheduler │
+│ Engine │ │ (DAG Builder) │ │ (Kahn's) │
+└────┬─────┘ └─────────┬──────┘ └───────┬──────┘
+ └────────────────────┼──────────────────┘
+ │
+ ┌──────────▼──────────┐
+ │ Execution Sandbox │
+ └──────────┬──────────┘
+ │
+ ┌────────────────────┼───────────────────┐
+ │ │ │
+┌────▼────────┐ ┌────────▼────────┐ ┌───────▼──────┐
+│ 86+ Scanner│ │ Observation │ │ Evidence │
+│ Adapters │ │ Parsers │ │ Store │
+└─────────────┘ └────────┬────────┘ │ (AES-256 │
+ │ │ per-file) │
+ │ └──────────────┘
+ ┌──────────▼──────────┐
+ │ Finding Engine │
+ │ (Fingerprint Dedup) │
+ └──────────┬──────────┘
+ │
+ ┌────────────────────┼───────────────────┐
+ │ │ │
+┌────▼────────┐ ┌────────▼────────┐ ┌───────▼──────┐
+│ Vuln Intel │ │ Report │ │ Risk Engine │
+│ (NVD/KEV/ │ │ Generator │ │ │
+│ EPSS) │ │ (PDF/MD/JSON) │ │ │
+└─────────────┘ └─────────────────┘ └──────────────┘
 ```
 
 ### Data Flow
 
 ```
-1.  Target Definition
-2.  Scope Validation (ScopeEngine)
-3.  Scan Planning (ScanPlanner + DAG)
-4.  Scanner Execution (ScannerAdapters + ExecutionSandbox)
-5.  Raw Output → Evidence Store (AES-256-GCM per file)
-6.  Observation Parsing (typed: Asset/Port/Service/CPE/Vuln)
-7.  CVE Intelligence Matching (offline NVD/EPSS/KEV)
-8.  Finding Correlation (SHA-256 fingerprint deduplication)
-9.  Risk Scoring
+1. Target Definition
+2. Scope Validation (ScopeEngine)
+3. Scan Planning (ScanPlanner + DAG)
+4. Scanner Execution (ScannerAdapters + ExecutionSandbox)
+5. Raw Output → Evidence Store (AES-256-GCM per file)
+6. Observation Parsing (typed: Asset/Port/Service/CPE/Vuln)
+7. CVE Intelligence Matching (offline NVD/EPSS/KEV)
+8. Finding Correlation (SHA-256 fingerprint deduplication)
+9. Risk Scoring
 10. Signed VAPT Report (SHA-256 authenticity hash)
 ```
 
@@ -179,15 +179,15 @@ SMP V9.5 implements a **layered security-data pipeline** with strict separation 
 
 ```
 data/
-├── security.db          # Encrypted (DEK): engagements, scans, findings, observations
-├── vulnerability.db     # Encrypted (IEK): CVEs, CPEs, EPSS, CISA KEV
-├── evidence/            # Per-file AES-256-GCM: raw scanner outputs
-│   └── <eng>/<scan>/<evidence_id>/
-│       ├── evidence.enc
-│       ├── metadata.json
-│       └── checksum.txt
-└── work/                # Temporary scanner workspaces
-    └── <scan_id>/
+├── security.db # Encrypted (DEK): engagements, scans, findings, observations
+├── vulnerability.db # Encrypted (IEK): CVEs, CPEs, EPSS, CISA KEV
+├── evidence/ # Per-file AES-256-GCM: raw scanner outputs
+│ └── <eng>/<scan>/<evidence_id>/
+│ ├── evidence.enc
+│ ├── metadata.json
+│ └── checksum.txt
+└── work/ # Temporary scanner workspaces
+ └── <scan_id>/
 ```
 
 ---
@@ -198,9 +198,9 @@ SMP uses a **4-layer hierarchical key architecture**:
 
 ```
 Master Password (PBKDF2-SHA256, 600k iterations)
-       ↓
+ ↓
 Key Encryption Key (KEK)
-       ↓
+ ↓
 ├── Database Encryption Key (DEK) → security.db (AES-256)
 ├── Intelligence Encryption Key (IEK) → vulnerability.db (AES-256)
 └── Evidence Encryption Key (EEK) → per-file evidence (AES-256-GCM)
@@ -230,7 +230,7 @@ Key Encryption Key (KEK)
 
 Built and maintained by **mrQhere**.
 
-This project started as a learning exercise and evolved into a sovereign, production-grade intelligence engine. The git history intentionally preserves the entire evolution for educational transparency.
+This project started as a learning exercise and evolved into a sovereign, intelligence engine. The git history intentionally preserves the entire evolution for educational transparency.
 
 Before contributing, please:
 1. Read [SECURITY.md](SECURITY.md)

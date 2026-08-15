@@ -72,11 +72,11 @@ TOOLS = [
     ("jwt_tool",      "jwt_tool",      "binary", ""),
     ("WPScan",        "wpscan",        "binary", ""),
 
-    # New V9.4.3 Enterprise pip packages
+    # New V9.5  pip packages
     ("semgrep",           "semgrep",     "pip",    "semgrep"),
     ("SpiderFoot OSINT",  "sf",          "manual", "Download from https://github.com/smicallef/spiderfoot"),
 
-    # New V9.4.3 Enterprise binaries
+    # New V9.5  binaries
     ("Amass",             "amass",       "binary", ""),
     ("Feroxbuster",       "feroxbuster", "binary", ""),
     ("TruffleHog",        "trufflehog",  "binary", ""),
@@ -460,7 +460,7 @@ def _download_missing_tools_locally(missing):
         "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.4.3 Enterprise binaries
+        # New V9.5  binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/x86_64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_amd64.tar.gz",
@@ -483,7 +483,7 @@ def _download_missing_tools_locally(missing):
         "jwt_tool":         "https://github.com/ticarpi/jwt_tool/archive/refs/tags/v2.2.6.zip",
         "WPScan":           "https://github.com/wpscanteam/wpscan/archive/refs/tags/v3.8.25.zip",
 
-        # New V9.4.3 Enterprise binaries
+        # New V9.5  binaries
         "Amass":        "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_arm64.tar.gz",
         "Feroxbuster":  "https://github.com/epi052/feroxbuster/releases/download/v2.10.2/aarch64-linux-feroxbuster.tar.gz",
         "TruffleHog":   "https://github.com/trufflesecurity/trufflehog/releases/download/v3.81.0/trufflehog_3.81.0_linux_arm64.tar.gz",
@@ -491,7 +491,7 @@ def _download_missing_tools_locally(missing):
     }
     urls = urls_arm64 if is_arm64 else urls_amd64
 
-    # ── V9.4.3 — Security: Download SHA256 Checksums ────────────────────────────
+    # ── V9.5 — Security: Download SHA256 Checksums ────────────────────────────
     # Add checksums to verify integrity before extraction
     checksums = {
         "Nuclei": "235f264d32e47e1ccf58d534e2eb4d0d4eeb47f1cae1ebb30a584b8b52565202",
@@ -525,7 +525,7 @@ def _download_missing_tools_locally(missing):
                 for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     
-            # ── V9.4.3 — Security Check: SHA256 ────────────────────────────
+            # ── V9.5 — Security Check: SHA256 ────────────────────────────
             if name in checksums:
                 import hashlib
                 h = hashlib.sha256()

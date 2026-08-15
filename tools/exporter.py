@@ -8,7 +8,7 @@ from tools.db_manager import get_db_connection
 def export_target_data(target_url):
     """
     Exports data for a specific target URL, including DB records, reports, and logs.
-    Packages them into a ZIP archive for enterprise ticketing systems.
+    Packages them into a ZIP archive for  ticketing systems.
     """
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     # Sanitize URL for filename
@@ -85,7 +85,7 @@ def export_target_data(target_url):
     # Generate README footer
     readme_path = os.path.join(staging_dir, "README.txt")
     with open(readme_path, "w", encoding="utf-8") as f:
-        f.write(f"Security Management Platform - Enterprise Data Export for {target_url}\n")
+        f.write(f"Security Management Platform -  Data Export for {target_url}\n")
         f.write("====================================================================\n\n")
         f.write(f"Export Date: {timestamp}\n")
         f.write("Contents:\n")

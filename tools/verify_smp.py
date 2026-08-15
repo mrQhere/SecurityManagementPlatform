@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SMP V9.5 — Full Enterprise Pipeline Verification & Test Suite
+SMP V9.5 — Full  Pipeline Verification & Test Suite
 =============================================================
 Comprehensive 12-suite end-to-end integration and verification runner covering:
   - Suite 01: Configuration & Metadata Manager (V9.5)
@@ -48,7 +48,7 @@ if BASE_DIR not in sys.path:
 
 
 class TestSMPComponents(unittest.TestCase):
-    """Full enterprise test suite for SMP V9.5 Security Data Pipeline."""
+    """Full  test suite for SMP V9.5 Security Data Pipeline."""
 
     temp_dir = None
     orig_db_path = None
@@ -450,7 +450,7 @@ class TestSMPComponents(unittest.TestCase):
 
 def main():
     print(f"\n{BLD}{CYN}══════════════════════════════════════════════════════════════════════{RST}")
-    print(f"{BLD}{CYN}       SMP V9.5 — Full Enterprise Pipeline Verification Runner         {RST}")
+    print(f"{BLD}{CYN}       SMP V9.5 — Full  Pipeline Verification Runner         {RST}")
     print(f"{BLD}{CYN}══════════════════════════════════════════════════════════════════════{RST}\n")
 
     suite = unittest.TestLoader().loadTestsFromTestCase(TestSMPComponents)

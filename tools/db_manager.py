@@ -141,7 +141,7 @@ ALL_ACTIVE_STATUSES = [
     "Running Open Redirect", "Running Tech Fingerprint",
     "Running Wapiti", "Running SQLMap", "Running Shodan", "Running Gitleaks",
     "Running ZAP",
-    # V9.4.3 New Scanners
+    # V9.5 New Scanners
     "Running Dalfox", "Running Arjun", "Running DNSx", "Running Katana",
     "Running Commix", "Running JWT Scanner", "Running WPScan",
     "Running Masscan", "Running ParamSpider", "Running Cloud Enum",
@@ -465,14 +465,14 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         cursor.execute("ALTER TABLE findings ADD COLUMN confidence INTEGER DEFAULT 50")
 
-    # V9.4.3 seamless upgrade: Add company_name and submitted_to to targets
+    # V9.5 seamless upgrade: Add company_name and submitted_to to targets
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN company_name TEXT")
         cursor.execute("ALTER TABLE targets ADD COLUMN submitted_to TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
         
-    # V9.4.3 seamless upgrade: Soft delete
+    # V9.5 seamless upgrade: Soft delete
     try:
         cursor.execute("ALTER TABLE targets ADD COLUMN is_deleted INTEGER DEFAULT 0")
         cursor.execute("ALTER TABLE targets ADD COLUMN deleted_at TEXT")
@@ -485,7 +485,7 @@ def _initialize_db_schema(conn):
     except sqlite3.OperationalError:
         pass
 
-    # Enterprise V9.4.3 — enriched findings columns (idempotent migrations)
+    #  V9.5 — enriched findings columns (idempotent migrations)
     _enterprise_columns = [
         ("url",                 "TEXT"),
         ("evidence",            "TEXT"),
@@ -1294,7 +1294,7 @@ def get_scans_for_target(target_id, limit=10):
 
 def add_finding(scan_id, severity, title, description, source_tool=None,
                 confidence=50, mitre_id="Unknown",
-                # Enterprise V9.4.3 enriched fields
+                #  V9.5 enriched fields
                 url=None, evidence=None, recommendation=None,
                 cvss_score=None, cve_id=None,
                 affected_component=None, owasp_category=None,
@@ -1303,7 +1303,7 @@ def add_finding(scan_id, severity, title, description, source_tool=None,
                 epss_score=None, epss_percentile=None,
                 **kwargs):
     """
-    Insert a scan finding with full enterprise-grade metadata.
+    Insert a scan finding with full metadata.
     Prevents duplicates for the same scan, title and source_tool.
     Mirrors every finding to the redundancy database for disaster recovery.
     """

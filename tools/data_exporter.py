@@ -1,6 +1,6 @@
 """
-SMP V9.5 — Enterprise Data Exporter
-Exports engagement data in multiple formats for enterprise ticketing system integration.
+SMP V9.5 — Data Exporter
+Exports engagement data in multiple formats for  ticketing system integration.
 All exports require explicit legal gate confirmation — the caller MUST pass gate_confirmed=True.
 """
 

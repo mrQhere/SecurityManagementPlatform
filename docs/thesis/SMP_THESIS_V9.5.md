@@ -9,33 +9,33 @@ repository: "https://github.com/mrQhere/SecurityManagementPlatform"
 # Security Management Platform V9.5
 ## Architectural Evolution of a Local-First, Zero-Cloud Vulnerability Intelligence Pipeline
 
-**Author:** mrQhere  
-**Repository:** https://github.com/mrQhere/SecurityManagementPlatform  
-**Version:** 9.5.0  
-**Date:** August 2026  
+**Author:** mrQhere 
+**Repository:** https://github.com/mrQhere/SecurityManagementPlatform 
+**Version:** 9.5.0 
+**Date:** August 2026 
 
 ---
 ## Table of Contents
 
 1. Abstract
 2. Introduction
-   - 2.1 Background and Motivation
-   - 2.2 Problem Statement
-   - 2.3 Research Objectives
+ - 2.1 Background and Motivation
+ - 2.2 Problem Statement
+ - 2.3 Research Objectives
 3. Architectural Evolution: V1 Through V4 (Monolithic Era)
 4. Architectural Evolution: V5 Through V8 (Async Era)
 5. V9.5 — The DAG Orchestration Engine & Observation Model
 6. Cryptographic Key Hierarchy: PBKDF2, KEK, DEK, AES-256-GCM
 7. Finding Deduplication & Fingerprinting
 8. The PySide6 UI Decoupling & Event Architecture
-9. Enterprise Export, Legal Gating & Non-Repudiation
+9. Export, Legal Gating & Non-Repudiation
 10. Conclusion & Future Work
 11. Bibliography
 
 # Abstract
 
 The rapid proliferation of networked assets, ephemeral cloud workloads, and
-ubiquitous interconnectivity in modern enterprise environments has fundamentally
+ubiquitous interconnectivity in modern environments has fundamentally
 outpaced the operational capacities of traditional vulnerability management
 systems. This thesis explores the necessary architectural metamorphosis of
 vulnerability scanning frameworks, detailing the imperative transition from
@@ -55,13 +55,13 @@ localized edge-node scanning execution. The empirical results demonstrate a
 super-linear improvement in scan throughput and a corresponding logarithmic
 reduction in false-negative rates attributable to timeout errors and state-table
 exhaustion, thereby establishing a new, robust foundational framework for next-
-generation enterprise security posture management.
+generation security posture management.
 
 # Chapter 1: Introduction
 
 ## 1.1 Background and Motivation
 
-In contemporary enterprise ecosystems, the attack surface has expanded beyond
+In contemporary ecosystems, the attack surface has expanded beyond
 manageable proportions, transcending the physical perimeters that once defined
 corporate networks. The advent of ubiquitous cloud computing, the proliferation
 of Internet of Things (IoT) devices, and the rapid adoption of ephemeral,
@@ -82,7 +82,7 @@ deployed against globally dispersed, heterogeneous infrastructures comprising
 millions of dynamic endpoints. The motivation for this research stems from the
 systemic failures repeatedly observed in legacy vulnerability management
 deployments, where the temporal gap between vulnerability disclosure and
-successful enterprise-wide enumeration frequently exceeded acceptable
+successful -wide enumeration frequently exceeded acceptable
 organizational risk thresholds. The inability of monolithic scanners to perform
 rapid, continuous assessment leaves organizations vulnerable to exploitation by
 advanced persistent threats (APTs) operating well within the window of exposure.
@@ -112,7 +112,7 @@ malicious volumetric anomalies, thereby blackholing the scanner's IP address and
 completely neutralizing the assessment effort. The fundamental problem,
 therefore, is that the architectural design of monolithic scanners is
 mathematically and practically incompatible with the scale, speed, and
-topological complexity of modern enterprise networks.
+topological complexity of modern networks.
 
 ## 1.3 Scope and Contributions
 
@@ -131,7 +131,7 @@ distributed architecture utilizing a decentralized message broker topology. This
 architecture is designed to orchestrate thousands of autonomous scanning agents
 deployed optimally across discrete, globally isolated network segments. Third,
 we provide a comprehensive empirical evaluation of SMP V9.5 deployed within a
-simulated enterprise environment, demonstrating its capacity to achieve true
+simulated environment, demonstrating its capacity to achieve true
 linear scalability and highly deterministic execution times, completely
 independent of the underlying network topology's complexity or the aggregate
 asset volume.
@@ -167,7 +167,7 @@ thrashing.
 ## 2.2 The Mathematical Premise of Monolithic Failure at Scale
 
 To rigorously understand the inevitable failure of monolithic scanners at
-enterprise scale, we must analyze the system through the precise mathematical
+scale, we must analyze the system through the precise mathematical
 lens of queuing theory and strict resource bound limitations.
 
 Let $N$ denote the total number of distinct network assets (endpoints) to be
@@ -299,7 +299,7 @@ securely report results back to the management plane, completely eliminating the
 need for dangerous inbound firewall exceptions. By fully embracing this
 mathematically sound distributed architecture, SMP V9.5 permanently transforms
 vulnerability scanning from a fragile, time-intensive, and failure-prone
-operation into a robust, continuous, and infinitely scalable enterprise security
+operation into a robust, continuous, and infinitely scalable security
 service.
 
 
@@ -513,7 +513,7 @@ that provided the most profound lessons.
 The architecture of V3 and V4 proved that while Python excels at rapid
 development and object-oriented design, its traditional concurrency models are
 ill-suited for the demanding, mixed-workload orchestration required by an
-enterprise security platform. The monolithic structure, combined with the GIL,
+security platform. The monolithic structure, combined with the GIL,
 created a rigid, unscalable system prone to lock-ups and resource exhaustion.
 Understanding the intricacies of these early failures is essential for
 comprehending the rationale behind the radical architectural decisions that
@@ -534,7 +534,7 @@ scanning to compliance auditing and log ingestion—was allocated a dedicated
 operating system thread. While this approach provided a straightforward mental
 model for developers and leveraged the widely understood POSIX thread
 abstractions, it fundamentally constrained the platform's scalability and
-efficiency when deployed in enterprise-scale environments.
+efficiency when deployed in environments.
 
 The primary bottleneck in SMP V5 emerged from the inherent nature of security
 operations: they are overwhelmingly I/O-bound. A typical vulnerability
@@ -542,8 +542,7 @@ assessment pipeline spends the vast majority of its execution time waiting for
 network responses, disk I/O operations, or external API rate limits, rather than
 consuming CPU cycles. In a synchronous multi-threaded architecture, these wait
 states translate into blocked OS-level threads. As the number of concurrent
-security tasks scaled into the thousands to accommodate large enterprise
-networks, the operating system was forced to manage a massive pool of threads.
+security tasks scaled into the thousands to accommodate large networks, the operating system was forced to manage a massive pool of threads.
 
 This architectural choice resulted in severe resource exhaustion. Specifically,
 memory overhead became a critical issue due to thread stack allocation; with a
@@ -706,7 +705,7 @@ capable of unprecedented throughput.
 
 By the release of SMP V7, the platform had achieved remarkable raw execution
 speed. Network I/O was strictly non-blocking, and local database contention had
-been effectively mitigated. However, as the complexity of enterprise security
+been effectively mitigated. However, as the complexity of security
 workflows evolved and matured in SMP V8, a fundamental realization emerged among
 the engineering team: asynchronous I/O alone is profoundly insufficient for
 resolving complex logical dependencies within distributed security pipelines.
@@ -724,18 +723,18 @@ graph is not entirely known at the time of execution. For example, a
 comprehensive web application assessment pipeline involves a strict sequence of
 dependent operations where the output of one node dictates the structure of
 subsequent nodes:
-1.  **Asset Discovery (DNS Resolution, Subdomain Enumeration):** Must complete
+1. **Asset Discovery (DNS Resolution, Subdomain Enumeration):** Must complete
 before target IP addresses are known. This node might yield 5 targets, or 50,000
 targets.
-2.  **Network Reconnaissance (Port Scanning):** Must wait for the exact IP
+2. **Network Reconnaissance (Port Scanning):** Must wait for the exact IP
 addresses from Step 1. The number of tasks spawned here is dynamically
 determined by Step 1.
-3.  **Service Fingerprinting:** Can only run on the specific open ports
+3. **Service Fingerprinting:** Can only run on the specific open ports
 identified in Step 2.
-4.  **Vulnerability Scanning (Web Application Scanner):** Must wait for
+4. **Vulnerability Scanning (Web Application Scanner):** Must wait for
 HTTP/HTTPS services to be confirmed by Step 3, and relies on the exact URIs and
 technologies discovered.
-5.  **Exploitation/Verification:** Depends on the specific vulnerabilities
+5. **Exploitation/Verification:** Depends on the specific vulnerabilities
 flagged in Step 4.
 
 ### 4.4.2 The Insufficiency of Pure AsyncIO for Graph Resolution
@@ -804,7 +803,7 @@ loops to manage efficiently, reliably, or distributably. This critical
 realization—that blazingly fast execution is ultimately useless without
 intelligent, stateful dependency resolution—set the foundational requirements
 for the next major leap in the platform's evolution: SMP V9.5. To achieve true
-enterprise scalability and flawlessly support complex, dynamically expanding
+scalability and flawlessly support complex, dynamically expanding
 security workflows, the platform necessitated the complete abstraction of
 pipeline routing logic away from the execution engine. This paved the way for
 the research and development of a dedicated, distributed DAG orchestrator
@@ -922,17 +921,17 @@ set $V$. If a vertex is found where $\deg^{-}(v) = 0$, immediately enqueue $v$
 into $Q$. These represent the foundational root tasks of the scan.
 3. **Active Processing Phase:** Initialize an empty, ordered list $L$ to store
 the finalized topologically sorted elements.
-   While the queue $Q$ is not definitively empty:
-   a. Dequeue a vertex $u$ from the front of $Q$.
-   b. Append $u$ to the list $L$. (In the practical context of the SMP execution
+ While the queue $Q$ is not definitively empty:
+ a. Dequeue a vertex $u$ from the front of $Q$.
+ b. Append $u$ to the list $L$. (In the practical context of the SMP execution
 engine, this exact step fundamentally corresponds to dispatching task $u$ to the
 active asynchronous worker thread pool for immediate execution).
-   c. For each outgoing edge $e = (u, v)$ originating from the processed node
+ c. For each outgoing edge $e = (u, v)$ originating from the processed node
 $u$:
-      i. Conceptually (and practically in the tracking arrays) remove the edge
+ i. Conceptually (and practically in the tracking arrays) remove the edge
 from the graph by explicitly decrementing the in-degree of the destination node:
 $\deg^{-}(v) = \deg^{-}(v) - 1$.
-      ii. If the newly updated $\deg^{-}(v) = 0$, it mathematically implies all
+ ii. If the newly updated $\deg^{-}(v) = 0$, it mathematically implies all
 required prerequisites for $v$ have now been fully met. Therefore, enqueue $v$
 into $Q$.
 4. **Validation and Verification Phase:** After the primary while-loop
@@ -943,8 +942,7 @@ cycle, rendering it fundamentally invalid for execution, and the engine aborts
 with a structural integrity error.
 
 Kahn's Algorithm operates with a strict, worst-case time complexity of $O(|V| +
-|E|)$, making it phenomenally scalable even for immensely complex enterprise
-security policies that routinely contain tens or even hundreds of thousands of
+|E|)$, making it phenomenally scalable even for immensely complex security policies that routinely contain tens or even hundreds of thousands of
 individual checks and dependencies. In the SMP V9.5 architecture, the queue $Q$
 is deeply integrated with a high-performance Python asynchronous event loop and
 a robust thread pool executor. When any node successfully completes its
@@ -959,7 +957,7 @@ nearly zero.
 As discrete nodes within the DAG execute their logic, they continually collect,
 process, and refine data regarding the target environment. This vital data must
 be securely and reliably passed downstream to highly dependent nodes. In
-earlier, less sophisticated iterations of the platform (pre-V9.0), tasks often
+earlier, less sophisticated iterations of the platform (pre-V9.5), tasks often
 irresponsibly modified shared state dictionaries or blindly updated global
 Python variables. This mutable shared state approach introduced devastating race
 conditions, profoundly unpredictable side effects, and necessitated highly
@@ -1091,7 +1089,7 @@ architecture effectively shrinks the serial fraction $(1-p)$ to strictly the
 absolute minimal time required for initial graph compilation, Kahn's algorithm
 initialization, and the final linear aggregation of terminal nodes. The highly
 parallelizable fraction $p$ routinely approaches $0.98$ for large-scale
-enterprise scans.
+scans.
 
 As the number of physical execution threads or processes $s$ increases, the
 overall system speedup asymptotically approaches the massive limit of
@@ -1110,7 +1108,7 @@ engineering of the Security Management Platform. It completely transforms a
 historically chaotic, highly imperative scanning process into a mathematically
 rigorous, inherently parallel, heavily optimized, and demonstrably safe
 execution framework that is flawlessly capable of scaling to meet and exceed the
-extreme demands of modern, highly complex enterprise security environments.
+extreme demands of modern, highly complex security environments.
 
 
 # Chapter 6: Cryptographic Architecture and Key Management
@@ -1340,7 +1338,7 @@ A mature cryptographic architecture must govern the entire lifecycle of keys, fr
 
 - **Generation**: The Master Password is generated by the user (subject to entropy policies), while the Salt, IVs, and DEK are generated via the operating system's /dev/urandom or equivalent CSPRNG, ensuring non-deterministic, high-entropy output.
 - **Rotation**: Regular key rotation is a staple compliance requirement. In SMP V9.5, users can proactively rotate their KEK by changing their Master Password. Furthermore, DEK rotation—while computationally intensive as it requires decrypting and re-encrypting the database pages—is supported as an offline maintenance task. This process generates a fresh DEK and re-wraps it with the current KEK, mitigating risks associated with long-term key exposure or hypothetical cryptanalytic advances.
-- **Revocation and Destruction**: As discussed, cryptographic erasure is instantaneously achieved by destroying the wrapped DEK. In enterprise deployments, the KEK could optionally be escrowed or split using Shamir's Secret Sharing (SSS) to allow for organizational recovery of data while maintaining the mathematically guaranteed separation of duties.
+- **Revocation and Destruction**: As discussed, cryptographic erasure is instantaneously achieved by destroying the wrapped DEK. In deployments, the KEK could optionally be escrowed or split using Shamir's Secret Sharing (SSS) to allow for organizational recovery of data while maintaining the mathematically guaranteed separation of duties.
 
 ## 6.6 Conclusion
 The cryptographic key hierarchy of SMP V9.5 represents a defense-in-depth approach to data at rest. By structurally decoupling the human-provided secret from the actual data encryption mechanism via envelope encryption, and rigorously enforcing computational difficulty through PBKDF2 with 600,000 iterations, the platform secures the root of trust against advanced offline attacks. 
@@ -1352,7 +1350,7 @@ bit-flipping and known-plaintext attacks. Furthermore, the proactive
 incorporation of constant-time algorithms and the intrinsic quantum resistance
 of 256-bit symmetric keys ensure that the architecture remains resilient against
 both side-channel and emerging post-quantum threats. This architecture ensures
-strict compliance with stringent enterprise security policies, regulatory
+strict compliance with stringent security policies, regulatory
 frameworks, and modern cryptographic best practices.
 
 
@@ -1397,8 +1395,7 @@ scoring model.
 
 Traditional approaches to vulnerability deduplication have historically relied
 on heuristic matching, regular expressions, or simple string comparisons. These
-approaches are fundamentally flawed in modern, highly scaled enterprise
-environments due to their computational inefficiency (often exhibiting $O(N^2)$
+approaches are fundamentally flawed in modern, highly scaled environments due to their computational inefficiency (often exhibiting $O(N^2)$
 complexity as the finding dataset grows) and unacceptably high false-positive
 and false-negative rates when dealing with unstructured or semi-structured
 scanner outputs. A minor discrepancy in how two different scanners format a
@@ -1696,7 +1693,7 @@ p99 latency per event.
 
 The deliberate integration of SHA-256 cryptographic fingerprinting fundamentally
 solves the seemingly intractable finding deduplication challenge inherent in
-distributed, multi-scanner enterprise security architectures. By aggressively
+distributed, multi-scanner security architectures. By aggressively
 moving away from flawed heuristic string matching to mathematically strict
 canonicalization and cryptographic hashing, SMP V9.5 guarantees perfect
 deterministic deduplication with highly predictable, highly scalable $O(1)$
@@ -1711,7 +1708,7 @@ ensure that overburdened security operations teams are exclusively directing
 their strictly limited remediation resources toward the specific vulnerabilities
 that present the highest probabilistic and active risk of exploitation in the
 wild, thereby decisively maximizing the overall defensive security posture of
-the enterprise.
+the .
 
 
 Chapter 8: Graphical User Interface Decoupling and Event Loop Orchestration in
@@ -1793,45 +1790,45 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot
 import xml.etree.ElementTree as ET
 
 class NmapParserWorker(QObject):
-    finished = Signal()
-    progress = Signal(int)
-    data_ready = Signal(list)
-    error_occurred = Signal(str)
+ finished = Signal()
+ progress = Signal(int)
+ data_ready = Signal(list)
+ error_occurred = Signal(str)
 
-    @Slot(str)
-    def parse_xml_report(self, filepath):
-        """
-        Executes intensive XML parsing. Must be run in a dedicated thread.
-        """
-        results = []
-        try:
-            # Simulate intense I/O and parsing workload
-            context = ET.iterparse(filepath, events=("start", "end"))
-            # ... complex iterative parsing logic ...
-            
-            # Emit data periodically or upon completion
-            self.data_ready.emit(results)
-        except Exception as e:
-            self.error_occurred.emit(f"Parsing failed: {str(e)}")
-        finally:
-            self.finished.emit()
+ @Slot(str)
+ def parse_xml_report(self, filepath):
+ """
+ Executes intensive XML parsing. Must be run in a dedicated thread.
+ """
+ results = []
+ try:
+ # Simulate intense I/O and parsing workload
+ context = ET.iterparse(filepath, events=("start", "end"))
+ # ... complex iterative parsing logic ...
+ 
+ # Emit data periodically or upon completion
+ self.data_ready.emit(results)
+ except Exception as e:
+ self.error_occurred.emit(f"Parsing failed: {str(e)}")
+ finally:
+ self.finished.emit()
 
 class NmapManager(QObject):
-    def __init__(self):
-        super().__init__()
-        self.worker = NmapParserWorker()
-        self.thread = QThread()
-        self.worker.moveToThread(self.thread)
-        
-        # Connect signals and slots across thread boundaries
-        # Starting the thread triggers the parsing
-        self.thread.started.connect(lambda:
+ def __init__(self):
+ super().__init__()
+ self.worker = NmapParserWorker()
+ self.thread = QThread()
+ self.worker.moveToThread(self.thread)
+ 
+ # Connect signals and slots across thread boundaries
+ # Starting the thread triggers the parsing
+ self.thread.started.connect(lambda:
 self.worker.parse_xml_report("/opt/smp/data/scan.xml"))
-        
-        # Proper cleanup mechanism
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
+ 
+ # Proper cleanup mechanism
+ self.worker.finished.connect(self.thread.quit)
+ self.worker.finished.connect(self.worker.deleteLater)
+ self.thread.finished.connect(self.thread.deleteLater)
 ```
 
 This pattern guarantees that the `parse_xml_report` method executes entirely
@@ -1880,37 +1877,37 @@ from PySide6.QtCore import QObject, Signal, Slot
 import json
 
 class UdpTelemetryListener(QObject):
-    telemetry_received = Signal(dict)
-    critical_error = Signal(str)
+ telemetry_received = Signal(dict)
+ critical_error = Signal(str)
 
-    def __init__(self, port, parent=None):
-        super().__init__(parent)
-        self.socket = QUdpSocket(self)
-        # Bind exclusively to localhost for security and loopback performance
-        if not self.socket.bind(QHostAddress.LocalHost, port):
-            self.critical_error.emit(f"Failed to bind UDP socket to port
+ def __init__(self, port, parent=None):
+ super().__init__(parent)
+ self.socket = QUdpSocket(self)
+ # Bind exclusively to localhost for security and loopback performance
+ if not self.socket.bind(QHostAddress.LocalHost, port):
+ self.critical_error.emit(f"Failed to bind UDP socket to port
 {port}")
-            
-        self.socket.readyRead.connect(self.read_pending_datagrams)
+ 
+ self.socket.readyRead.connect(self.read_pending_datagrams)
 
-    @Slot()
-    def read_pending_datagrams(self):
-        """
-        Triggered asynchronously whenever new UDP datagrams arrive on the
+ @Slot()
+ def read_pending_datagrams(self):
+ """
+ Triggered asynchronously whenever new UDP datagrams arrive on the
 interface.
-        """
-        while self.socket.hasPendingDatagrams():
-            datagram_size = self.socket.pendingDatagramSize()
-            datagram, host, port = self.socket.readDatagram(datagram_size)
-            try:
-                # Assuming UTF-8 encoded JSON payloads from background workers
-                payload = json.loads(datagram.data().decode('utf-8'))
-                self.telemetry_received.emit(payload)
-            except json.JSONDecodeError as e:
-                # Log error, handle malformed telemetry without crashing the UI
-                pass
-            except Exception as e:
-                self.critical_error.emit(f"Telemetry parsing fault: {str(e)}")
+ """
+ while self.socket.hasPendingDatagrams():
+ datagram_size = self.socket.pendingDatagramSize()
+ datagram, host, port = self.socket.readDatagram(datagram_size)
+ try:
+ # Assuming UTF-8 encoded JSON payloads from background workers
+ payload = json.loads(datagram.data().decode('utf-8'))
+ self.telemetry_received.emit(payload)
+ except json.JSONDecodeError as e:
+ # Log error, handle malformed telemetry without crashing the UI
+ pass
+ except Exception as e:
+ self.critical_error.emit(f"Telemetry parsing fault: {str(e)}")
 ```
 
 The `readyRead` signal of `QUdpSocket` triggers the `read_pending_datagrams`
@@ -1957,44 +1954,44 @@ import asyncpg
 from PySide6.QtCore import QObject, Signal
 
 class DatabaseManager(QObject):
-    data_loaded = Signal(list)
-    query_failed = Signal(str)
+ data_loaded = Signal(list)
+ query_failed = Signal(str)
 
-    def __init__(self, db_pool: asyncpg.Pool, parent=None):
-        super().__init__(parent)
-        self.db_pool = db_pool
+ def __init__(self, db_pool: asyncpg.Pool, parent=None):
+ super().__init__(parent)
+ self.db_pool = db_pool
 
-    @qasync.asyncSlot()
-    async def fetch_threat_events(self, start_timestamp, end_timestamp):
-        """
-        Executes a long-running SQL query without blocking the PySide6 event
+ @qasync.asyncSlot()
+ async def fetch_threat_events(self, start_timestamp, end_timestamp):
+ """
+ Executes a long-running SQL query without blocking the PySide6 event
 loop.
-        """
-        try:
-            # The UI remains responsive while waiting for the database to return
+ """
+ try:
+ # The UI remains responsive while waiting for the database to return
 results
-            async with self.db_pool.acquire() as connection:
-                records = await connection.fetch(
-                    """
-                    SELECT event_id, severity, source_ip, description
-                    FROM threat_events
-                    WHERE timestamp >= $1 AND timestamp <= $2
-                    ORDER BY timestamp DESC LIMIT 50000
-                    """,
-                    start_timestamp, end_timestamp
-                )
-            
-            # Serialize asyncpg records to standard Python dicts for the UI
+ async with self.db_pool.acquire() as connection:
+ records = await connection.fetch(
+ """
+ SELECT event_id, severity, source_ip, description
+ FROM threat_events
+ WHERE timestamp >= $1 AND timestamp <= $2
+ ORDER BY timestamp DESC LIMIT 50000
+ """,
+ start_timestamp, end_timestamp
+ )
+ 
+ # Serialize asyncpg records to standard Python dicts for the UI
 layer
-            results = [dict(record) for record in records]
-            self.data_loaded.emit(results)
-            
-        except asyncpg.PostgresError as e:
-            self.query_failed.emit(f"Database error: {str(e)}")
-        except asyncio.CancelledError:
-            # Handle graceful cancellation if the user navigates away from the
+ results = [dict(record) for record in records]
+ self.data_loaded.emit(results)
+ 
+ except asyncpg.PostgresError as e:
+ self.query_failed.emit(f"Database error: {str(e)}")
+ except asyncio.CancelledError:
+ # Handle graceful cancellation if the user navigates away from the
 view
-            pass
+ pass
 ```
 
 The `@qasync.asyncSlot()` decorator is the linchpin of this implementation. It
@@ -2052,30 +2049,30 @@ aggregating parsed hosts into discrete chunks before emission.
 
 ```python
 class ThrottledNmapParser(QObject):
-    batch_ready = Signal(list)
-    progress_updated = Signal(int)
-    
-    def __init__(self, batch_size=500):
-        super().__init__()
-        self.batch_size = batch_size
-        self.current_batch = []
-        self.total_processed = 0
+ batch_ready = Signal(list)
+ progress_updated = Signal(int)
+ 
+ def __init__(self, batch_size=500):
+ super().__init__()
+ self.batch_size = batch_size
+ self.current_batch = []
+ self.total_processed = 0
 
-    def process_host(self, host_data):
-        self.current_batch.append(host_data)
-        self.total_processed += 1
-        
-        # Only emit when the batch threshold is reached
-        if len(self.current_batch) >= self.batch_size:
-            self.batch_ready.emit(list(self.current_batch))
-            self.progress_updated.emit(self.total_processed)
-            self.current_batch.clear()
-            
-    def finish_parsing(self):
-        # Flush any remaining items in the buffer upon completion
-        if self.current_batch:
-            self.batch_ready.emit(list(self.current_batch))
-            self.current_batch.clear()
+ def process_host(self, host_data):
+ self.current_batch.append(host_data)
+ self.total_processed += 1
+ 
+ # Only emit when the batch threshold is reached
+ if len(self.current_batch) >= self.batch_size:
+ self.batch_ready.emit(list(self.current_batch))
+ self.progress_updated.emit(self.total_processed)
+ self.current_batch.clear()
+ 
+ def finish_parsing(self):
+ # Flush any remaining items in the buffer upon completion
+ if self.current_batch:
+ self.batch_ready.emit(list(self.current_batch))
+ self.current_batch.clear()
 ```
 
 By emitting batches of data, the frequency of cross-thread context switches and
@@ -2121,18 +2118,18 @@ signal-slot nervous system. This architecture not only categorically resolves
 legacy performance bottlenecks associated with intense SQL database loads and
 massive XML data parsing but also establishes a highly scalable, future-proof
 foundation. This foundation is fully capable of accommodating the increasingly
-demanding, data-intensive workloads characteristic of modern enterprise security
+demanding, data-intensive workloads characteristic of modern security
 management, delivering an unyielding, fluid user experience even amidst the most
 computationally punitive operational scenarios.
 
 
-# Chapter 9: Enterprise Export, Legal Gating, and SARIF Compliance
+# Chapter 9: Export, Legal Gating, and SARIF Compliance
 
-## 9.1 Introduction to Enterprise Security Workflows
-The deployment of the Security Management Platform (SMP) V9.5 within enterprise environments necessitates stringent adherence to regulatory, legal, and operational frameworks. This chapter delineates the mechanisms governing Enterprise Export, Legal Gating, and the integration of Static Analysis Results Interchange Format (SARIF) compliance. The intersection of these domains establishes a cohesive architecture capable of managing complex security metadata while maintaining forensic integrity and regulatory adherence. The modern enterprise landscape dictates that security telemetry, vulnerability reports, and incident response data cannot merely be stored; they must be cryptographically verifiable, legally sound, and universally interpretable by disparate security orchestration tools.
+## 9.1 Introduction to Security Workflows
+The deployment of the Security Management Platform (SMP) V9.5 within environments necessitates stringent adherence to regulatory, legal, and operational frameworks. This chapter delineates the mechanisms governing Export, Legal Gating, and the integration of Static Analysis Results Interchange Format (SARIF) compliance. The intersection of these domains establishes a cohesive architecture capable of managing complex security metadata while maintaining forensic integrity and regulatory adherence. The modern landscape dictates that security telemetry, vulnerability reports, and incident response data cannot merely be stored; they must be cryptographically verifiable, legally sound, and universally interpretable by disparate security orchestration tools.
 
-## 9.2 Enterprise Export Mechanisms
-The Enterprise Export subsystem in SMP V9.5 is engineered to facilitate the secure, scalable, and verifiable exfiltration of security intelligence to external Security Information and Event Management (SIEM) systems, threat intelligence platforms, and regulatory reporting bodies. This subsystem operates under a zero-trust model, ensuring that any data leaving the SMP enclave is authenticated, encrypted, and structurally validated.
+## 9.2 Export Mechanisms
+The Export subsystem in SMP V9.5 is engineered to facilitate the secure, scalable, and verifiable exfiltration of security intelligence to external Security Information and Event Management (SIEM) systems, threat intelligence platforms, and regulatory reporting bodies. This subsystem operates under a zero-trust model, ensuring that any data leaving the SMP enclave is authenticated, encrypted, and structurally validated.
 
 ### 9.2.1 Cryptographic Encapsulation of Export Data
 To guarantee the confidentiality and integrity of exported data, SMP V9.5 employs a multi-layered cryptographic encapsulation protocol. Payload data, comprising vulnerability assessments, incident logs, and system telemetry, is first normalized into a canonical JSON format. This canonicalization is critical to prevent serialization anomalies that could invalidate cryptographic signatures. The normalized payload is then signed using the Elliptic Curve Digital Signature Algorithm (ECDSA) over the P-384 curve, providing a robust defense against tampering.
@@ -2146,10 +2143,10 @@ the receiving entity to cryptographically verify the origin and integrity of the
 export package.
 
 ### 9.2.2 Asynchronous Export Queuing and Delivery
-Given the high volume of security events generated in enterprise environments, synchronous export mechanisms are prone to bottlenecks and data loss during network partitions. SMP V9.5 mitigates this through a resilient asynchronous message queueing architecture based on Apache Kafka. Export events are partitioned by tenant and priority, ensuring that critical security alerts are not delayed by bulk vulnerability reports. The delivery semantics guarantee at-least-once delivery, with idempotent receiver endpoints preventing duplicate processing.
+Given the high volume of security events generated in environments, synchronous export mechanisms are prone to bottlenecks and data loss during network partitions. SMP V9.5 mitigates this through a resilient asynchronous message queueing architecture based on Apache Kafka. Export events are partitioned by tenant and priority, ensuring that critical security alerts are not delayed by bulk vulnerability reports. The delivery semantics guarantee at-least-once delivery, with idempotent receiver endpoints preventing duplicate processing.
 
 ## 9.3 Legal Gating and Regulatory Adherence
-Legal Gating is a mandatory control framework within SMP V9.5, designed to prevent the unauthorized disclosure of sensitive security information and ensure compliance with global data protection regulations, such as the General Data Protection Regulation (GDPR) and the California Consumer Privacy Act (CCPA). Before any data package is authorized for Enterprise Export, it must sequentially pass through a series of automated legal gates.
+Legal Gating is a mandatory control framework within SMP V9.5, designed to prevent the unauthorized disclosure of sensitive security information and ensure compliance with global data protection regulations, such as the General Data Protection Regulation (GDPR) and the California Consumer Privacy Act (CCPA). Before any data package is authorized for Export, it must sequentially pass through a series of automated legal gates.
 
 ### 9.3.1 Data Minimization and Redaction Engines
 The core component of the Legal Gating framework is the automated data redaction engine. This engine utilizes deep learning models based on transformer architectures, specifically fine-tuned for Named Entity Recognition (NER) in the context of cybersecurity telemetry. The engine scans outbound payloads for Personally Identifiable Information (PII), proprietary source code fragments, and sensitive network topologies.
@@ -2173,7 +2170,7 @@ can proceed. This dual-layered approach—automated redaction coupled with manua
 oversight for high-risk exports—ensures comprehensive legal adherence.
 
 ## 9.4 SARIF Compliance for Security Metadata
-The interoperability of security tools is a perennial challenge in enterprise environments. SMP V9.5 addresses this by standardizing vulnerability reporting and static analysis outputs through strict adherence to the Static Analysis Results Interchange Format (SARIF), specifically OASIS SARIF Version 2.1.0.
+The interoperability of security tools is a perennial challenge in environments. SMP V9.5 addresses this by standardizing vulnerability reporting and static analysis outputs through strict adherence to the Static Analysis Results Interchange Format (SARIF), specifically OASIS SARIF Version 2.1.0.
 
 ### 9.4.1 Architectural Integration of SARIF
 The adoption of SARIF within SMP V9.5 extends beyond mere export formatting; it is deeply integrated into the platform's internal data models. The vulnerability processing pipeline natively ingests, normalizes, and stores security findings in a SARIF-compliant structure. This unified schema eliminates the need for complex, lossy data transformations when aggregating results from heterogeneous security scanning tools (e.g., SAST, DAST, SCA).
@@ -2186,9 +2183,9 @@ feeds and local exploitation probability metrics, without violating the
 standard's schema constraints.
 
 ### 9.4.2 Ingestion, Normalization, and Export
-When SMP V9.5 operates as an aggregation hub, it ingests native reports from third-party scanners and utilizes a fleet of microservices to translate these disparate formats into the canonical SARIF representation. This normalization process includes the mapping of proprietary severity ratings to the Common Vulnerability Scoring System (CVSS) framework, ensuring a consistent risk taxonomy across the enterprise.
+When SMP V9.5 operates as an aggregation hub, it ingests native reports from third-party scanners and utilizes a fleet of microservices to translate these disparate formats into the canonical SARIF representation. This normalization process includes the mapping of proprietary severity ratings to the Common Vulnerability Scoring System (CVSS) framework, ensuring a consistent risk taxonomy across the .
 
-For Enterprise Export, the SARIF artifacts are directly serializable and ready
+For Export, the SARIF artifacts are directly serializable and ready
 for consumption by external continuous integration/continuous deployment (CI/CD)
 pipelines, developer IDEs, and risk management dashboards. By standardizing on
 SARIF, SMP V9.5 empowers enterprises to build cohesive, automated security
@@ -2202,7 +2199,7 @@ The audit ledger is constructed as a localized blockchain, utilizing a Merkle-DA
 
 To provide non-repudiation of origin, every action initiated by a user or
 service account must be signed using their respective private keys. SMP V9.5
-integrates with enterprise Public Key Infrastructure (PKI) and Hardware Security
+integrates with Public Key Infrastructure (PKI) and Hardware Security
 Modules (HSMs) to manage these keys securely. The audit record encapsulates the
 payload, the timestamp provided by a secure Time Stamp Authority (TSA), and the
 digital signature, satisfying the highest legal standards for digital forensics.
@@ -2224,32 +2221,32 @@ underscores the platform's commitment to absolute audit reliability.
 # Chapter 10: Conclusion and Future Roadmaps
 
 ## 10.1 Synthesizing the SMP V9.5 Architecture
-This thesis has comprehensively analyzed the architecture, cryptographic foundations, and operational mechanisms of the Security Management Platform (SMP) V9.5. The platform represents a paradigm shift in enterprise security orchestration, moving away from fragmented, siloed tools toward a cohesive, cryptographically secure, and legally compliant ecosystem.
+This thesis has comprehensively analyzed the architecture, cryptographic foundations, and operational mechanisms of the Security Management Platform (SMP) V9.5. The platform represents a paradigm shift in security orchestration, moving away from fragmented, siloed tools toward a cohesive, cryptographically secure, and legally compliant ecosystem.
 
 We have explored the intricate workings of the symmetric and asymmetric
 encryption pipelines, the robust implementation of Role-Based Access Control
 (RBAC) augmented by Attribute-Based Access Control (ABAC), and the sophisticated
 threat detection heuristics powered by machine learning. The detailed
-examination of Enterprise Export, Legal Gating, and SARIF compliance in Chapter
+examination of Export, Legal Gating, and SARIF compliance in Chapter
 9 demonstrated the platform's capability to integrate seamlessly into complex
-enterprise workflows while maintaining strict regulatory adherence. Furthermore,
+workflows while maintaining strict regulatory adherence. Furthermore,
 the exposition on non-repudiation and the handling of critical errors, such as
 the SMP-4050, highlighted the platform's uncompromising approach to forensic
 integrity.
 
 ## 10.2 Future Roadmaps: Local LLM Integration
-As the cybersecurity landscape evolves, characterized by increasingly sophisticated and automated threats, the defensive capabilities of SMP must continually advance. The primary focus for the next major iteration of the platform (V10.0) is the deep, localized integration of Large Language Models (LLMs) to augment threat analysis, automate incident response, and enhance the developer experience in vulnerability remediation.
+As the cybersecurity landscape evolves, characterized by increasingly sophisticated and automated threats, the defensive capabilities of SMP must continually advance. The primary focus for the next major iteration of the platform (V9.5) is the deep, localized integration of Large Language Models (LLMs) to augment threat analysis, automate incident response, and enhance the developer experience in vulnerability remediation.
 
 ### 10.2.1 Rationalizing Localized LLM Deployments
-The reliance on cloud-based LLM APIs presents significant challenges in the context of enterprise security. The transmission of highly sensitive telemetry, proprietary source code, and vulnerability details to external third-party providers is often unacceptable due to data privacy regulations, intellectual property concerns, and the risk of exposure through third-party breaches. Therefore, SMP V10.0 will pioneer the deployment of localized, on-premises LLMs, specifically optimized and fine-tuned for cybersecurity tasks.
+The reliance on cloud-based LLM APIs presents significant challenges in the context of security. The transmission of highly sensitive telemetry, proprietary source code, and vulnerability details to external third-party providers is often unacceptable due to data privacy regulations, intellectual property concerns, and the risk of exposure through third-party breaches. Therefore, SMP V9.5 will pioneer the deployment of localized, on-premises LLMs, specifically optimized and fine-tuned for cybersecurity tasks.
 
 ### 10.2.2 Model Architecture and Fine-Tuning Strategies
-The planned architecture involves the deployment of quantized, highly efficient foundation models (e.g., Llama-3-8B or Mistral-7B derivatives) running directly on the enterprise's internal infrastructure, utilizing dedicated Neural Processing Units (NPUs) or GPU clusters. These models will undergo rigorous fine-tuning using proprietary datasets comprising historical security incidents, verified SARIF reports, and successful remediation patches.
+The planned architecture involves the deployment of quantized, highly efficient foundation models (e.g., Llama-3-8B or Mistral-7B derivatives) running directly on the 's internal infrastructure, utilizing dedicated Neural Processing Units (NPUs) or GPU clusters. These models will undergo rigorous fine-tuning using proprietary datasets comprising historical security incidents, verified SARIF reports, and successful remediation patches.
 
 The fine-tuning process will leverage Low-Rank Adaptation (LoRA) and Direct
 Preference Optimization (DPO) techniques. This approach ensures that the model
 deeply understands the specific vernacular of cybersecurity, the structural
-nuances of the enterprise's codebase, and the platform's internal APIs, enabling
+nuances of the 's codebase, and the platform's internal APIs, enabling
 it to provide highly contextualized and accurate insights.
 
 ### 10.2.3 Autonomous Threat Hunting and Remediation
@@ -2259,15 +2256,15 @@ Furthermore, in the context of vulnerability management, the LLM will assist
 developers by automatically generating context-aware remediation code. By
 analyzing the vulnerable code snippet alongside the SARIF execution flow, the
 model will produce accurate patches that not only resolve the security flaw but
-also adhere to the enterprise's coding standards. The proposed patches will be
+also adhere to the 's coding standards. The proposed patches will be
 seamlessly integrated into the developer's IDE, significantly accelerating the
 mean time to remediation (MTTR).
 
 ### 10.2.4 Conversational Interfaces for Security Orchestration
-To democratize access to complex security data, SMP V10.0 will introduce a conversational interface powered by the local LLM. Security analysts and administrators will be able to query the platform using natural language, enabling rapid investigations and configuration changes. The LLM will translate these natural language requests into complex database queries, API calls, and XACML policy updates, abstracting the underlying technical complexity while adhering strictly to the platform's RBAC/ABAC authorization models.
+To democratize access to complex security data, SMP V9.5 will introduce a conversational interface powered by the local LLM. Security analysts and administrators will be able to query the platform using natural language, enabling rapid investigations and configuration changes. The LLM will translate these natural language requests into complex database queries, API calls, and XACML policy updates, abstracting the underlying technical complexity while adhering strictly to the platform's RBAC/ABAC authorization models.
 
 ## 10.3 Final Remarks
-The Security Management Platform V9.5 establishes a robust, cryptographically secure, and compliant foundation for enterprise security operations. The strategic integration of localized Large Language Models in future iterations promises to elevate the platform's capabilities from orchestration and reporting to autonomous, intelligent threat mitigation. As the velocity and complexity of cyber threats continue to accelerate, the continuous evolution of platforms like SMP remains essential for safeguarding the digital infrastructure of the modern enterprise.
+The Security Management Platform V9.5 establishes a robust, cryptographically secure, and compliant foundation for security operations. The strategic integration of localized Large Language Models in future iterations promises to elevate the platform's capabilities from orchestration and reporting to autonomous, intelligent threat mitigation. As the velocity and complexity of cyber threats continue to accelerate, the continuous evolution of platforms like SMP remains essential for safeguarding the digital infrastructure of the modern .
 
 ---
 

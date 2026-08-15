@@ -386,7 +386,7 @@ def _should_run_step(step_name, resume_status):
     """
     Returns True if this step should execute given the selected scan profile.
 
-    Scan Profiles (V9.4.3)
+    Scan Profiles (V9.5)
     ────────────────────
     osint    — Purely passive, zero traffic to target. Safe for un-permissioned recon.
                Covers: OSINT APIs, certificate transparency, Whois, Wayback, Shodan.
@@ -497,7 +497,7 @@ def _should_run_step(step_name, resume_status):
 
 
 def _save_findings(scan_id, results, source_tool, severity_override=None, confidence=None):
-    """Bulk-save a list of finding dicts to the DB, including all enterprise metadata."""
+    """Bulk-save a list of finding dicts to the DB, including all metadata."""
     if not results:
         return
         
@@ -711,7 +711,7 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
     url = target["url"]
     settings = load_settings()
 
-    # ── V9.4.3 — Global Proxy Configuration ────────────────────────────────────
+    # ── V9.5 — Global Proxy Configuration ────────────────────────────────────
     http_proxy = settings.get("http_proxy", "").strip()
     https_proxy = settings.get("https_proxy", "").strip()
     if http_proxy:

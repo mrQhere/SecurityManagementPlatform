@@ -65,7 +65,7 @@ _OWASP_2021 = {
 
 # ── CIS Controls v8 ───────────────────────────────────────────────────────────
 _CIS_CONTROLS_V8 = {
-    "CIS 1 - Inventory and Control of Enterprise Assets": [
+    "CIS 1 - Inventory and Control of  Assets": [
         "asset", "inventory", "unauthorized device",
     ],
     "CIS 2 - Inventory and Control of Software Assets": [

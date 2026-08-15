@@ -264,7 +264,7 @@ class SMPPortCollisionError(SMPValidationError):
     slug = "port_collision"
 
 
-# Enterprise Data Export Errors
+#  Data Export Errors
 class SMPExportDeniedError(SMPValidationError):
     """Raised when an export is attempted without explicit I AGREE legal gate confirmation."""
     code = "SMP-4050"

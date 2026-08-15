@@ -1,6 +1,6 @@
 """
 Encryption Manager — manages database and file encryption keys with hierarchical model.
-V10.0 Enterprise Rebuild.
+V9.5  Rebuild.
 """
 
 import os
@@ -140,7 +140,7 @@ def setup_password(password: str):
         "salt": salt.hex(),
         "hash": pw_hash,
         "pbkdf2_iterations": _PBKDF2_ITERATIONS,
-        "version": "V10.0",
+        "version": "V9.5",
         "keys": {
             "dek": encrypt_sub_key(kek, dek),
             "iek": encrypt_sub_key(kek, iek),
@@ -239,7 +239,7 @@ def rotate_master_password(old_password: str, new_password: str):
         "salt": salt.hex(),
         "hash": pw_hash,
         "pbkdf2_iterations": _PBKDF2_ITERATIONS,
-        "version": "V10.0",
+        "version": "V9.5",
         "keys": {
             "dek": encrypt_sub_key(new_kek, _ACTIVE_STORE.dek),
             "iek": encrypt_sub_key(new_kek, _ACTIVE_STORE.iek),

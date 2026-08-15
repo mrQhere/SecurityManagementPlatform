@@ -1,0 +1,29 @@
+{
+ "schema_version": "1.0",
+ "report_id": "fc8d3b3b-1757-4e7f-b616-cafaf9cec196",
+ "engagement_id": "1",
+ "target": "https://example.com",
+ "operator": "SMP Operator",
+ "generated_at": "2026-08-15T06:30:52.177436+00:00",
+ "report_generator_version": "V9.5",
+ "intelligence_version": "V9.5",
+ "scanner_versions": {},
+ "findings": [],
+ "assets": [],
+ "services": [],
+ "evidence_hashes": [],
+ "statistics": {
+ "total_findings": 0,
+ "by_severity": {
+ "Critical": 0,
+ "High": 0,
+ "Medium": 0,
+ "Low": 0,
+ "Info": 0
+ },
+ "unique_cves": 0,
+ "kev_findings": 0,
+ "risk_rating": "INFORMATIONAL"
+ },
+ "authenticity_hash": "1f7aa352b44b9d41b4e03daf910ffd6b91db1add03ba37e9fbbc4234035cbade"
+}

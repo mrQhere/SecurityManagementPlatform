@@ -1,0 +1,296 @@
+<!DOCTYPE html><html lang='en'>
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>VAPT Report — example.com — 2026-08-15</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --crit:#dc2626;--high:#ea580c;--med:#d97706;--low:#2563eb;--info:#4b5563;
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --accent:#1e3a5f;--accent2:#2563eb;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+a{color:var(--accent2);text-decoration:none;}a:hover{text-decoration:underline;}
+.page{max-width:1080px;margin:0 auto;padding:32px 20px 60px;}
+/* ── Cover ── */
+.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1d4ed8 100%);color:#f8fafc;
+  border-radius:16px;padding:56px 48px 48px;margin-bottom:36px;position:relative;overflow:hidden;}
+.cover::before{content:'';position:absolute;top:-60px;right:-60px;width:320px;height:320px;
+  border-radius:50%;background:rgba(255,255,255,.04);}
+.cover-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;}
+.cover-logo-icon{width:40px;height:40px;background:#2563eb;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;}
+.cover-logo-text{font-size:13px;font-weight:700;letter-spacing:.05em;color:#94a3b8;text-transform:uppercase;}
+.cover h1{font-size:2.4rem;font-weight:800;line-height:1.15;margin-bottom:6px;letter-spacing:-.02em;}
+.cover .tagline{color:#93c5fd;font-size:1rem;margin-bottom:36px;}
+.cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;margin-bottom:28px;}
+.cover-kv{display:flex;flex-direction:column;gap:2px;}
+.cover-kv .k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b;}
+.cover-kv .v{font-size:13px;font-weight:600;color:#f1f5f9;}
+.cover-divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:20px 0;}
+.hash-row{display:flex;align-items:flex-start;gap:12px;background:rgba(0,0,0,.25);
+  border-radius:10px;padding:14px 16px;}
+.hash-icon{font-size:18px;margin-top:1px;}
+.hash-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#34d399;margin-bottom:4px;}
+.hash-value{font-family:'Courier New',monospace;font-size:11px;color:#a7f3d0;word-break:break-all;line-height:1.5;}
+/* ── KPI Strip ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:32px;}
+.kpi-card{background:var(--card);border-radius:12px;padding:18px 16px;text-align:center;
+  border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+.kpi-card.crit::before{background:var(--crit);}
+.kpi-card.high::before{background:var(--high);}
+.kpi-card.med::before{background:var(--med);}
+.kpi-card.low::before{background:var(--low);}
+.kpi-card.info::before{background:var(--info);}
+.kpi-num{font-size:2.2rem;font-weight:800;line-height:1;}
+.kpi-card.crit .kpi-num{color:var(--crit);}
+.kpi-card.high .kpi-num{color:var(--high);}
+.kpi-card.med .kpi-num{color:var(--med);}
+.kpi-card.low .kpi-num{color:var(--low);}
+.kpi-card.info .kpi-num{color:var(--info);}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:4px;}
+/* ── Sections ── */
+.section{background:var(--card);border-radius:12px;padding:28px 32px;margin-bottom:24px;
+  border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;
+  padding-bottom:14px;border-bottom:2px solid var(--border);}
+.section-num{font-size:11px;font-weight:700;color:var(--accent2);background:#eff6ff;
+  border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;letter-spacing:.05em;}
+.section-title{font-size:1.05rem;font-weight:700;color:var(--text);}
+/* ── Tables ── */
+.data-table{border-collapse:collapse;width:100%;font-size:13px;}
+.data-table th{background:#f8fafc;color:var(--muted);padding:9px 12px;text-align:left;
+  border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.data-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:#f8fafc;}
+/* ── Severity Badge ── */
+.sev{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-weight:700;font-size:11px;color:#fff;letter-spacing:.03em;}
+.sev-Critical{background:var(--crit);}
+.sev-High{background:var(--high);}
+.sev-Medium{background:var(--med);}
+.sev-Low{background:var(--low);}
+.sev-Info{background:var(--info);}
+/* ── Finding Cards ── */
+.finding-card{border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden;}
+.finding-card-header{padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#f8fafc;}
+.finding-card-header.sev-Critical-bg{border-left:5px solid var(--crit);background:#fff5f5;}
+.finding-card-header.sev-High-bg{border-left:5px solid var(--high);background:#fff8f3;}
+.finding-card-header.sev-Medium-bg{border-left:5px solid var(--med);background:#fffdf0;}
+.finding-card-header.sev-Low-bg{border-left:5px solid var(--low);background:#f0f5ff;}
+.finding-card-header.sev-Info-bg{border-left:5px solid var(--info);background:#f8fafc;}
+.finding-id{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;font-family:monospace;}
+.finding-title{font-size:14px;font-weight:700;color:var(--text);flex:1;}
+.finding-body{padding:16px 18px;}
+.finding-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.tag{display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;color:#475569;
+  border-radius:5px;padding:3px 9px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;}
+.tag-mitre{background:#1e3a5f;color:#93c5fd;border-color:#1e3a5f;}
+.tag-cve{background:#7c3aed;color:#ede9fe;border-color:#6d28d9;}
+.tag-cvss{background:#0f766e;color:#ccfbf1;border-color:#0d9488;}
+.sub-heading{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin:14px 0 6px;display:flex;align-items:center;gap:6px;}
+.sub-heading::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--accent2);}
+.prose{font-size:13px;color:#334155;line-height:1.75;white-space:pre-wrap;word-break:break-word;}
+.code-block{background:#0f172a;color:#e2e8f0;padding:14px 16px;border-radius:8px;
+  font-family:'Courier New',monospace;font-size:12px;line-height:1.6;overflow-x:auto;
+  white-space:pre-wrap;word-break:break-all;margin:6px 0;}
+.evidence-block{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;
+  padding:12px 14px;font-family:'Courier New',monospace;font-size:12px;color:#14532d;
+  overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:6px 0;}
+.impact-block{background:#fef9ec;border:1px solid #fcd34d;border-radius:8px;
+  padding:12px 14px;font-size:13px;color:#92400e;margin:6px 0;}
+.remd-block{background:#f0fdf4;border-left:3px solid #22c55e;
+  padding:12px 14px;font-size:13px;color:#15803d;border-radius:0 8px 8px 0;margin:6px 0;}
+.ref-list{list-style:none;margin:6px 0;display:flex;flex-direction:column;gap:4px;}
+.ref-list li::before{content:'↗ ';}
+.ref-list a{font-size:12px;word-break:break-all;}
+/* ── Methodology table ── */
+.method-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.method-item{background:#f8fafc;border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;font-size:12px;}
+.method-item .tool-name{font-weight:700;color:var(--text);}
+.method-item .tool-type{color:var(--muted);font-size:11px;margin-top:2px;}
+.method-item.used{border-left:3px solid #22c55e;}
+/* ── Risk gauge ── */
+.risk-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.risk-score{font-size:3rem;font-weight:800;line-height:1;}
+.risk-score.Critical{color:var(--crit);}
+.risk-score.High{color:var(--high);}
+.risk-score.Medium{color:var(--med);}
+.risk-score.Low{color:var(--low);}
+.risk-bar-wrap{flex:1;background:#e2e8f0;border-radius:999px;height:12px;overflow:hidden;}
+.risk-bar{height:100%;border-radius:999px;transition:width .4s;}
+.risk-bar.Critical{background:var(--crit);}
+.risk-bar.High{background:var(--high);}
+.risk-bar.Medium{background:var(--med);}
+.risk-bar.Low{background:var(--low);}
+/* ── Action Plan ── */
+.action-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
+.action-row:last-child{border-bottom:none;}
+.action-window{min-width:80px;text-align:center;font-size:11px;font-weight:700;
+  padding:4px 10px;border-radius:6px;color:#fff;}
+.aw-imm{background:var(--crit);}
+.aw-72h{background:var(--high);}
+.aw-2w{background:var(--med);}
+.aw-q{background:#0891b2;}
+.aw-ong{background:var(--info);}
+.action-text{font-size:13px;color:#334155;flex:1;}
+/* ── Footer ── */
+.report-footer{text-align:center;color:var(--muted);font-size:12px;margin-top:48px;
+  padding-top:24px;border-top:1px solid var(--border);}
+.report-footer strong{color:var(--text);}
+/* ── TOC ── */
+.toc-list{list-style:none;counter-reset:toc;}
+.toc-list li{counter-increment:toc;padding:6px 0;border-bottom:1px dotted var(--border);
+  display:flex;justify-content:space-between;font-size:13px;}
+.toc-list li .toc-num{color:var(--accent2);font-weight:700;margin-right:8px;}
+/* ── Attrib banner ── */
+.confidential-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;
+  padding:10px 16px;font-size:12px;font-weight:600;color:#991b1b;text-align:center;
+  margin-bottom:28px;letter-spacing:.04em;}
+</style>
+</head><body><div class='page'>
+<!-- SMP-CONTENT-HASH:34f293d62b1b2fc91949d454704a58a38f99d4a6e85744d2a94fc7cd18d916e0:END-HASH -->
+<!-- SMP-META-START{"content_hash": "34f293d62b1b2fc91949d454704a58a38f99d4a6e85744d2a94fc7cd18d916e0", "critical": 0, "findings_count": 0, "high": 0, "low": 0, "medium": 0, "scan_date": "2026-08-15", "scanned_by": "Security Auditor", "smp_version": "V9.5", "url": "https://example.com"}SMP-META-END -->
+<div class='cover'>
+<div class='cover-logo'><div class='cover-logo-icon'>🛡</div><div class='cover-logo-text'>Security Management Platform</div></div>
+<h1>Vulnerability Assessment &amp;<br>Penetration Testing Report</h1>
+<div class='tagline'>https://example.com</div>
+<div class='cover-grid'>
+<div class='cover-kv'><div class='k'>Target Company</div><div class='v'>—</div></div>
+<div class='cover-kv'><div class='k'>Submitted To</div><div class='v'>Internal Security Team</div></div>
+<div class='cover-kv'><div class='k'>Date of Assessment</div><div class='v'>2026-08-15</div></div>
+<div class='cover-kv'><div class='k'>Lead Penetration Tester</div><div class='v'>Security Auditor</div></div>
+<div class='cover-kv'><div class='k'>QA Reviewer</div><div class='v'>QA Manager</div></div>
+<div class='cover-kv'><div class='k'>SMP Version</div><div class='v'>V9.5 Stable</div></div>
+<div class='cover-kv'><div class='k'>Data Classification</div><div class='v'>CONFIDENTIAL — INTERNAL USE ONLY</div></div>
+<div class='cover-kv'><div class='k'>Total Findings</div><div class='v'>0</div></div>
+</div>
+<hr class='cover-divider'>
+<div class='hash-row'>
+<div class='hash-icon'>✅</div>
+<div><div class='hash-label'>Verification Hash (SHA-256 Content Signature)</div>
+<div class='hash-value'>34f293d62b1b2fc91949d454704a58a38f99d4a6e85744d2a94fc7cd18d916e0</div>
+<div style='font-size:10px;color:#64748b;margin-top:6px;'>Verify with: <code>python3 tools/verify_report.py &lt;this-file&gt;</code></div>
+</div></div>
+</div>
+<div class='confidential-banner'>⚠ CONFIDENTIAL — AUTHORISED RECIPIENTS ONLY — NOT FOR EXTERNAL DISTRIBUTION</div>
+<div class='kpi-strip'>
+<div class='kpi-card crit'><div class='kpi-num'>0</div><div class='kpi-label'>Critical</div></div>
+<div class='kpi-card high'><div class='kpi-num'>0</div><div class='kpi-label'>High</div></div>
+<div class='kpi-card med'><div class='kpi-num'>0</div><div class='kpi-label'>Medium</div></div>
+<div class='kpi-card low'><div class='kpi-num'>0</div><div class='kpi-label'>Low</div></div>
+<div class='kpi-card info'><div class='kpi-num'>0</div><div class='kpi-label'>Informational</div></div>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 1</span>
+<span class='section-title'>Table of Contents</span>
+</div>
+<ol class='toc-list'>
+<li><span><span class='toc-num'>1.</span> Table of Contents</span><span>This page</span></li>
+<li><span><span class='toc-num'>2.</span> Executive Summary &amp; Risk Score</span><span></span></li>
+<li><span><span class='toc-num'>3.</span> Engagement Scope &amp; Methodology</span><span></span></li>
+<li><span><span class='toc-num'>4.</span> Findings Overview Matrix</span><span></span></li>
+<li><span><span class='toc-num'>5.</span> Technical Findings — Detail</span><span></span></li>
+<li><span><span class='toc-num'>6.</span> Action Plan &amp; Remediation Timeline</span><span></span></li>
+<li><span><span class='toc-num'>7.</span> Attestation &amp; Verification</span><span></span></li>
+</ol>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 2</span>
+<span class='section-title'>Executive Summary &amp; Risk Score</span>
+</div>
+<div class='risk-row'>
+<div class='risk-score Low'>0.0</div>
+<div style='flex:1'>
+<div style='font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;'>Overall Risk Score / 100 — <strong style='color:inherit'>Low</strong></div>
+<div class='risk-bar-wrap'><div class='risk-bar Low' style='width:0%'></div></div>
+</div></div>
+<p style='font-size:13.5px;line-height:1.8;color:#334155;'>The security assessment of <strong>https://example.com</strong> completed with <strong>no exploitable vulnerabilities</strong> identified. The target presented a strong security posture across all tested domains including network services, web application behaviour, SSL/TLS configuration, and HTTP security headers. Continued monitoring and periodic re-assessment are recommended to maintain this posture.</p>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 3</span>
+<span class='section-title'>Engagement Scope &amp; Methodology</span>
+</div>
+<table class='data-table' style='margin-bottom:20px;'>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>Target URL</td><td><code>https://example.com</code></td></tr>
+<tr><td>Company</td><td>—</td></tr>
+<tr><td>Assessment Date</td><td>2026-08-15</td></tr>
+<tr><td>Assessment Type</td><td>Black-box VAPT (Automated + Correlation)</td></tr>
+<tr><td>Lead Tester</td><td>Security Auditor</td></tr>
+<tr><td>QA Reviewer</td><td>QA Manager</td></tr>
+<tr><td>Scope</td><td>Web application, network services, SSL/TLS, headers, OSINT</td></tr>
+<tr><td>Out of Scope</td><td>Physical access, social engineering, denial of service</td></tr>
+</table>
+<div class='sub-heading'>Security Tools Deployed</div>
+<div class='method-grid'>
+</div>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 4</span>
+<span class='section-title'>Findings Overview Matrix</span>
+</div>
+<p style='color:var(--muted);font-style:italic;'>No vulnerabilities identified during this assessment.</p>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 5</span>
+<span class='section-title'>Technical Findings — Detail</span>
+</div>
+<p style='color:var(--muted);font-style:italic;'>No vulnerabilities to detail for this assessment.</p>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 6</span>
+<span class='section-title'>Action Plan &amp; Remediation Timeline</span>
+</div>
+<div class='action-row'>
+<div class='action-window aw-imm'>Immediate (0–24 h)</div>
+<div class='action-text'>Patch, isolate, or WAF-block all <strong>Critical</strong> findings (0 identified). Engage incident response if any Critical finding is actively exploited.</div>
+</div>
+<div class='action-row'>
+<div class='action-window aw-72h'>Short-term (72 h)</div>
+<div class='action-text'>Remediate all <strong>High</strong>-severity findings (0 identified). Deploy WAF rules as temporary mitigations where direct patching is not immediately feasible.</div>
+</div>
+<div class='action-row'>
+<div class='action-window aw-2w'>Medium-term (2 weeks)</div>
+<div class='action-text'>Address all <strong>Medium</strong>-severity issues (0 identified). Apply OS, TLS version, and HTTP header hardening across the stack.</div>
+</div>
+<div class='action-row'>
+<div class='action-window aw-q'>Quarterly</div>
+<div class='action-text'>Resolve remaining <strong>Low</strong>/0 informational items and tighten configuration baselines. Schedule developer security training.</div>
+</div>
+<div class='action-row'>
+<div class='action-window aw-ong'>Ongoing</div>
+<div class='action-text'>Maintain automated CVE monitoring for detected technologies. Repeat full VAPT every 6 months or after any major infrastructure change. Subscribe to CISA KEV and NVD feeds for zero-day alerting.</div>
+</div>
+</div>
+<div class='section'>
+<div class='section-header'>
+<span class='section-num'>SECTION 7</span>
+<span class='section-title'>Formal Attestation &amp; Report Verification</span>
+</div>
+<table class='data-table' style='margin-bottom:20px;'>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>Lead Penetration Tester</td><td><strong>Security Auditor</strong></td></tr>
+<tr><td>QA Reviewer</td><td>QA Manager</td></tr>
+<tr><td>Date of Report</td><td>2026-08-15</td></tr>
+<tr><td>Generated By</td><td>Security Management Platform V9.5</td></tr>
+<tr><td>Report Integrity Hash</td><td><code style='font-size:11px;word-break:break-all;'>34f293d62b1b2fc91949d454704a58a38f99d4a6e85744d2a94fc7cd18d916e0</code></td></tr>
+</table>
+<p style='font-size:12px;color:var(--muted);'>
+This report was generated automatically by Security Management Platform (SMP). The content hash above uniquely identifies this report's findings and can be independently verified using: <code>python3 tools/verify_report.py &lt;path-to-this-file&gt;</code>. Any modification to this document will invalidate the embedded signature.
+</p>
+</div>
+<div class='report-footer'>
+<strong>Security Management Platform (SMP) V9.5</strong><br>
+Report: SMP_example.com_Report_2026-08-15.html &nbsp;·&nbsp; Hash: <code>34f293d62b1b2fc91949d454…</code><br>
+<em>CONFIDENTIAL — INTERNAL USE ONLY — NOT FOR EXTERNAL DISTRIBUTION</em>
+</div>
+</div></body></html>

@@ -637,7 +637,7 @@ python3 tools/verify_report.py <report_file.json>
         with open(md_path, "w", encoding="utf-8") as mf:
             mf.write(md_content)
             
-        # Try to use the Enterprise PDF Engine for the massive 2000-line PDF report
+        # Try to use the  PDF Engine for the massive 2000-line PDF report
         try:
             from tools.enterprise_pdf_engine import generate_scan_reports
             target_dict = {"url": target_str or "Default Target"}
@@ -651,6 +651,6 @@ python3 tools/verify_report.py <report_file.json>
                 return pdf_path
         except Exception as e:
             import logging
-            logging.getLogger("smp").error(f"Enterprise PDF Engine failed: {e}")
+            logging.getLogger("smp").error(f" PDF Engine failed: {e}")
             
         return md_path
