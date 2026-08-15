@@ -29,15 +29,15 @@ This guide provides technical diagnosis and resolutions for operating system dep
 # Install required Qt6 XCB platform dependencies
 sudo apt-get update
 sudo apt-get install -y \
- libxcb-cursor0 \
- libxcb-xinerama0 \
- libxcb-icccm4 \
- libxcb-image0 \
- libxcb-keysyms1 \
- libxcb-render-util0 \
- libxcb-shape0 \
- libxkbcommon-x11-0 \
- libgl1-mesa-glx
+  libxcb-cursor0 \
+  libxcb-xinerama0 \
+  libxcb-icccm4 \
+  libxcb-image0 \
+  libxcb-keysyms1 \
+  libxcb-render-util0 \
+  libxcb-shape0 \
+  libxkbcommon-x11-0 \
+  libgl1-mesa-glx
 
 # Force XCB platform backend if on Wayland
 export QT_QPA_PLATFORM=xcb
@@ -135,16 +135,16 @@ Launch Docker with `cap_add: [NET_RAW, NET_ADMIN]` in `docker-compose.yml`:
 
 ```yaml
 services:
- smp:
- image: smp:v9.5
- cap_add:
- - NET_RAW
- - NET_ADMIN
- ports:
- - "8000:8000"
- volumes:
- - ./data:/app/data
- - ./database:/app/database
+  smp:
+    image: smp:v9.5
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./database:/app/database
 ```
 ```bash
 docker compose up -d

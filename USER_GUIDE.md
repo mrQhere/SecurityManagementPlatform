@@ -1,13 +1,13 @@
 ```
-███████╗███╗ ███╗██████╗ ██╗ ██╗ █████╗ ███████╗
-██╔════╝████╗ ████║██╔══██╗ ██║ ██║██╔══██╗ ╚════██║
-███████╗██╔████╔██║██████╔╝ ██║ ██║╚██████║ ██╔╝
-╚════██║██║╚██╔╝██║██╔═══╝ ╚██╗ ██╔╝ ╚═══██║ ██╔╝
-███████║██║ ╚═╝ ██║██║ ╚████╔╝ █████╔╝ ██║
-╚══════╝╚═╝ ╚═╝╚═╝ ╚═══╝ ╚════╝ ╚═╝
- Security Management Platform · by mrQhere
- Local-first · Zero-cloud · AES-256 Encrypted at Rest
- github.com/mrQhere/SecurityManagementPlatform
+███████╗███╗   ███╗██████╗     ██╗   ██╗ █████╗     ███████╗
+██╔════╝████╗ ████║██╔══██╗    ██║   ██║██╔══██╗    ╚════██║
+███████╗██╔████╔██║██████╔╝    ██║   ██║╚██████║        ██╔╝
+╚════██║██║╚██╔╝██║██╔═══╝     ╚██╗ ██╔╝ ╚═══██║       ██╔╝
+███████║██║ ╚═╝ ██║██║          ╚████╔╝  █████╔╝        ██║
+╚══════╝╚═╝     ╚═╝╚═╝           ╚═══╝   ╚════╝         ╚═╝
+  Security Management Platform  ·  by mrQhere
+  Local-first · Zero-cloud · AES-256 Encrypted at Rest
+  github.com/mrQhere/SecurityManagementPlatform
 ```
 
 # Security Management Platform (SMP) — Complete User Guide
@@ -20,7 +20,7 @@
 5. [Running Your First Scan](#5-running-your-first-scan)
 6. [Scanner Reference & Tuning](#6-scanner-reference--tuning)
 7. [Writing Custom Scanners](#7-writing-custom-scanners)
-8. [Data Export & Legal Gate](#8--data-export--legal-gate)
+8. [Enterprise Data Export & Legal Gate](#8-enterprise-data-export--legal-gate)
 9. [Advanced Tuning & Performance](#9-advanced-tuning--performance)
 10. [Headless API Reference](#10-headless-api-reference)
 11. [Troubleshooting & Error Codes](#11-troubleshooting--error-codes)
@@ -153,19 +153,19 @@ This gives you the full source tree including all scanner modules, the UI, the A
 1. **Detects your OS and architecture** — reads `/etc/os-release` and `uname -m` to determine the correct package manager and CPU architecture (`x86_64` or `arm64`).
 2. **Updates the package index** — runs `apt update`, `dnf makecache`, `pacman -Sy`, `brew update`, or equivalent. Retries up to 5 times on network failure.
 3. **Installs system packages** — installs only what is missing (checks first with `dpkg -s`, `rpm -q`, `pacman -Q`, etc.):
- - `python3`, `python3-pip`, `python3-venv`, `python3-dev`
- - `libsqlcipher-dev`, `libsqlcipher0` (or `sqlcipher`, `sqlcipher-devel` depending on distro)
- - `build-essential` / `base-devel` / `@development-tools`
- - `nmap`, `nikto`, `ruby`, `perl`, `git`, `nodejs`, `npm`, `cargo`
+   - `python3`, `python3-pip`, `python3-venv`, `python3-dev`
+   - `libsqlcipher-dev`, `libsqlcipher0` (or `sqlcipher`, `sqlcipher-devel` depending on distro)
+   - `build-essential` / `base-devel` / `@development-tools`
+   - `nmap`, `nikto`, `ruby`, `perl`, `git`, `nodejs`, `npm`, `cargo`
 4. **Compiles SQLCipher from source** (if no pre-built library is found) — clones `sqlcipher/sqlcipher`, compiles with `DSQLITE_HAS_CODEC`, installs to `/usr/local`, and runs `ldconfig`.
 5. **Creates a Python virtual environment** at `venv/` (unless `--no-venv` is passed).
 6. **Installs Python dependencies** from `requirements.txt` into the venv. Key packages include:
- - `PySide6` — GUI framework
- - `pysqlcipher3` — encrypted SQLite driver
- - `fastapi`, `uvicorn`, `slowapi` — headless API server
- - `cryptography` — AES-256-GCM key derivation and evidence encryption
- - `pydantic` — typed data models (Observation, Finding schemas)
- - `sslyze`, `sqlmap`, `python-owasp-zap-v2.4`, `shodan` — embedded security tools
+   - `PySide6` — GUI framework
+   - `pysqlcipher3` — encrypted SQLite driver
+   - `fastapi`, `uvicorn`, `slowapi` — headless API server
+   - `cryptography` — AES-256-GCM key derivation and evidence encryption
+   - `pydantic` — typed data models (Observation, Finding schemas)
+   - `sslyze`, `sqlmap`, `python-owasp-zap-v2.4`, `shodan` — embedded security tools
 7. **Downloads pinned Go security tool binaries** directly from their official GitHub Release pages. SHA-256 hashes are verified after every download. Tools are extracted into the local `bin/` directory:
 
 | Tool | Version | Source | Purpose |
@@ -181,17 +181,17 @@ This gives you the full source tree including all scanner modules, the UI, the A
 | `race-the-web` | v1.0.3 | The-Z-Labs/race-the-web | Race condition exploitation |
 
 8. **Installs Node.js tools** via `npm` (globally, into the repo's local `node_modules`):
- - `ppmap` — prototype pollution payload mapper
- - `wscat` — WebSocket testing client
+   - `ppmap` — prototype pollution payload mapper
+   - `wscat` — WebSocket testing client
 
 9. **Logs all output** to `setup.log` in the repository root. The terminal shows a live spinner with coloured output (`✔`, `⚠`, `✘`).
 
 **Optional flags:**
 
 ```bash
-./setup.sh --skip-tools # Skip Go binary downloads (useful in AV-restricted environments)
-./setup.sh --no-venv # Use system Python instead of creating a new venv
-./setup.sh --help # Print usage
+./setup.sh --skip-tools   # Skip Go binary downloads (useful in AV-restricted environments)
+./setup.sh --no-venv      # Use system Python instead of creating a new venv
+./setup.sh --help         # Print usage
 ```
 
 **Typical install time:** 2–5 minutes on a fast connection. SQLCipher source compilation adds ~1 minute on slower machines.
@@ -244,9 +244,9 @@ This is the only command you need to start SMP for every session.
 **Flags you can pass through to `main.py`:**
 
 ```bash
-./run.sh --operator "Alice" # Sets the operator name shown in scan records and reports
-./run.sh --api # Force headless API mode even if a display is available
-./run.sh --no-lock # Disable the single-instance lock (useful for development)
+./run.sh --operator "Alice"   # Sets the operator name shown in scan records and reports
+./run.sh --api                # Force headless API mode even if a display is available
+./run.sh --no-lock            # Disable the single-instance lock (useful for development)
 ```
 
 ---
@@ -258,8 +258,8 @@ Once `run.sh` hands off to `main.py`, the application performs these steps:
 1. **Single-instance lock** — acquires an exclusive, non-blocking file lock on `/tmp/.smp_runtime.lock` via `fcntl.flock()`. If another SMP instance is already running, it prints `"Another instance of SMP is already running. Exiting."` and terminates.
 2. **Signal handlers** — registers `SIGINT` and `SIGTERM` handlers for clean shutdown (releases the file lock, closes the database WAL).
 3. **Mode selection**:
- - If `--api` was passed: starts `uvicorn` serving the FastAPI app (`api/server.py`) on `0.0.0.0:8000`. API docs are at `http://localhost:8000/api/v6/docs`.
- - Otherwise: initialises the PySide6 GUI.
+   - If `--api` was passed: starts `uvicorn` serving the FastAPI app (`api/server.py`) on `0.0.0.0:8000`. API docs are at `http://localhost:8000/api/v6/docs`.
+   - Otherwise: initialises the PySide6 GUI.
 
 ---
 
@@ -287,11 +287,11 @@ After the splash, `main.py` checks whether a master password has already been co
 - Title: `"Create Master Password"`. Size: 450×500.
 - You enter a password and confirm it.
 - A **live strength meter** grades your password across five requirements:
- - ✅ 8+ characters
- - ✅ Uppercase letter
- - ✅ Lowercase letter
- - ✅ Digit
- - ✅ Special character
+  - ✅ 8+ characters
+  - ✅ Uppercase letter
+  - ✅ Lowercase letter
+  - ✅ Digit
+  - ✅ Special character
 - The password bar must reach **100/100 (Strong)** before the "Set Password" button activates.
 - On confirm, `tools/encryption_manager.set_master_password(password)` is called.
 
@@ -311,17 +311,17 @@ SMP uses a layered key model so that the master password is never stored, and al
 
 ```
 Master Password (human-provided, never stored)
- │
- ▼
+       │
+       ▼
  PBKDF2-HMAC-SHA256
  (600,000 iterations, 32-byte random salt)
- │
- ▼
- Key Encryption Key (KEK) ← derived fresh every session
- │
- ├──▶ Database Encryption Key (DEK) → unlocks database/security.db (SQLCipher AES-256)
- ├──▶ Intelligence Encryption Key (IEK) → unlocks database/vulnerability.db
- └──▶ Evidence Encryption Key (EEK) → encrypts per-file scanner outputs (AES-256-GCM)
+       │
+       ▼
+ Key Encryption Key (KEK)   ← derived fresh every session
+       │
+       ├──▶ Database Encryption Key (DEK)  → unlocks database/security.db (SQLCipher AES-256)
+       ├──▶ Intelligence Encryption Key (IEK) → unlocks database/vulnerability.db
+       └──▶ Evidence Encryption Key (EEK)  → encrypts per-file scanner outputs (AES-256-GCM)
 ```
 
 - **KEK** is derived fresh every time you enter your password. It is never stored anywhere.
@@ -473,19 +473,19 @@ The **Dashboard Tab** is the default landing page upon logging into SMP V9.5. It
 provides a single-pane-of-glass overview of your organization's security
 posture.
 
-* **Global Time Range Filter Button**: Located at the top right, this button
+*   **Global Time Range Filter Button**: Located at the top right, this button
 allows you to filter all dashboard widgets by a specific time period (e.g., Last
 24 Hours, Last 7 Days, Last 30 Days, Custom Range).
-* **Refresh Dashboard Button**: Forces an immediate pull of the latest data
+*   **Refresh Dashboard Button**: Forces an immediate pull of the latest data
 from the backend database, circumventing the standard 5-minute auto-refresh
 interval.
-* **Customize Layout Button**: Enables "Edit Mode." In this mode, users can
+*   **Customize Layout Button**: Enables "Edit Mode." In this mode, users can
 drag and drop widgets, resize them, or click the "Add Widget" button to
 introduce new metrics (like Top 10 Vulnerable Assets, Scan Execution Trends, or
 SLA Compliance metrics).
-* **Export Dashboard Button**: Generates a high-fidelity PDF snapshot of the
+*   **Export Dashboard Button**: Generates a high-fidelity PDF snapshot of the
 current dashboard view, perfect for quick executive updates.
-* **Summary Widgets**: By default, the dashboard displays "Total Open
+*   **Summary Widgets**: By default, the dashboard displays "Total Open
 Findings," "Critical/High Severity Breakdown," "Average Time to Remediate
 (MTTR)," and "Active Scans." Clicking on any of these widgets acts as a
 shortcut, pivoting you directly into the Findings or Scans tab with the relevant
@@ -499,22 +499,22 @@ The **Targets Tab** is where administrators define the scope of their security
 operations. A "Target" can be a single IP address, a CIDR block, a hostname, or
 a web application URL.
 
-* **New Target Button**: Opens a modal window to manually input a new target.
+*   **New Target Button**: Opens a modal window to manually input a new target.
 You must specify the Target Name, Network Address (IP/URL), and assign it to an
 appropriate Asset Group.
-* **Import Targets Button**: Allows bulk creation of targets by uploading a
+*   **Import Targets Button**: Allows bulk creation of targets by uploading a
 standard CSV file. The UI provides a "Download Template" link to ensure your CSV
 headers match the platform's expectations.
-* **Export Targets Button**: Dumps the current list of targets (respecting
+*   **Export Targets Button**: Dumps the current list of targets (respecting
 applied filters) into a CSV or Excel file for offline auditing.
-* **Bulk Actions Dropdown**: After selecting multiple targets via the
+*   **Bulk Actions Dropdown**: After selecting multiple targets via the
 checkboxes on the left side of the data grid, this dropdown allows you to
 perform actions en masse. Options include "Assign Tags," "Change Group,"
 "Deactivate Targets," and "Delete Targets."
-* **Target Data Grid**: Displays all configured targets. Columns include
+*   **Target Data Grid**: Displays all configured targets. Columns include
 Target Name, IP/Hostname, OS Guess, Last Scanned Date, and a proprietary Risk
 Score. Clicking column headers sorts the data.
-* **Target Details Action Icon**: The small gear/eye icon next to each target
+*   **Target Details Action Icon**: The small gear/eye icon next to each target
 opens a slide-out panel showing specific authentication credentials attached to
 the target and its historical scan calendar.
 
@@ -525,18 +525,18 @@ the target and its historical scan calendar.
 The **Scans Tab** controls the execution engine of the SMP V9.5 platform. It is
 divided into "Active Scans," "Scheduled Scans," and "Scan History."
 
-* **New Scan Button**: Launches the Scan Configuration Wizard. Here, you
+*   **New Scan Button**: Launches the Scan Configuration Wizard. Here, you
 define the Scan Name, select a Scan Template (e.g., Full TCP Port Scan, Web App
 Auth Scan, Fast Discovery), attach Targets or Target Groups, and configure
 scheduling.
-* **Play/Pause/Stop Buttons**: Active scans feature real-time controls. The
+*   **Play/Pause/Stop Buttons**: Active scans feature real-time controls. The
 "Pause" button suspends network traffic generation (useful during unforeseen
 network load spikes), while the "Stop" button terminates the scan immediately,
 saving whatever partial results were gathered. "Resume" restarts a paused scan.
-* **Clone Scan Button**: Available in the Scan History sub-tab, this highly
+*   **Clone Scan Button**: Available in the Scan History sub-tab, this highly
 useful button takes a previous scan's exact configuration and duplicates it,
 allowing you to re-run it instantly without navigating the configuration wizard.
-* **View Logs Button**: Opens a raw text modal detailing the exact scanner
+*   **View Logs Button**: Opens a raw text modal detailing the exact scanner
 engine outputs, connection timeouts, and plugin compilation logs. This is
 critical for troubleshooting when a scan fails to complete.
 
@@ -547,22 +547,22 @@ critical for troubleshooting when a scan fails to complete.
 The **Findings Tab** is the heart of the analyst's workflow, where
 vulnerabilities, misconfigurations, and compliance violations are triaged.
 
-* **Advanced Filter Toggle**: Expands a comprehensive filtering matrix. You
+*   **Advanced Filter Toggle**: Expands a comprehensive filtering matrix. You
 can filter by CVSS Score, Severity (Critical, High, Medium, Low, Info), Status
 (Open, Closed, Risk Accepted, False Positive), Asset Tag, and First Discovered
 date.
-* **Mark False Positive Button**: Moves the selected finding out of the "Open"
+*   **Mark False Positive Button**: Moves the selected finding out of the "Open"
 queue. This requires the user to input a mandatory justification note, which is
 logged for audit purposes.
-* **Accept Risk Button**: Similar to False Positive, but used when the
+*   **Accept Risk Button**: Similar to False Positive, but used when the
 vulnerability is legitimate but business context dictates it will not be fixed.
 Requires an expiration date (e.g., Risk Accepted for 90 days), after which the
 finding will revert to "Open."
-* **Create Ticket Button**: Integrates directly with ITSM tools (like Jira or
+*   **Create Ticket Button**: Integrates directly with ITSM tools (like Jira or
 ServiceNow). Clicking this pushes the finding details to the ticketing system
 and attaches the resulting Ticket ID to the finding row in SMP for bidirectional
 tracking.
-* **Verify/Retest Button**: Commands the scanning engine to immediately
+*   **Verify/Retest Button**: Commands the scanning engine to immediately
 perform a targeted, single-plugin scan against the specific asset to verify if
 the vulnerability has been remediated, without requiring a full system scan.
 
@@ -573,22 +573,22 @@ the vulnerability has been remediated, without requiring a full system scan.
 The **Intel Tab** integrates global Threat Intelligence directly into your
 platform.
 
-* **Threat Feeds Section**: Displays the synchronization status of external
+*   **Threat Feeds Section**: Displays the synchronization status of external
 intelligence feeds (e.g., CISA KEV, National Vulnerability Database, proprietary
 Zero-Day feeds). A "Force Sync" button allows manual updating of these feeds.
-* **Zero-Day Alerts Panel**: A scrolling marquee of newly announced, high-
+*   **Zero-Day Alerts Panel**: A scrolling marquee of newly announced, high-
 profile vulnerabilities. Clicking an alert automatically cross-references the
 CVE against your Assets inventory to identify immediate exposure.
-* **Advisory Export Button**: Downloads high-level PDF advisories regarding
+*   **Advisory Export Button**: Downloads high-level PDF advisories regarding
 specific threat actors or vulnerability campaigns to share with non-technical
 stakeholders.
 
 #### Deep Dive: CVE Search Functionality
 Located prominently within the Intel Tab (and globally via the top navigation bar), the **CVE Search** is an immensely powerful tool.
-* **Search Bar**: Accepts standard CVE IDs (e.g., CVE-2023-12345).
-* **Advanced Query Builder**: Clicking the "+" icon next to the search bar allows operators to use boolean logic and specific operators. For example, typing `vendor:microsoft AND cvss:>8.0 AND published:>2024-01-01` returns all high-severity Microsoft vulnerabilities disclosed this year.
-* **EPSS Score Display**: Every searched CVE displays its Exploit Prediction Scoring System (EPSS) probability, indicating the real-world likelihood of exploitation.
-* **"Find in My Environment" Button**: Once a CVE is searched, this button executes a rapid query against the local SMP database, instantly listing any internally managed assets that suffer from this specific CVE.
+*   **Search Bar**: Accepts standard CVE IDs (e.g., CVE-2023-12345).
+*   **Advanced Query Builder**: Clicking the "+" icon next to the search bar allows operators to use boolean logic and specific operators. For example, typing `vendor:microsoft AND cvss:>8.0 AND published:>2024-01-01` returns all high-severity Microsoft vulnerabilities disclosed this year.
+*   **EPSS Score Display**: Every searched CVE displays its Exploit Prediction Scoring System (EPSS) probability, indicating the real-world likelihood of exploitation.
+*   **"Find in My Environment" Button**: Once a CVE is searched, this button executes a rapid query against the local SMP database, instantly listing any internally managed assets that suffer from this specific CVE.
 
 ---
 
@@ -597,15 +597,15 @@ Located prominently within the Intel Tab (and globally via the top navigation ba
 The **Assets Tab** provides a purely inventory-centric view of the network,
 built dynamically from scan results and API integrations.
 
-* **Discover Assets Button**: Triggers a lightweight ICMP/ARP sweep across
+*   **Discover Assets Button**: Triggers a lightweight ICMP/ARP sweep across
 predefined subnet ranges to populate the inventory without running intrusive
 vulnerability checks.
-* **Add Asset Button**: For manually adding un-scannable assets (e.g., offline
+*   **Add Asset Button**: For manually adding un-scannable assets (e.g., offline
 cold-storage servers) to maintain a complete centralized ledger.
-* **Manage Tags Button**: Opens the taxonomy manager. Tags (e.g., "PCI-Scope",
+*   **Manage Tags Button**: Opens the taxonomy manager. Tags (e.g., "PCI-Scope",
 "Production", "Third-Party") can be created here and later applied to assets for
 granular reporting.
-* **Set Criticality Button**: Allows administrators to override default asset
+*   **Set Criticality Button**: Allows administrators to override default asset
 importance. Setting an asset to "Mission Critical" will automatically elevate
 the risk score of any vulnerabilities found on it.
 
@@ -616,15 +616,15 @@ the risk score of any vulnerabilities found on it.
 The **Reports Tab** is the dissemination engine of SMP V9.5, transforming raw
 data into actionable intelligence.
 
-* **Generate New Report Button**: Initiates the report creation flow. Users
+*   **Generate New Report Button**: Initiates the report creation flow. Users
 first select a template.
-* **Template Manager**: Distinguishes between "Executive Summaries" (high-
+*   **Template Manager**: Distinguishes between "Executive Summaries" (high-
 level graphs, risk trending, minimal jargon) and "Technical Remediation Reports"
 (deep technical details, exact file paths, patch links).
-* **Schedule Report Button**: Allows users to automate reporting. For example,
+*   **Schedule Report Button**: Allows users to automate reporting. For example,
 configuring a "Weekly Patching Delta" report to be emailed to the IT Operations
 group every Monday at 8:00 AM.
-* **Download/Share Buttons**: Previously generated reports are stored in a
+*   **Download/Share Buttons**: Previously generated reports are stored in a
 history grid. They can be downloaded locally (PDF, HTML) or shared via a secure,
 time-expiring link directly from the platform.
 
@@ -635,14 +635,14 @@ time-expiring link directly from the platform.
 The **Exporter Tab** is designed for integrating SMP data into downstream data
 lakes, SIEMs, or continuous monitoring tools.
 
-* **New Export Task Button**: Opens a configuration pane to set up a
+*   **New Export Task Button**: Opens a configuration pane to set up a
 continuous or scheduled data push.
-* **Format Selection Dropdown**: Users can choose to export raw data in JSON,
+*   **Format Selection Dropdown**: Users can choose to export raw data in JSON,
 CSV, or XML formats.
-* **Webhook Configuration Button**: Allows administrators to set up real-time
+*   **Webhook Configuration Button**: Allows administrators to set up real-time
 HTTP POST callbacks. For instance, whenever a new Critical vulnerability is
 discovered, a webhook can be fired instantly to a custom Slack/Teams bot.
-* **Test Connection Button**: Essential for troubleshooting API keys and
+*   **Test Connection Button**: Essential for troubleshooting API keys and
 network routes. It sends a mock payload to the configured destination to verify
 successful transmission before saving the export task.
 
@@ -653,15 +653,15 @@ successful transmission before saving the export task.
 The **Scanners Tab** is an infrastructure management page used to control the
 distributed scanning sensors.
 
-* **Deploy Node Button**: Generates a unique, one-time execution script (bash
+*   **Deploy Node Button**: Generates a unique, one-time execution script (bash
 for Linux, PowerShell for Windows) to install a new scanner agent in a remote
 network segment.
-* **Scanner Grid**: Displays all active and offline scanners. Columns show
+*   **Scanner Grid**: Displays all active and offline scanners. Columns show
 Node Name, IP, Polling Status, Current CPU/RAM Load, and Plugin Version.
-* **Restart Service Button**: Allows administrators to remotely restart the
+*   **Restart Service Button**: Allows administrators to remotely restart the
 scanner daemon on a specific node without requiring SSH/RDP access to the
 underlying OS.
-* **Update Feed Button**: Pushes the latest vulnerability signatures to a
+*   **Update Feed Button**: Pushes the latest vulnerability signatures to a
 specific scanner node immediately, overriding the nightly automatic update
 schedule.
 
@@ -672,16 +672,16 @@ schedule.
 The **Settings Tab** governs platform administration, access control, and system
 maintenance.
 
-* **User Management Button**: Create, delete, or suspend analyst accounts.
-* **RBAC Configuration**: Role-Based Access Control is managed here. Create
+*   **User Management Button**: Create, delete, or suspend analyst accounts.
+*   **RBAC Configuration**: Role-Based Access Control is managed here. Create
 custom roles (e.g., "View-Only Auditor", "Remediation Specialist") and assign
 granular permissions to specific UI tabs or asset groups.
-* **SSO/SAML Configuration Button**: Facilitates integration with Identity
+*   **SSO/SAML Configuration Button**: Facilitates integration with Identity
 Providers like Okta, Azure AD, or PingIdentity for seamless federated login.
-* **System Preferences**: Manage global variables such as password complexity
+*   **System Preferences**: Manage global variables such as password complexity
 requirements, session timeout durations, and custom branding (uploading company
 logos to replace the default SMP logo).
-* **Audit Logs Button**: Downloads an immutable CSV ledger of every action
+*   **Audit Logs Button**: Downloads an immutable CSV ledger of every action
 performed within the platform by any user—crucial for compliance and internal
 security investigations.
 
@@ -694,39 +694,39 @@ any single row slides out the **Finding Detail Panel**, which is arguably the
 most critical interface for a security analyst. It is divided into several
 highly detailed sections:
 
-* **Header & Summary View**: At the top, the panel clearly displays the
+*   **Header & Summary View**: At the top, the panel clearly displays the
 Vulnerability Name, the affected Asset Name (hyperlinked to the Asset Tab), the
 numerical CVSS v3.1 score, and a color-coded Severity badge. A large "Actions"
 button in the top right replicates the triage actions (Create Ticket, Accept
 Risk, Mark FP).
-* **Vulnerability Description & Impact**: A comprehensive, human-readable
+*   **Vulnerability Description & Impact**: A comprehensive, human-readable
 explanation of the flaw. This section explains *how* the vulnerability works and
 the potential business impact if an adversary successfully exploits it (e.g.,
 remote code execution, data exfiltration, denial of service).
-* **CVSS Vector String & Calculator**: Displays the raw CVSS vector (e.g.,
+*   **CVSS Vector String & Calculator**: Displays the raw CVSS vector (e.g.,
 `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`). Crucially, this UI element is
 interactive. Analysts can adjust the metrics (like changing Attack Vector from
 Network to Local) to see how environmental compensations alter the final score,
 aiding in environmental risk scoring.
-* **Proof of Concept (PoC) / Evidence**: This is where SMP proves the
+*   **Proof of Concept (PoC) / Evidence**: This is where SMP proves the
 vulnerability exists. It displays the exact HTTP request sent by the scanner and
 the corresponding HTTP response from the server that triggered the alert. For
 authenticated scans, it may show the output of a specific shell command or
 registry key value. This is vital for eliminating false positives and convincing
 system administrators that the flaw is real.
-* **Remediation & Solutions**: Provides actionable advice. This section
+*   **Remediation & Solutions**: Provides actionable advice. This section
 includes exact patch numbers (e.g., KB5001234), direct hyperlinks to vendor
 advisories, or configuration workarounds (e.g., "Disable SMBv1 in the Windows
 Registry").
-* **Linked Assets / Blast Radius**: A visual dependency graph showing other
+*   **Linked Assets / Blast Radius**: A visual dependency graph showing other
 assets in the same network segment that also suffer from this vulnerability.
 This helps analysts understand the "blast radius" and prioritize patching on
 central pivot points.
-* **Activity & Triage Log**: An immutable chronological timeline at the bottom
+*   **Activity & Triage Log**: An immutable chronological timeline at the bottom
 of the panel. It records when the finding was first discovered, every time it
 was seen in subsequent scans, and any human interactions (e.g., "John Doe marked
 this as Risk Accepted on Oct 12th," "Ticket SEC-4423 created on Oct 13th").
-* **Export Finding Button**: A localized button within the panel that exports
+*   **Export Finding Button**: A localized button within the panel that exports
 just this specific vulnerability's technical details to a secure, password-
 protected PDF, intended for direct handover to the specific developer or
 sysadmin responsible for the fix.
@@ -909,7 +909,7 @@ parameters, and its specific position within the DAG execution order.
 ### 18. Burp Suite Professional (Headless)
 **Description:** The toolkit for web security testing. SMP utilizes Burp's REST API for scanning.
 **Dependencies:** Burp Suite Pro License, `java` >= 17.
-**DAG Execution Order:** Phase 4 (Vulnerability Scanning).
+**DAG Execution Order:** Phase 4 (Premium Vulnerability Scanning).
 **Tuning & Configuration:**
 - `Headless Execution:` Run via `java -jar burpsuite_pro.jar -Djava.awt.headless=true --project-file=smp.burp`.
 - `Configuration JSON:` SMP loads a highly customized `scan_config.json` via the REST API, disabling out-of-band (OAST) checks if the target network is strictly air-gapped.
@@ -1041,60 +1041,60 @@ from smp.core.models import Observation, Severity
 from smp.core.base import BaseScanner
 
 @register_scanner(
- name="AcmeProprietaryTokenScanner",
- version="1.0.0",
- description="Detects hardcoded ACME internal tokens.",
- target_extensions=[".py", ".json", ".yaml", ".yml", ".txt", ".conf"]
+    name="AcmeProprietaryTokenScanner",
+    version="1.0.0",
+    description="Detects hardcoded ACME internal tokens.",
+    target_extensions=[".py", ".json", ".yaml", ".yml", ".txt", ".conf"]
 )
 class AcmeProprietaryTokenScanner(BaseScanner):
- def __init__(self):
- super().__init__()
- # Compile the regex once during initialization for performance
- self.token_pattern = re.compile(r'ACME_TOKEN_[A-Za-z0-9]{16}')
+    def __init__(self):
+        super().__init__()
+        # Compile the regex once during initialization for performance
+        self.token_pattern = re.compile(r'ACME_TOKEN_[A-Za-z0-9]{16}')
 
- def scan_file(self, file_context):
- """
- The main entry point called by the SMP engine for each file.
- :param file_context: An object containing file content, path, and
+    def scan_file(self, file_context):
+        """
+        The main entry point called by the SMP engine for each file.
+        :param file_context: An object containing file content, path, and
 metadata.
- """
- observations = []
- content = file_context.get_content()
- 
- # If the file is too large or binary, get_content might return None
- if not content:
- return observations
+        """
+        observations = []
+        content = file_context.get_content()
+        
+        # If the file is too large or binary, get_content might return None
+        if not content:
+            return observations
 
- for line_num, line in enumerate(content.splitlines(), start=1):
- matches = self.token_pattern.finditer(line)
- for match in matches:
- snippet = line.strip()
- # Optional: redact the actual token in the snippet to prevent
+        for line_num, line in enumerate(content.splitlines(), start=1):
+            matches = self.token_pattern.finditer(line)
+            for match in matches:
+                snippet = line.strip()
+                # Optional: redact the actual token in the snippet to prevent
 leaking it in reports
- redacted_snippet =
+                redacted_snippet =
 self.token_pattern.sub('ACME_TOKEN_***REDACTED***', snippet)
- 
- obs = Observation(
- rule_id="CUST-SEC-01",
- title="Hardcoded ACME Token",
- description="A proprietary ACME authentication token was
+                
+                obs = Observation(
+                    rule_id="CUST-SEC-01",
+                    title="Hardcoded ACME Token",
+                    description="A proprietary ACME authentication token was
 found hardcoded in the source file. "
- "Hardcoded credentials can be easily extracted
+                                "Hardcoded credentials can be easily extracted
 by unauthorized parties and used to "
- "compromise internal systems.",
- severity=Severity.CRITICAL,
- file_path=file_context.file_path,
- line_number=line_num,
- snippet=redacted_snippet,
- remediation="Remove the hardcoded token and migrate it to a
+                                "compromise internal systems.",
+                    severity=Severity.CRITICAL,
+                    file_path=file_context.file_path,
+                    line_number=line_num,
+                    snippet=redacted_snippet,
+                    remediation="Remove the hardcoded token and migrate it to a
 secure secrets management "
- "system such as HashiCorp Vault or AWS Secrets
+                                "system such as HashiCorp Vault or AWS Secrets
 Manager. Use environment variables "
- "to inject the token at runtime."
- )
- observations.append(obs)
- 
- return observations
+                                "to inject the token at runtime."
+                )
+                observations.append(obs)
+                
+        return observations
 ```
 
 ### Best Practices for Custom Scanners
@@ -1115,7 +1115,8 @@ instead of raw text parsing.
 ## Optimizing Performance: WAL Mode and Concurrency Limits
 
 As your codebase grows, the time required to perform comprehensive security
-scans naturally increases. SMP V9.5 is built to handle massive repositories, but achieving maximum performance requires tuning the system to
+scans naturally increases. SMP V9.5 is built to handle massive enterprise
+repositories, but achieving maximum performance requires tuning the system to
 match your hardware and workload profile. The two most impactful areas for
 tuning are the database backend and the internal concurrency thread pool.
 
@@ -1144,9 +1145,9 @@ You can enable WAL mode via the `smp_config.yaml` file:
 
 ```yaml
 database:
- connection_string: "sqlite:///smp_results.db"
- wal_mode: true
- synchronous: "NORMAL"
+  connection_string: "sqlite:///smp_results.db"
+  wal_mode: true
+  synchronous: "NORMAL"
 ```
 
 In addition to setting `wal_mode: true`, it is highly recommended to set the
@@ -1178,15 +1179,15 @@ You can explicitly override the ThreadPoolExecutor concurrency limits in the
 
 ```yaml
 engine:
- concurrency:
- max_workers: 16
- chunk_size: 50
+  concurrency:
+    max_workers: 16
+    chunk_size: 50
 ```
 
 - **max_workers**: This defines the absolute maximum number of threads in the pool. A good rule of thumb for optimization:
- - For standard local SSDs: Set `max_workers` to exactly `number_of_cores * 2`.
- - For network storage: Set `max_workers` higher, potentially `number_of_cores * 4`, to compensate for high latency.
- - For highly CPU-intensive custom AST scanners: Restrict `max_workers` to the exact `number_of_cores` to prevent context-switching overhead.
+  - For standard local SSDs: Set `max_workers` to exactly `number_of_cores * 2`.
+  - For network storage: Set `max_workers` higher, potentially `number_of_cores * 4`, to compensate for high latency.
+  - For highly CPU-intensive custom AST scanners: Restrict `max_workers` to the exact `number_of_cores` to prevent context-switching overhead.
 - **chunk_size**: This defines how many files are dispatched to a worker thread in a single batch. Increasing chunk size reduces the overhead of task submission but can lead to uneven thread utilization at the end of a scan.
 
 Monitoring your system's `iostat` and CPU utilization during a test run is the
@@ -1238,13 +1239,13 @@ Example using `curl`:
 
 ```bash
 curl -X POST https://smp.internal.corp:8443/api/v1/scans \
- -H "Authorization: Bearer $SMP_API_TOKEN" \
- -H "Content-Type: application/json" \
- -d '{
- "target_path": "/mnt/ci_builds/project_repo",
- "profile": "strict_ci",
- "wait_for_completion": true
- }'
+     -H "Authorization: Bearer $SMP_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "target_path": "/mnt/ci_builds/project_repo",
+           "profile": "strict_ci",
+           "wait_for_completion": true
+         }'
 ```
 
 Setting `wait_for_completion: true` ensures the HTTP request blocks until the
@@ -1267,9 +1268,9 @@ complete example of a shell script that could run in a CI pipeline step:
 echo "Starting SMP Security Scan..."
 
 RESPONSE=$(curl -s -X POST https://smp.internal.corp:8443/api/v1/scans \
- -H "Authorization: Bearer $SMP_API_TOKEN" \
- -H "Content-Type: application/json" \
- -d '{"target_path": "'$WORKSPACE'", "profile": "ci_default",
+     -H "Authorization: Bearer $SMP_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"target_path": "'$WORKSPACE'", "profile": "ci_default",
 "wait_for_completion": true}')
 
 # Extract counts using jq
@@ -1282,12 +1283,12 @@ echo "Critical Findings: $CRITICAL_COUNT"
 echo "High Findings: $HIGH_COUNT"
 
 if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
- echo "ERROR: Security vulnerabilities detected exceeding threshold."
- echo "Build failed. Please remediate findings."
- exit 1
+    echo "ERROR: Security vulnerabilities detected exceeding threshold."
+    echo "Build failed. Please remediate findings."
+    exit 1
 else
- echo "SUCCESS: No blocking security vulnerabilities found."
- exit 0
+    echo "SUCCESS: No blocking security vulnerabilities found."
+    exit 0
 fi
 ```
 
@@ -1301,19 +1302,19 @@ name: SMP Security Scan
 on: [pull_request]
 
 jobs:
- smp-scan:
- runs-on: self-hosted
- steps:
- - name: Checkout Code
- uses: actions/checkout@v3
+  smp-scan:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
- - name: Execute SMP Headless Scan
- env:
- SMP_API_TOKEN: ${{ secrets.SMP_API_TOKEN }}
- run: |
- # Use the python smp-client utility for cleaner integration
- pip install smp-client
- smp-client scan --target . --fail-on high,critical --token
+      - name: Execute SMP Headless Scan
+        env:
+          SMP_API_TOKEN: ${{ secrets.SMP_API_TOKEN }}
+        run: |
+          # Use the python smp-client utility for cleaner integration
+          pip install smp-client
+          smp-client scan --target . --fail-on high,critical --token
 $SMP_API_TOKEN --server https://smp.internal.corp:8443
 ```
 
@@ -1329,12 +1330,12 @@ application into a foundational element of DevSecOps automation.
 Welcome to the troubleshooting and error resolution guide for the Security Management Platform (SMP) V9.5. This section is designed to provide comprehensive details regarding error codes, their root causes, and step-by-step remediation procedures to ensure uninterrupted operation of your security environment. SMP utilizes a standardized error code nomenclature. Every error is prefixed with `SMP-` followed by a four-digit numeric identifier. These identifiers are grouped by subsystems to help administrators quickly identify the source of the issue.
 
 The error ranges are categorized as follows:
-* **1xxx:** Authentication & Authorization errors.
-* **2xxx:** Scanner & Engine errors.
-* **3xxx:** Database & Storage errors.
-* **4xxx:** Evidence & Export errors.
-* **5xxx:** Threat Intelligence Integration errors.
-* **6xxx:** Policy & Compliance errors.
+*   **1xxx:** Authentication & Authorization errors.
+*   **2xxx:** Scanner & Engine errors.
+*   **3xxx:** Database & Storage errors.
+*   **4xxx:** Evidence & Export errors.
+*   **5xxx:** Threat Intelligence Integration errors.
+*   **6xxx:** Policy & Compliance errors.
 
 In addition to referencing this guide, we strongly recommend checking the SMP
 System Logs located at `/var/log/smp/syslog.log` for additional contextual
@@ -1546,7 +1547,7 @@ scale data offloading.
 ## 5.6 Category 5xxx: Threat Intelligence
 
 These errors relate to the ingestion, parsing, and utilization of external
-threat intelligence feeds, including integrations, MISP, and
+threat intelligence feeds, including  integrations, MISP, and
 commercial feed providers.
 
 ### SMP-5001: Feed Sync Failed
@@ -1659,58 +1660,58 @@ SMP V9.5 is architected as a local-first, zero-cloud security data pipeline. Rat
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ SMP V9.5 ARCHITECTURE │
+│                                 SMP V9.5 ARCHITECTURE                                  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
- │
- ┌───────────────────────────┴───────────────────────────┐
- ▼ ▼
- [ GUI Mode (PySide6 MVC) ] [ Headless API Mode (FastAPI) ]
- • main.py → splash_screen.py • main.py --api
- • password_dialog.py (4-Layer KEK/DEK) • api/server.py (/api/v6/)
- • dashboard_layout.py + dashboard_logic.py • api/auth.py (JWT Bearer)
- │ │
- └───────────────────────────┬───────────────────────────┘
- │
- ▼
- ┌───────────────────────────────────────────────┐
- │ ENGAGEMENT & SCOPE ENGINE │
- │ • core/authorization.py • core/scope_engine.py │
- │ • tools/responsibility_manager.py │
- └───────────────────────┬───────────────────────┘
- │
- ▼
- ┌───────────────────────────────────────────────┐
- │ DAG ORCHESTRATION & RESILIENCE │
- │ • scanners/core/dag.py (Kahn's Topo-Sort) │
- │ • scanners/core/registry.py (90 Scanners) │
- │ • scanners/framework/ (Sandbox, Timeout) │
- │ • tools/mac_changer.py (OUI Preservation) │
- └───────────────────────┬───────────────────────┘
- │
- ▼
- ┌───────────────────────────────────────────────┐
- │ IMMUTABLE OBSERVATIONS & THREAT INTEL │
- │ • core/observation.py (Typed Observations) │
- │ • intelligence/cve_correlator.py (CPE Match) │
- │ • intelligence/epss.py • intelligence/cisa.py │
- │ • intelligence/brain.py (Local Heuristics) │
- └───────────────────────┬───────────────────────┘
- │
- ▼
- ┌───────────────────────────────────────────────┐
- │ DEDUPLICATION & RISK SCORING │
- │ • tools/finding_deduplicator.py (SHA-256 FP) │
- │ • tools/risk_scorer.py (Logarithmic Weights) │
- │ • tools/compliance_mapper.py (NIST/ISO/PCI) │
- └───────────────────────┬───────────────────────┘
- │
- ▼
- ┌───────────────────────────────────────────────┐
- │ STORAGE, REPORTING & DATA EXPORT │
- │ • tools/db_manager.py (SQLCipher AES-256) │
- │ • tools/report_generator.py (RFC 8785 Hash) │
- │ • tools/data_exporter.py (Legal Gate "I AGREE")│
- └───────────────────────────────────────────────┘
+                                         │
+             ┌───────────────────────────┴───────────────────────────┐
+             ▼                                                       ▼
+  [ GUI Mode (PySide6 MVC) ]                              [ Headless API Mode (FastAPI) ]
+  • main.py → splash_screen.py                            • main.py --api
+  • password_dialog.py (4-Layer KEK/DEK)                  • api/server.py (/api/v6/)
+  • dashboard_layout.py + dashboard_logic.py              • api/auth.py (JWT Bearer)
+             │                                                       │
+             └───────────────────────────┬───────────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │          ENGAGEMENT & SCOPE ENGINE            │
+                 │ • core/authorization.py • core/scope_engine.py │
+                 │ • tools/responsibility_manager.py             │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │       DAG ORCHESTRATION & RESILIENCE          │
+                 │ • scanners/core/dag.py (Kahn's Topo-Sort)     │
+                 │ • scanners/core/registry.py (90 Scanners)     │
+                 │ • scanners/framework/ (Sandbox, Timeout)      │
+                 │ • tools/mac_changer.py (OUI Preservation)     │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │     IMMUTABLE OBSERVATIONS & THREAT INTEL     │
+                 │ • core/observation.py (Typed Observations)    │
+                 │ • intelligence/cve_correlator.py (CPE Match)  │
+                 │ • intelligence/epss.py • intelligence/cisa.py │
+                 │ • intelligence/brain.py (Local Heuristics)    │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │        DEDUPLICATION & RISK SCORING           │
+                 │ • tools/finding_deduplicator.py (SHA-256 FP)  │
+                 │ • tools/risk_scorer.py (Logarithmic Weights)  │
+                 │ • tools/compliance_mapper.py (NIST/ISO/PCI)   │
+                 └───────────────────────┬───────────────────────┘
+                                         │
+                                         ▼
+                 ┌───────────────────────────────────────────────┐
+                 │      STORAGE, REPORTING & DATA EXPORT         │
+                 │ • tools/db_manager.py (SQLCipher AES-256)     │
+                 │ • tools/report_generator.py (RFC 8785 Hash)   │
+                 │ • tools/data_exporter.py (Legal Gate "I AGREE")│
+                 └───────────────────────────────────────────────┘
 ```
 
 ### 12.2 Complete File & Component Taxonomy (All 186 Modules)
@@ -1738,102 +1739,102 @@ The platform is structured into modular layers, each with strict separation of c
 #### Phase 1: Environment Provisioning & Supply-Chain Validation
 1. **Command**: `./setup.sh`
 2. **Execution**:
- - Analyzes host operating system (`Debian`, `Ubuntu`, `Arch`, `Fedora`, `RHEL`, `openSUSE`, `macOS/Darwin`) and CPU architecture (`x86_64` vs `arm64`).
- - Installs system compilation prerequisites: `libsqlite3-dev`, `libsqlcipher-dev`, `python3-dev`, `libxcb-cursor0`, `git`, `curl`, `jq`.
- - Downloads pinned Go security tool binaries (`nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`).
- - Validates cryptographic SHA-256 hashes against trusted release manifests to prevent supply-chain tampering.
- - Creates an isolated Python virtual environment (`venv/`) and installs pinned dependencies from `requirements.txt`.
+   - Analyzes host operating system (`Debian`, `Ubuntu`, `Arch`, `Fedora`, `RHEL`, `openSUSE`, `macOS/Darwin`) and CPU architecture (`x86_64` vs `arm64`).
+   - Installs system compilation prerequisites: `libsqlite3-dev`, `libsqlcipher-dev`, `python3-dev`, `libxcb-cursor0`, `git`, `curl`, `jq`.
+   - Downloads pinned Go security tool binaries (`nuclei`, `subfinder`, `httpx`, `katana`, `dnsx`, `ffuf`, `gitleaks`, `dalfox`).
+   - Validates cryptographic SHA-256 hashes against trusted release manifests to prevent supply-chain tampering.
+   - Creates an isolated Python virtual environment (`venv/`) and installs pinned dependencies from `requirements.txt`.
 
 #### Phase 2: Launch & Cryptographic Key Derivation
 1. **Command**: `./run.sh` or `python3 main.py`
 2. **Execution**:
- - Obtains an exclusive non-blocking file lock on `/tmp/.smp_runtime.lock` via `fcntl.flock()`. If another instance is running, execution halts immediately with error `SMP-1001`.
- - Renders `SplashScreen` (`ui/views/splash_screen.py`).
- - Prompts `PasswordDialog` (`ui/components/password_dialog.py`).
- - **4-Layer Cryptographic Key Hierarchy**:
- 1. Operator inputs the Master Password.
- 2. `tools/encryption_manager.py` applies **PBKDF2-HMAC-SHA256 with 600,000 iterations** over a 32-byte cryptographic salt to derive the **Key Encryption Key (KEK)**:
- $$\text{KEK} = \text{PBKDF2}(\text{HMAC-SHA256}, \text{Password}, \text{Salt}, 600000, 32)$$
- 3. The KEK unwraps three isolated 256-bit sub-keys:
- - **DEK (Database Encryption Key)**: Unlocks `database/security.db` and `database/redundancy.db` via SQLCipher.
- - **IEK (Intelligence Encryption Key)**: Unlocks private intelligence records.
- - **EEK (Evidence Encryption Key)**: Encrypts raw tool artifacts in `database/raw_outputs/`.
- 4. In-memory keys are held exclusively inside `KeyStore` and never written to disk in unencrypted form.
+   - Obtains an exclusive non-blocking file lock on `/tmp/.smp_runtime.lock` via `fcntl.flock()`. If another instance is running, execution halts immediately with error `SMP-1001`.
+   - Renders `SplashScreen` (`ui/views/splash_screen.py`).
+   - Prompts `PasswordDialog` (`ui/components/password_dialog.py`).
+   - **4-Layer Cryptographic Key Hierarchy**:
+     1. Operator inputs the Master Password.
+     2. `tools/encryption_manager.py` applies **PBKDF2-HMAC-SHA256 with 600,000 iterations** over a 32-byte cryptographic salt to derive the **Key Encryption Key (KEK)**:
+        $$\text{KEK} = \text{PBKDF2}(\text{HMAC-SHA256}, \text{Password}, \text{Salt}, 600000, 32)$$
+     3. The KEK unwraps three isolated 256-bit sub-keys:
+        - **DEK (Database Encryption Key)**: Unlocks `database/security.db` and `database/redundancy.db` via SQLCipher.
+        - **IEK (Intelligence Encryption Key)**: Unlocks private intelligence records.
+        - **EEK (Evidence Encryption Key)**: Encrypts raw tool artifacts in `database/raw_outputs/`.
+     4. In-memory keys are held exclusively inside `KeyStore` and never written to disk in unencrypted form.
 
 #### Phase 3: Target Onboarding, Scope Engine & Legal Attestation
 1. Operator navigates to the **Targets** tab and submits a URL or network CIDR (e.g. `https://target.corp` or `192.168.1.0/24`).
 2. **Legal Attestation Gate**:
- - `ResponsibilityDialog` (`ui/components/responsibility_dialog.py`) opens.
- - The operator must scroll to the end of the legal terms and type:
- > *"I accept full legal responsibility for scanning this target."*
- - Once confirmed, `tools/responsibility_manager.py` logs the attestation timestamp, operator ID, and target hash into the encrypted audit ledger.
+   - `ResponsibilityDialog` (`ui/components/responsibility_dialog.py`) opens.
+   - The operator must scroll to the end of the legal terms and type:
+     > *"I accept full legal responsibility for scanning this target."*
+   - Once confirmed, `tools/responsibility_manager.py` logs the attestation timestamp, operator ID, and target hash into the encrypted audit ledger.
 3. **Scope Engine**:
- - `core/scope_engine.py` compiles the target boundaries into active CIDR, wildcard domain (`*.target.corp`), and URL rules.
- - Any packet or request targeted outside these boundaries is intercepted and aborted with `ScopeViolationError` (`SMP-2001`).
+   - `core/scope_engine.py` compiles the target boundaries into active CIDR, wildcard domain (`*.target.corp`), and URL rules.
+   - Any packet or request targeted outside these boundaries is intercepted and aborted with `ScopeViolationError` (`SMP-2001`).
 
 #### Phase 4: Pre-Flight Health Check & OPSEC Anonymization
 1. Operator initiates scanning by clicking **"Scan Target"**.
 2. **System Health Verification**:
- - `SystemCheckDialog` (`ui/components/system_check_dialog.py`) queries `tools/system_checker.py`.
- - Validates that CPU usage is below 80%, free RAM is at least 1,024 MB, free disk space is at least 2,048 MB, and required tool binaries are executable in `$PATH`.
+   - `SystemCheckDialog` (`ui/components/system_check_dialog.py`) queries `tools/system_checker.py`.
+   - Validates that CPU usage is below 80%, free RAM is at least 1,024 MB, free disk space is at least 2,048 MB, and required tool binaries are executable in `$PATH`.
 3. **MAC Address Randomization**:
- - If enabled in `settings.json`, `tools/mac_changer.py` reads the primary network interface OUI (first 3 bytes) and randomizes only the lower 3 bytes:
- $$\text{MAC}_{\text{new}} = \text{OUI}_{\text{vendor}} \parallel \text{RandomBytes}(3)$$
- - This prevents network intrusion detection systems (NIDS) from flagging suspicious vendor mismatches on the local broadcast domain.
+   - If enabled in `settings.json`, `tools/mac_changer.py` reads the primary network interface OUI (first 3 bytes) and randomizes only the lower 3 bytes:
+     $$\text{MAC}_{\text{new}} = \text{OUI}_{\text{vendor}} \parallel \text{RandomBytes}(3)$$
+   - This prevents network intrusion detection systems (NIDS) from flagging suspicious vendor mismatches on the local broadcast domain.
 
 #### Phase 5: DAG Graph Orchestration & Parallel Scan Waves
 1. `ui/controllers/dashboard_logic.py` spawns an asynchronous `ScanWorker` thread.
 2. `scanners/core/registry.py` discovers all 90 scanners and supplies their manifests to `scanners/core/dag.py`.
 3. `DAGOrchestrator` computes the topological dependency order using Kahn's algorithm:
- - **Wave 1 (Passive Reconnaissance)**: `Whois` $\to$ `CRT.sh` $\to$ `HackerTarget` $\to$ `Subfinder` $\to$ `Amass` $\to$ `DNSx`
- - **Wave 2 (Active Host & Service Probing)**: `HTTPx` $\to$ `Nmap` $\to$ `Masscan` $\to$ `SSL/TLS Scanner` $\to$ `Security Headers` $\to$ `Tech Fingerprint`
- - **Wave 3 (Content Enumeration & CMS Analysis)**: `Katana` $\to$ `Nikto` $\to$ `WPScan` $\to$ `Robots.txt` $\to$ `CORS Scanner` $\to$ `Dirb` $\to$ `Gobuster`
- - **Wave 4 (Targeted Exploitation & Fuzzing)**: `Nuclei` $\to$ `FFUF` $\to$ `SQLMap` $\to$ `Dalfox` $\to$ `Commix` $\to$ `IDOR Scanner` $\to$ `Race-the-Web` $\to$ `Gitleaks`
+   - **Wave 1 (Passive Reconnaissance)**: `Whois` $\to$ `CRT.sh` $\to$ `HackerTarget` $\to$ `Subfinder` $\to$ `Amass` $\to$ `DNSx`
+   - **Wave 2 (Active Host & Service Probing)**: `HTTPx` $\to$ `Nmap` $\to$ `Masscan` $\to$ `SSL/TLS Scanner` $\to$ `Security Headers` $\to$ `Tech Fingerprint`
+   - **Wave 3 (Content Enumeration & CMS Analysis)**: `Katana` $\to$ `Nikto` $\to$ `WPScan` $\to$ `Robots.txt` $\to$ `CORS Scanner` $\to$ `Dirb` $\to$ `Gobuster`
+   - **Wave 4 (Targeted Exploitation & Fuzzing)**: `Nuclei` $\to$ `FFUF` $\to$ `SQLMap` $\to$ `Dalfox` $\to$ `Commix` $\to$ `IDOR Scanner` $\to$ `Race-the-Web` $\to$ `Gitleaks`
 4. `scanners/framework/` wraps every tool process in a sandboxed execution harness with strict timeouts (`timeout.py`), retry handling (`retry.py`), and cooling pauses (`scan_runner.py:get_cooling_delay()`) to prevent thermal throttling.
 
 #### Phase 6: Observation Model Parsing & Threat Intelligence Correlation
 1. Raw tool output (JSON, XML, text) is stored in the encrypted Evidence Store (`core/evidence.py`) and tagged with a SHA-256 hash.
 2. The output is parsed into structured, immutable `Observation` objects (`core/observation.py`).
 3. `intelligence/cve_correlator.py` extracts service banners and Common Platform Enumeration (CPE) strings, querying `database/cve.db` using Levenshtein distance string matching:
- - Evaluates vulnerability version ranges (`<=`, `>=`, `<`, `>`, `==`).
- - If the CVE is in the CISA KEV catalog (`intelligence/cisa.py`), a **$2.0\times$ risk multiplier** is assigned.
- - The FIRST EPSS probability score (`intelligence/epss.py`) is attached to represent real-world exploitation probability.
+   - Evaluates vulnerability version ranges (`<=`, `>=`, `<`, `>`, `==`).
+   - If the CVE is in the CISA KEV catalog (`intelligence/cisa.py`), a **$2.0\times$ risk multiplier** is assigned.
+   - The FIRST EPSS probability score (`intelligence/epss.py`) is attached to represent real-world exploitation probability.
 4. `intelligence/brain.py` correlates cross-scanner evidence and synthesizes multi-stage attack paths.
 
 #### Phase 7: Finding Deduplication, Risk Scoring & Alerts
 1. **Composite Fingerprinting**:
- - `tools/finding_deduplicator.py` calculates a canonical SHA-256 hash across the finding's core attributes:
- $$\text{Fingerprint} = \text{SHA256}(\text{Target} \parallel \text{Port/Service} \parallel \text{VulnClass} \parallel \text{CVE\_ID})$$
- - Duplicate findings from different scanners (e.g. Nikto and Nuclei both flagging `X-Frame-Options`) are merged into a single verified finding with combined evidence references.
+   - `tools/finding_deduplicator.py` calculates a canonical SHA-256 hash across the finding's core attributes:
+     $$\text{Fingerprint} = \text{SHA256}(\text{Target} \parallel \text{Port/Service} \parallel \text{VulnClass} \parallel \text{CVE\_ID})$$
+   - Duplicate findings from different scanners (e.g. Nikto and Nuclei both flagging `X-Frame-Options`) are merged into a single verified finding with combined evidence references.
 2. **Logarithmic Risk Calculation**:
- - `tools/risk_scorer.py` evaluates all findings using a logarithmic damping curve to prevent low-severity alert volume from skewing the overall target risk score (0–100 scale).
+   - `tools/risk_scorer.py` evaluates all findings using a logarithmic damping curve to prevent low-severity alert volume from skewing the overall target risk score (0–100 scale).
 3. **Compliance Mapping**:
- - `tools/compliance_mapper.py` maps technical findings directly to regulatory controls in **NIST SP 800-53 Rev 5**, **ISO/IEC 27001:2022**, and **PCI-DSS v4.0**.
+   - `tools/compliance_mapper.py` maps technical findings directly to regulatory controls in **NIST SP 800-53 Rev 5**, **ISO/IEC 27001:2022**, and **PCI-DSS v4.0**.
 4. **Signaling & Alerts**:
- - Events are broadcast over `tools/event_bus.py` and local UDP socket port 5005, updating the PySide6 UI and triggering SMTP email alerts via `tools/alert_engine.py` for Critical and High vulnerabilities.
+   - Events are broadcast over `tools/event_bus.py` and local UDP socket port 5005, updating the PySide6 UI and triggering SMTP email alerts via `tools/alert_engine.py` for Critical and High vulnerabilities.
 
-#### Phase 8: Cryptographic Reporting & Data Export
+#### Phase 8: Cryptographic Reporting & Enterprise Data Export
 1. **Report Generation**:
- - `tools/report_generator.py` compiles the engagement findings, asset inventory, compliance mappings, and evidence hashes into machine-readable JSON and formatted Markdown.
- - Calculates the **RFC 8785 Canonical SHA-256 signature** over the report contents and embeds the authenticity hash into the header.
+   - `tools/report_generator.py` compiles the engagement findings, asset inventory, compliance mappings, and evidence hashes into machine-readable JSON and formatted Markdown.
+   - Calculates the **RFC 8785 Canonical SHA-256 signature** over the report contents and embeds the authenticity hash into the header.
 2. **Report Verification**:
- - Any stakeholder can verify that the report has not been altered using the standalone verification tool:
- ```bash
- python3 tools/verify_report.py reports/scan_1.json
- ```
-3. **Ticketing Export**:
- - In Page 7 ("Exporter"), the operator selects an export format (`Jira JSON`, `ServiceNow CSV`, `DefectDojo JSON`, `Generic JSON`, `Markdown ZIP`, or `SARIF 2.1.0`).
- - `ExportGateDialog` (`ui/components/export_gate_dialog.py`) prompts the operator to type `"I AGREE"`.
- - `tools/data_exporter.py` prepends unencrypted plaintext warning headers to every exported file and writes an immutable `ExportAuditRecord` into the audit log.
+   - Any stakeholder can verify that the report has not been altered using the standalone verification tool:
+     ```bash
+     python3 tools/verify_report.py reports/scan_1.json
+     ```
+3. **Enterprise Ticketing Export**:
+   - In Page 7 ("Exporter"), the operator selects an export format (`Jira JSON`, `ServiceNow CSV`, `DefectDojo JSON`, `Generic JSON`, `Markdown ZIP`, or `SARIF 2.1.0`).
+   - `ExportGateDialog` (`ui/components/export_gate_dialog.py`) prompts the operator to type `"I AGREE"`.
+   - `tools/data_exporter.py` prepends unencrypted plaintext warning headers to every exported file and writes an immutable `ExportAuditRecord` into the audit log.
 
 #### Phase 9: Application Teardown & Key Zeroing
 1. When the operator closes the window (`DashboardWindow.closeEvent`):
- - All active `ScanWorker` threads and sandboxed subprocesses are signaled to terminate (`SIGTERM`).
- - UDP socket listener threads and polling timers are stopped.
- - SQLite WAL caches are checkpointed and flushed to disk.
- - `tools/encryption_manager.py:clear_keys()` overwrites all in-memory cryptographic keys with zeroes:
- $$\text{KeyStore.keys} \leftarrow \emptyset$$
- - The single-instance lock file `/tmp/.smp_runtime.lock` is released and unlinked.
+   - All active `ScanWorker` threads and sandboxed subprocesses are signaled to terminate (`SIGTERM`).
+   - UDP socket listener threads and polling timers are stopped.
+   - SQLite WAL caches are checkpointed and flushed to disk.
+   - `tools/encryption_manager.py:clear_keys()` overwrites all in-memory cryptographic keys with zeroes:
+     $$\text{KeyStore.keys} \leftarrow \emptyset$$
+   - The single-instance lock file `/tmp/.smp_runtime.lock` is released and unlinked.
 
 ---
 
@@ -1859,66 +1860,66 @@ from tools.db_manager import add_finding
 logger = logging.getLogger("smp.scan")
 
 @register_scanner(
- name="Custom API Fuzzer",
- step_name="Running Custom API Fuzzer",
- depends_on=["HTTPx", "Katana"], # Scanners that must finish before this runs
- binary_name="ffuf", # Binary checked in PATH (optional)
- needs_binary=True,
- confidence=90,
- severity="High"
+    name="Custom API Fuzzer",
+    step_name="Running Custom API Fuzzer",
+    depends_on=["HTTPx", "Katana"],  # Scanners that must finish before this runs
+    binary_name="ffuf",               # Binary checked in PATH (optional)
+    needs_binary=True,
+    confidence=90,
+    severity="High"
 )
 def run_custom_fuzzer(target_url: str, scan_id: int = None, settings: dict = None):
- """
- Executes custom API fuzzing against discovered endpoints.
- """
- logger.info(f"[Custom API Fuzzer] Starting fuzzing against {target_url}")
- settings = settings or load_settings()
- 
- findings = []
- cmd = ["ffuf", "-u", f"{target_url}/FUZZ", "-w", "/usr/share/wordlists/api_routes.txt", "-mc", "200,401,403"]
- 
- try:
- res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
- if res.returncode == 0 and "Status: 200" in res.stdout:
- findings.append({
- "severity": "Medium",
- "title": "Exposed Unauthenticated API Endpoint",
- "description": f"Discovered reachable API route during fuzzing: {res.stdout[:200]}",
- "confidence": 90,
- "remediation": "Apply authentication middleware to API endpoints.",
- "scanner": "Custom API Fuzzer"
- })
- if scan_id is not None:
- add_finding(
- scan_id=scan_id,
- severity="Medium",
- title="Exposed Unauthenticated API Endpoint",
- description=res.stdout[:500],
- source_tool="Custom API Fuzzer",
- confidence=90,
- recommendation="Apply authentication middleware to API endpoints."
- )
- except Exception as e:
- logger.error(f"[Custom API Fuzzer] Error during execution: {e}")
- 
- return findings
+    """
+    Executes custom API fuzzing against discovered endpoints.
+    """
+    logger.info(f"[Custom API Fuzzer] Starting fuzzing against {target_url}")
+    settings = settings or load_settings()
+    
+    findings = []
+    cmd = ["ffuf", "-u", f"{target_url}/FUZZ", "-w", "/usr/share/wordlists/api_routes.txt", "-mc", "200,401,403"]
+    
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if res.returncode == 0 and "Status: 200" in res.stdout:
+            findings.append({
+                "severity": "Medium",
+                "title": "Exposed Unauthenticated API Endpoint",
+                "description": f"Discovered reachable API route during fuzzing: {res.stdout[:200]}",
+                "confidence": 90,
+                "remediation": "Apply authentication middleware to API endpoints.",
+                "scanner": "Custom API Fuzzer"
+            })
+            if scan_id is not None:
+                add_finding(
+                    scan_id=scan_id,
+                    severity="Medium",
+                    title="Exposed Unauthenticated API Endpoint",
+                    description=res.stdout[:500],
+                    source_tool="Custom API Fuzzer",
+                    confidence=90,
+                    recommendation="Apply authentication middleware to API endpoints."
+                )
+    except Exception as e:
+        logger.error(f"[Custom API Fuzzer] Error during execution: {e}")
+        
+    return findings
 ```
 
 #### Method B: Using `PLUGIN_META` Zero-Config Auto-Discovery
 ```python
 PLUGIN_META = {
- "name": "CloudAudit",
- "binary": "prowler",
- "severity": "High",
- "step_name": "Auditing Cloud Configurations",
- "depends_on": ["HTTPx"],
- "confidence": 95,
- "enabled": True
+    "name": "CloudAudit",
+    "binary": "prowler",
+    "severity": "High",
+    "step_name": "Auditing Cloud Configurations",
+    "depends_on": ["HTTPx"],
+    "confidence": 95,
+    "enabled": True
 }
 
 def scan(target_url: str, scan_id: int, settings: dict):
- # Execution logic here
- return []
+    # Execution logic here
+    return []
 ```
 
 ---
@@ -1928,26 +1929,26 @@ def scan(target_url: str, scan_id: int, settings: dict):
 To customize scanner parallelization and queue behavior, modify `scanners/core/dag.py`:
 
 1. **Adjust Max Concurrent Workers**:
- In `DAGOrchestrator.__init__()`:
- ```python
- # Default is 3 parallel workers. Increase for high-core workstations:
- self.max_workers = max_workers # e.g., change to 6 or 8
- ```
+   In `DAGOrchestrator.__init__()`:
+   ```python
+   # Default is 3 parallel workers. Increase for high-core workstations:
+   self.max_workers = max_workers  # e.g., change to 6 or 8
+   ```
 
 2. **Adjust Inter-Request Rate Limiting**:
- In `scanners/core/dag.py`:
- ```python
- # Delay in seconds between scanner dispatches:
- _INTER_REQUEST_DELAY = 0.5 # Adjust lower (0.1) for speed or higher (2.0) for stealth
- ```
+   In `scanners/core/dag.py`:
+   ```python
+   # Delay in seconds between scanner dispatches:
+   _INTER_REQUEST_DELAY = 0.5  # Adjust lower (0.1) for speed or higher (2.0) for stealth
+   ```
 
 3. **Adjust CPU Cooling Thresholds**:
- In `scanners/scan_runner.py`:
- ```python
- def get_cooling_delay():
- # System temperature and CPU load monitoring logic
- # Adjust delay thresholds (e.g. pause for 5s if CPU > 85%)
- ```
+   In `scanners/scan_runner.py`:
+   ```python
+   def get_cooling_delay():
+       # System temperature and CPU load monitoring logic
+       # Adjust delay thresholds (e.g. pause for 5s if CPU > 85%)
+   ```
 
 ---
 
@@ -1956,34 +1957,34 @@ To customize scanner parallelization and queue behavior, modify `scanners/core/d
 To customize how vulnerability risk scores (0–100) are calculated, modify `tools/risk_scorer.py`:
 
 1. **Modify Severity Base Weights**:
- ```python
- _SEVERITY_LOG_WEIGHTS = {
- "Critical": 60, # Adjust base impact for Critical findings
- "High": 25, # Adjust base impact for High findings
- "Medium": 8, # Adjust base impact for Medium findings
- "Low": 2, # Adjust base impact for Low findings
- "Info": 0.1, # Adjust base impact for Informational findings
- }
- ```
+   ```python
+   _SEVERITY_LOG_WEIGHTS = {
+       "Critical": 60,   # Adjust base impact for Critical findings
+       "High":     25,   # Adjust base impact for High findings
+       "Medium":   8,    # Adjust base impact for Medium findings
+       "Low":      2,    # Adjust base impact for Low findings
+       "Info":     0.1,  # Adjust base impact for Informational findings
+   }
+   ```
 
 2. **Modify CISA KEV & EPSS Multipliers**:
- ```python
- # CISA KEV active exploitation multiplier:
- if finding.get("is_kev"):
- weight *= 2.0 # Increase to 2.5 or 3.0 for higher exploit weighting
+   ```python
+   # CISA KEV active exploitation multiplier:
+   if finding.get("is_kev"):
+       weight *= 2.0  # Increase to 2.5 or 3.0 for higher exploit weighting
 
- # EPSS Probability Factor:
- epss = float(finding.get("epss_score", 0.0))
- if epss > 0.5:
- weight *= (1.0 + epss)
- ```
+   # EPSS Probability Factor:
+   epss = float(finding.get("epss_score", 0.0))
+   if epss > 0.5:
+       weight *= (1.0 + epss)
+   ```
 
 3. **Modify Minimum Confidence Threshold**:
- ```python
- # Filter out low-confidence scanner outputs from risk score:
- if finding.get("confidence", 100) < 60:
- continue # Adjust threshold to 70 or 80 for stricter scoring
- ```
+   ```python
+   # Filter out low-confidence scanner outputs from risk score:
+   if finding.get("confidence", 100) < 60:
+       continue  # Adjust threshold to 70 or 80 for stricter scoring
+   ```
 
 ---
 
@@ -1993,11 +1994,11 @@ To add a new regulatory framework (e.g. HIPAA, CIS Benchmarks, SOC 2 Type II), u
 
 ```python
 COMPLIANCE_FRAMEWORKS["HIPAA"] = {
- "SQL Injection": ["164.312(a)(1) Access Control", "164.312(e)(1) Transmission Security"],
- "Cross-Site Scripting": ["164.312(c)(1) Data Integrity"],
- "Weak SSL/TLS": ["164.312(e)(2)(ii) Encryption in Transit"],
- "Exposed Admin Panel": ["164.308(a)(1)(ii)(B) Risk Management"],
- "Default Credentials": ["164.312(d) Authentication"],
+    "SQL Injection": ["164.312(a)(1) Access Control", "164.312(e)(1) Transmission Security"],
+    "Cross-Site Scripting": ["164.312(c)(1) Data Integrity"],
+    "Weak SSL/TLS": ["164.312(e)(2)(ii) Encryption in Transit"],
+    "Exposed Admin Panel": ["164.308(a)(1)(ii)(B) Risk Management"],
+    "Default Credentials": ["164.312(d) Authentication"],
 }
 ```
 
@@ -2008,13 +2009,13 @@ COMPLIANCE_FRAMEWORKS["HIPAA"] = {
 To customize how CPE strings and CVE databases are matched, modify `intelligence/cve_correlator.py`:
 
 1. **Adjust Levenshtein Similarity Threshold**:
- ```python
- # Minimum similarity score required to correlate service banner to a CVE (0.0 - 1.0):
- SIMILARITY_THRESHOLD = 0.85 # Increase to 0.95 to reduce false positives
- ```
+   ```python
+   # Minimum similarity score required to correlate service banner to a CVE (0.0 - 1.0):
+   SIMILARITY_THRESHOLD = 0.85  # Increase to 0.95 to reduce false positives
+   ```
 
 2. **Custom Version Comparison Logic**:
- Update `_matches_version_range(service_version, cve_version_spec)` to support custom version formatting schemes (e.g. git commit hashes or internal build tags).
+   Update `_matches_version_range(service_version, cve_version_spec)` to support custom version formatting schemes (e.g. git commit hashes or internal build tags).
 
 ---
 
@@ -2024,39 +2025,39 @@ To customize encryption key derivation, modify `tools/encryption_manager.py`:
 
 ```python
 # Number of PBKDF2 iterations for Master Password -> KEK:
-_PBKDF2_ITERATIONS = 600000 # Increase to 1,000,000 for higher security margin
+_PBKDF2_ITERATIONS = 600000  # Increase to 1,000,000 for higher security margin
 
 # AES-256-GCM Nonce and Tag lengths:
-_NONCE_SIZE = 12 # Standard 96-bit GCM nonce
-_TAG_SIZE = 16 # 128-bit authentication tag
+_NONCE_SIZE = 12  # Standard 96-bit GCM nonce
+_TAG_SIZE = 16    # 128-bit authentication tag
 ```
 
 ---
 
-### 13.7 Adding Custom Export Formats
+### 13.7 Adding Custom Enterprise Export Formats
 
 To add a new export target (e.g. GitLab Issues, Splunk HEC, or Tenable SC), add a new builder method in `tools/data_exporter.py`:
 
 ```python
 class ExportFormat(str, Enum):
- JIRA_JSON = "JIRA_JSON"
- SERVICENOW_CSV = "SERVICENOW_CSV"
- DEFECTDOJO_JSON = "DEFECTDOJO_JSON"
- GENERIC_JSON = "GENERIC_JSON"
- MARKDOWN_ZIP = "MARKDOWN_ZIP"
- SARIF = "SARIF"
- GITLAB_ISSUES = "GITLAB_ISSUES" # New format
+    JIRA_JSON = "JIRA_JSON"
+    SERVICENOW_CSV = "SERVICENOW_CSV"
+    DEFECTDOJO_JSON = "DEFECTDOJO_JSON"
+    GENERIC_JSON = "GENERIC_JSON"
+    MARKDOWN_ZIP = "MARKDOWN_ZIP"
+    SARIF = "SARIF"
+    GITLAB_ISSUES = "GITLAB_ISSUES"  # New format
 
 def _build_gitlab_issues(self, findings: list, engagement_meta: dict) -> list:
- issues = []
- for f in findings:
- issues.append({
- "title": f"[{f.get('severity')}] {f.get('title')}",
- "description": f"{f.get('description')}\n\n**Remediation:** {f.get('remediation')}",
- "labels": ["security", f.get("severity", "Info").lower()],
- "confidential": True
- })
- return issues
+    issues = []
+    for f in findings:
+        issues.append({
+            "title": f"[{f.get('severity')}] {f.get('title')}",
+            "description": f"{f.get('description')}\n\n**Remediation:** {f.get('remediation')}",
+            "labels": ["security", f.get("severity", "Info").lower()],
+            "confidential": True
+        })
+    return issues
 ```
 
 ---
@@ -2064,27 +2065,27 @@ def _build_gitlab_issues(self, findings: list, engagement_meta: dict) -> list:
 ### 13.8 Tweaking UI Styling & Layout Pages
 
 1. **Theme Colors**:
- Modify `ui/theme.py`:
- ```python
- COLORS = {
- "bg_base": "#0D0F14", # Main canvas background
- "bg_card": "#151820", # Card surface background
- "accent_cyan": "#00D4FF", # Accent glow and active border
- "sev_critical": "#FF3D5A", # Critical severity badge color
- "sev_high": "#FF8C42", # High severity badge color
- "sev_medium": "#FFD700", # Medium severity badge color
- "sev_low": "#00C9A7", # Low severity badge color
- }
- ```
+   Modify `ui/theme.py`:
+   ```python
+   COLORS = {
+       "bg_base": "#0D0F14",        # Main canvas background
+       "bg_card": "#151820",        # Card surface background
+       "accent_cyan": "#00D4FF",    # Accent glow and active border
+       "sev_critical": "#FF3D5A",   # Critical severity badge color
+       "sev_high": "#FF8C42",       # High severity badge color
+       "sev_medium": "#FFD700",     # Medium severity badge color
+       "sev_low": "#00C9A7",        # Low severity badge color
+   }
+   ```
 
 2. **Custom QSS Rules**:
- Update `ui/style.qss` to customize widget scrollbars, table hover states, and input focus highlights.
+   Update `ui/style.qss` to customize widget scrollbars, table hover states, and input focus highlights.
 
 3. **Adding a New Navigation Page**:
- In `ui/views/dashboard_layout.py`:
- - Add the page tuple to `PAGE_NAMES`: `('🛰️', 'Telemetry')`.
- - Build a new `QWidget` container and add it to `self.content_stack.addWidget(page_widget)`.
- - In `ui/controllers/dashboard_logic.py`, add `_load_telemetry_page(self)` and connect its signals.
+   In `ui/views/dashboard_layout.py`:
+   - Add the page tuple to `PAGE_NAMES`: `('🛰️', 'Telemetry')`.
+   - Build a new `QWidget` container and add it to `self.content_stack.addWidget(page_widget)`.
+   - In `ui/controllers/dashboard_logic.py`, add `_load_telemetry_page(self)` and connect its signals.
 
 
 

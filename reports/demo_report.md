@@ -151,9 +151,9 @@ A classic SQL Injection vulnerability was confirmed in the POST /api/v1/login en
 
 The following 3 observation(s) support this finding:
 
- - `OBS-001`
- - `OBS-002`
- - `OBS-003`
+  - `OBS-001`
+  - `OBS-002`
+  - `OBS-003`
 
 #### Remediation
 
@@ -193,8 +193,8 @@ The Jetty 9.4.43 application on port 8080 incorporates Log4j 2.14.1, which is vu
 
 The following 2 observation(s) support this finding:
 
- - `OBS-004`
- - `OBS-005`
+  - `OBS-004`
+  - `OBS-005`
 
 #### Remediation
 
@@ -234,8 +234,8 @@ The Redis 7.0.5 instance on port 6379 accepts connections without authentication
 
 The following 2 observation(s) support this finding:
 
- - `OBS-006`
- - `OBS-007`
+  - `OBS-006`
+  - `OBS-007`
 
 #### Remediation
 
@@ -275,7 +275,7 @@ The Spring Framework version in use (5.3.15) is likely affected by CVE-2022-2296
 
 The following 1 observation(s) support this finding:
 
- - `OBS-011`
+  - `OBS-011`
 
 #### Remediation
 
@@ -315,7 +315,7 @@ The TLS certificate for webserver.internal expired on 2025-06-01. Browsers and A
 
 The following 1 observation(s) support this finding:
 
- - `OBS-008`
+  - `OBS-008`
 
 #### Remediation
 
@@ -360,8 +360,8 @@ The web application is missing the following recommended security headers:
 
 The following 2 observation(s) support this finding:
 
- - `OBS-009`
- - `OBS-010`
+  - `OBS-009`
+  - `OBS-010`
 
 #### Remediation
 
@@ -406,14 +406,14 @@ Apache directory listing is enabled for the /uploads/ directory. This exposes th
 
 The following 1 observation(s) support this finding:
 
- - `OBS-012`
+  - `OBS-012`
 
 #### Remediation
 
 Disable directory listing in Apache configuration:
 ```
 <Directory /var/www/html/uploads>
- Options -Indexes
+    Options -Indexes
 </Directory>
 ```
 
@@ -496,10 +496,10 @@ The authenticity hash below was computed over the canonical JSON representation 
 data (excluding the hash field itself) using SHA-256.
 
 ```
-REPORT-ID: e49421bc-2021-4252-8030-d50e64c5b3e1
-ENGAGEMENT: ENG-2026-001
+REPORT-ID:    e49421bc-2021-4252-8030-d50e64c5b3e1
+ENGAGEMENT:   ENG-2026-001
 GENERATED-AT: 2026-08-14T19:15:43.745607+00:00
-SHA-256: 3ca9522d3612d5fb250f57fef939e55086af9580c55cc58790e60f2f11e58a1d
+SHA-256:      3ca9522d3612d5fb250f57fef939e55086af9580c55cc58790e60f2f11e58a1d
 ```
 
 To verify this report has not been tampered with:

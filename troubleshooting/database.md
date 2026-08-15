@@ -79,9 +79,9 @@ python3 -c "
 from tools.encryption_manager import verify_password, is_decryption_ok
 pw = input('Enter master password: ')
 if verify_password(pw):
- print('Password valid and keys loaded successfully.')
+    print('Password valid and keys loaded successfully.')
 else:
- print('Password invalid.')
+    print('Password invalid.')
 "
 
 # 2. If recovering from backup:

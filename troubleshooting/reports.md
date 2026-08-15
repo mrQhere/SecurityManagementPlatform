@@ -30,14 +30,14 @@ This guide provides technical diagnosis and resolutions for report generation, c
 # Install required rendering toolchains on Debian/Ubuntu/Kali:
 sudo apt-get update
 sudo apt-get install -y \
- libpango-1.0-0 \
- libharfbuzz0b \
- libpangoft2-1.0-0 \
- libcairo2 \
- libgdk-pixbuf-2.0-0 \
- libffi-dev \
- fonts-liberation \
- fonts-dejavu-core
+  libpango-1.0-0 \
+  libharfbuzz0b \
+  libpangoft2-1.0-0 \
+  libcairo2 \
+  libgdk-pixbuf-2.0-0 \
+  libffi-dev \
+  fonts-liberation \
+  fonts-dejavu-core
 
 # Re-test PDF compilation with demo generator
 python3 tools/generate_demo_report.py --output reports/test_render
@@ -80,11 +80,11 @@ python3 -c "
 import hashlib, json, sys, os
 ev_dir = sys.argv[1] if len(sys.argv) > 1 else 'data/evidence/'
 for root, dirs, files in os.walk(ev_dir):
- if 'checksum.txt' in files and 'evidence.enc' in files:
- expected = open(os.path.join(root, 'checksum.txt')).read().strip()
- data = open(os.path.join(root, 'evidence.enc'), 'rb').read()
- actual = hashlib.sha256(data).hexdigest()
- print(f'Checking {root}:', 'VALID ✅' if actual == expected else 'TAMPERED ❌')
+    if 'checksum.txt' in files and 'evidence.enc' in files:
+        expected = open(os.path.join(root, 'checksum.txt')).read().strip()
+        data = open(os.path.join(root, 'evidence.enc'), 'rb').read()
+        actual = hashlib.sha256(data).hexdigest()
+        print(f'Checking {root}:', 'VALID ✅' if actual == expected else 'TAMPERED ❌')
 "
 ```
 
