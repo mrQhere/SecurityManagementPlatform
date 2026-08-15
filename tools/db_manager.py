@@ -1420,6 +1420,14 @@ def get_findings_for_scan(scan_id):
             conn.close()
 
 
+def get_findings_by_target(target_id):
+    """Get all findings for the latest scan of a specific target."""
+    scans = get_scans_for_target(target_id, limit=1)
+    if not scans:
+        return []
+    return get_findings_for_scan(scans[0]["id"])
+
+
 def get_all_findings(limit=100):
     """Get latest findings."""
     conn = get_db_connection()
