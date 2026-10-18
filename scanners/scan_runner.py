@@ -122,11 +122,152 @@ def get_cooling_delay():
         return 2.5      # Fallback default
 
 
-def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=1, brain_insights=None):
+class ResilientPopen(subprocess.Popen):
+    """
+    Subprocess Popen wrapper providing process group isolation, reliable
+    termination/kill fallback, diagnostic error preservation, and child process reaping.
+    """
+
+    def __init__(self, args, *kargs, **kwargs):
+        if os.name != 'nt' and 'preexec_fn' not in kwargs:
+            kwargs['preexec_fn'] = os.setsid
+        super().__init__(args, *kargs, **kwargs)
+
+    def _reap_child(self, timeout=1.0):
+        """Reap the child process to prevent zombies, without hanging indefinitely."""
+        try:
+            self.wait(timeout=timeout)
+        except (subprocess.TimeoutExpired, ProcessLookupError, ChildProcessError):
+            pass
+        except Exception as e:
+            logger.debug(f"[ResilientPopen] Exception while reaping pid {self.pid}: {e}")
+
+    def kill(self, timeout=1.0):
+        """
+        Kill the process group first with SIGKILL. If group termination fails,
+        fall back to standard subprocess kill. Preserve original exceptions for
+        diagnostics, avoid masking already-exited processes, and reap child.
+        """
+        group_err = None
+        group_killed = False
+
+        if os.name != 'nt':
+            try:
+                pgid = os.getpgid(self.pid)
+                os.killpg(pgid, signal.SIGKILL)
+                group_killed = True
+            except ProcessLookupError:
+                # Process or group already exited; avoid masking
+                self._reap_child(timeout=0.1)
+                return
+            except Exception as e:
+                group_err = e
+                logger.warning(
+                    f"[ResilientPopen] Failed to killpg(SIGKILL) for pid {self.pid}: {e}. "
+                    f"Falling back to standard subprocess kill."
+                )
+
+        if not group_killed:
+            # Standard subprocess fallback
+            try:
+                super().kill()
+            except ProcessLookupError:
+                # Process already exited; avoid masking
+                self._reap_child(timeout=0.1)
+                return
+            except Exception as fallback_err:
+                if group_err is not None:
+                    logger.error(
+                        f"[ResilientPopen] Both group kill ({group_err}) and standard kill ({fallback_err}) failed for pid {self.pid}"
+                    )
+                    raise fallback_err from group_err
+                logger.error(f"[ResilientPopen] Standard kill failed for pid {self.pid}: {fallback_err}")
+                raise fallback_err
+
+        self._reap_child(timeout=timeout)
+
+    def terminate(self, timeout=1.0):
+        """
+        Terminate the process group first with SIGTERM. If group termination fails,
+        fall back to standard subprocess terminate. Preserve original exceptions for
+        diagnostics, avoid masking already-exited processes, and reap child.
+        """
+        group_err = None
+        group_terminated = False
+
+        if os.name != 'nt':
+            try:
+                pgid = os.getpgid(self.pid)
+                os.killpg(pgid, signal.SIGTERM)
+                group_terminated = True
+            except ProcessLookupError:
+                # Process or group already exited; avoid masking
+                self._reap_child(timeout=0.1)
+                return
+            except Exception as e:
+                group_err = e
+                logger.warning(
+                    f"[ResilientPopen] Failed to killpg(SIGTERM) for pid {self.pid}: {e}. "
+                    f"Falling back to standard subprocess terminate."
+                )
+
+        if not group_terminated:
+            # Standard subprocess fallback
+            try:
+                super().terminate()
+            except ProcessLookupError:
+                # Process already exited; avoid masking
+                self._reap_child(timeout=0.1)
+                return
+            except Exception as fallback_err:
+                if group_err is not None:
+                    logger.error(
+                        f"[ResilientPopen] Both group terminate ({group_err}) and standard terminate ({fallback_err}) failed for pid {self.pid}"
+                    )
+                    raise fallback_err from group_err
+                logger.error(f"[ResilientPopen] Standard terminate failed for pid {self.pid}: {fallback_err}")
+                raise fallback_err
+
+        self._reap_child(timeout=timeout)
+
+
+def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_binary=True, attempt=1, brain_insights=None, cancel_event=None, engagement_id=None, auth_id=None, scan_policy=None):
     """
     Executes a scan function with execution guards, process group tracking,
     adaptive timeouts, and failure tracking.
     """
+    # If cancel_event is not provided directly, attempt to check target's cancel_event from cache
+    if cancel_event is None and scan_id:
+        try:
+            from tools.db_manager import get_scan
+            scan_rec = get_scan(scan_id)
+            if scan_rec and "target_id" in scan_rec:
+                cancel_event = _cancel_events.get(scan_rec["target_id"])
+        except Exception:
+            pass
+
+    # ── V9.5.10 Server-side execution gate check (immediately before execution) ──
+    from core.execution_gate import verify_scan_execution
+    allowed, reason = verify_scan_execution(
+        target=url,
+        scanner_name=step_name,
+        engagement_id=engagement_id,
+        auth_id=auth_id,
+        scan_policy=scan_policy,
+        cancel_event=cancel_event,
+    )
+    if not allowed:
+        logger.warning(f"[{step_name}] Execution gate blocked execution on {url}: {reason}")
+        try:
+            add_log_entry("WARNING", f"[{step_name}] Execution gate blocked {url}: {reason}")
+        except Exception:
+            pass
+        try:
+            log_scanner_failure_status(scan_id, step_name, f"Blocked: {reason}")
+        except Exception:
+            pass
+        return None, False
+
     settings = load_settings()
     
     # 1. Binary availability guard with self-healing
@@ -174,41 +315,6 @@ def run_with_resilience(scan_id, step_name, scan_func, url, binary_name, needs_b
 
     # 3. Subprocess monkeypatching for process group isolation and termination (Improvement 7)
     original_popen = subprocess.Popen
-    
-    class ResilientPopen(original_popen):
-        def __init__(self, args, *kargs, **kwargs):
-            if os.name != 'nt' and 'preexec_fn' not in kwargs:
-                kwargs['preexec_fn'] = os.setsid
-            super().__init__(args, *kargs, **kwargs)
-
-        def kill(self):
-            if os.name != 'nt':
-                try:
-                    os.killpg(os.getpgid(self.pid), signal.SIGKILL)
-                except Exception as e:
-                    from tools.errors import SMPUnclassifiedError
-                    import traceback
-                    import logging
-                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-                    raise SMPUnclassifiedError(str(e))
-                    super().kill()
-            else:
-                super().kill()
-
-        def terminate(self):
-            if os.name != 'nt':
-                try:
-                    os.killpg(os.getpgid(self.pid), signal.SIGTERM)
-                except Exception as e:
-                    from tools.errors import SMPUnclassifiedError
-                    import traceback
-                    import logging
-                    logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-                    raise SMPUnclassifiedError(str(e))
-                    super().terminate()
-            else:
-                super().terminate()
-
     subprocess.Popen = ResilientPopen
     
     result = None
@@ -317,6 +423,18 @@ def start_scan_for_target(target, sudo_password=None):
     """Start a background scan for *target* if one isn't already running."""
     target_id = target["id"]
     url = target["url"]
+
+    # ── V9.5.10 Server-side execution gate check ──────────────────────────────
+    from core.execution_gate import verify_scan_execution
+    allowed, reason = verify_scan_execution(
+        target=url,
+        engagement_id=str(target.get("engagement_id", "default")),
+        auth_id=target.get("auth_id"),
+        scan_policy=target.get("policy") or target.get("scan_policy"),
+    )
+    if not allowed:
+        logger.warning(f"[ScanRunner] Execution gate blocked scan for target {url}: {reason}")
+        return False
 
     with _lock:
         if target_id in _active_scans:
@@ -703,12 +821,59 @@ def _filter_spa_ffuf_results(results):
     return results
 
 
-def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_password=None, cancel_event=None):
+def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_password=None, cancel_event=None, *args, **kwargs):
     # Store sudo password in thread-local storage for this execution thread
     thread_local.sudo_password = sudo_password
 
-    target_id = target["id"]
-    url = target["url"]
+    target_id = target.get("id", 0) if isinstance(target, dict) else 0
+    url = target.get("url", target) if isinstance(target, dict) else str(target)
+    eng_id = str(target.get("engagement_id", "default")) if isinstance(target, dict) else "default"
+    auth_id = target.get("auth_id") if isinstance(target, dict) else None
+
+    # ── V9.5.10 Enforce ScanPlanner and Server-Side Execution Gate ─────────────
+    from core.scan_policy import ScanPolicy
+    from scanners.scan_planner import ScanPlanner
+    from core.execution_gate import verify_scan_execution
+
+    policy = None
+    if isinstance(target, dict) and (target.get("policy") or target.get("scan_policy")):
+        policy = target.get("policy") or target.get("scan_policy")
+        if isinstance(policy, dict):
+            policy = ScanPolicy(policy)
+    if policy is None:
+        policy = ScanPolicy({
+            "engagement_id": eng_id,
+            "name": "ProductionScanPolicy",
+        })
+
+    # Immediate execution gate check
+    allowed, reason = verify_scan_execution(
+        target=url,
+        engagement_id=eng_id,
+        auth_id=auth_id,
+        scan_policy=policy,
+        cancel_event=cancel_event,
+    )
+    if not allowed:
+        logger.warning(f"[ScanRunner] Scan blocked by execution gate for {url}: {reason}")
+        try:
+            add_log_entry("WARNING", f"Scan blocked by execution gate for {url}: {reason}")
+        except Exception:
+            pass
+        return
+
+    # Unified planner gate check
+    planner = ScanPlanner(engagement_id=eng_id, target=url, scan_policy=policy, auth_id=auth_id)
+    try:
+        planner.create_plan()
+    except Exception as gate_err:
+        logger.warning(f"[ScanRunner] Scan blocked by planner execution gate for {url}: {gate_err}")
+        try:
+            add_log_entry("WARNING", f"Scan blocked by execution gate for {url}: {gate_err}")
+        except Exception:
+            pass
+        return
+
     settings = load_settings()
 
     # ── V9.5 — Global Proxy Configuration ────────────────────────────────────
@@ -1116,7 +1281,11 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
                     process_func=process_fn,
                     needs_binary=meta["needs_binary"],
                     precondition=precondition,
-                    resume_status=resume_status
+                    resume_status=resume_status,
+                    engagement_id=eng_id,
+                    auth_id=auth_id,
+                    scan_policy=policy,
+                    cancel_event=cancel_event,
                 )
             )
 
@@ -1333,13 +1502,26 @@ def _run_scan_sequence(target, resume_scan_id=None, resume_status=None, sudo_pas
 # ── Scan resumption ────────────────────────────────────────────────────────────
 
 def resume_interrupted_scans():
-    """Find scans that were running when the app was killed and resume them."""
+    """Find scans that were running when the app was killed and resume them.
+
+    Excludes Cancelled and all other terminal states centrally. Only resumes
+    states explicitly classified as recoverable after an unclean shutdown.
+    Unknown and corrupt statuses fail closed and are never resumed.
+    """
+    resumed_ids = []
     try:
+        from core.state_machine import (
+            TERMINAL_SCAN_STATUSES,
+            is_recoverable_status,
+            is_terminal_status,
+        )
+
         conn = get_db_connection()
+        terminal_placeholders = ", ".join(f"'{s}'" for s in TERMINAL_SCAN_STATUSES)
         rows = conn.execute(
-            "SELECT scans.*, targets.url FROM scans "
-            "JOIN targets ON scans.target_id = targets.id "
-            "WHERE scans.status NOT IN ('Completed', 'Failed', 'Report Pending')"
+            f"SELECT scans.*, targets.url FROM scans "
+            f"JOIN targets ON scans.target_id = targets.id "
+            f"WHERE scans.status NOT IN ({terminal_placeholders})"
         ).fetchall()
         conn.close()
 
@@ -1369,6 +1551,16 @@ def resume_interrupted_scans():
 
         for r in rows:
             scan = dict(r)
+            status = scan.get("status")
+
+            # Enforce positive classification: only explicitly recoverable statuses resume.
+            # Cancelled, terminal, and unknown/corrupt statuses must never auto-resume.
+            if not is_recoverable_status(status) or is_terminal_status(status):
+                logger.info(
+                    f"[Resume] Skipping scan {scan.get('id')} with non-recoverable status '{status}'"
+                )
+                continue
+
             target = {"id": scan["target_id"], "url": scan["url"]}
             target_id = target["id"]
             url = target["url"]
@@ -1381,6 +1573,13 @@ def resume_interrupted_scans():
                     continue
 
                 resume_step = _infer_resume_step(url, scan["status"])
+
+                # If the inferred step is terminal or non-recoverable, skip
+                if is_terminal_status(resume_step) or not is_recoverable_status(resume_step):
+                    logger.info(
+                        f"[Resume] Scan {scan.get('id')} reached non-recoverable step '{resume_step}' in logs. Skipping."
+                    )
+                    continue
 
                 # Register a cancel event so resumed scans can also be cancelled from the UI
                 cancel_event = multiprocessing.Event()
@@ -1402,7 +1601,10 @@ def resume_interrupted_scans():
                     daemon=True
                 )
                 waiter.start()
+                resumed_ids.append(scan["id"])
                 logger.info(f"Resumed scan {scan['id']} for {url} from '{resume_step}'")
 
     except Exception as e:
         logger.error(f"Error resuming scans: {e}")
+
+    return resumed_ids

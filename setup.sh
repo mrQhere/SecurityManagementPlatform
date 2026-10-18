@@ -70,12 +70,23 @@ spin() {
     done
   ) & local spin_pid=$!
 
-  if "$@" >> "$LOG_FILE" 2>&1; then
-    kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
+  local cmd_timeout="${SETUP_CMD_TIMEOUT:-120}"
+  local status=0
+  if command -v timeout &>/dev/null; then
+    timeout "$cmd_timeout" "$@" >> "$LOG_FILE" 2>&1 || status=$?
+  else
+    "$@" >> "$LOG_FILE" 2>&1 || status=$?
+  fi
+
+  kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
+
+  if [[ $status -eq 0 ]]; then
     ok "$msg"
     return 0
+  elif [[ $status -eq 124 ]]; then
+    warn "$msg — timed out after ${cmd_timeout}s"
+    return 1
   else
-    kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
     warn "$msg — see setup.log"
     return 1
   fi
@@ -312,16 +323,38 @@ pkg_update() {
 pkg_install() {
   case "$PKG_MGR" in
     apt)
-      local retries=5
+      local retries=3
       while (( retries > 0 )); do
-        if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"; then return 0; fi
-        sleep 3
+        if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$@"; then return 0; fi
+        sleep 2
         ((retries--))
       done
       
+      # If batch fails, attempt to install available packages individually
+      local failed=()
+      local installed_any=false
+      for p in "$@"; do
+        if apt-cache show "$p" &>/dev/null; then
+          if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$p"; then
+            installed_any=true
+          else
+            failed+=("$p")
+          fi
+        else
+          failed+=("$p (not found in repos)")
+        fi
+      done
+
+      if $installed_any; then
+        if [[ ${#failed[@]} -gt 0 ]]; then
+          warn "Some system packages could not be installed from apt: ${failed[*]}"
+        fi
+        return 0
+      fi
+
       # Run automated troubleshooter on install failure
       run_troubleshooter "System Package Installation"
-      if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"; then return 0; fi
+      if sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends "$@"; then return 0; fi
       
       report_error_with_code \
         "SMP-9002" \
@@ -398,6 +431,13 @@ get_pkg() {
  case "$DISTRO" in
  arch) echo "nikto";;
  rhel) echo "";; # manual install on RHEL
+ debian)
+ if apt-cache show nikto &>/dev/null; then
+ echo "nikto"
+ else
+ echo ""
+ fi
+ ;;
  *) echo "nikto";;
  esac ;;
  ruby)
@@ -419,8 +459,12 @@ get_pkg() {
 
 # ── sudo keepalive ─────────────────────────────────────────────────────────────
 if [[ "$OS" != "Darwin" ]]; then
- sudo -v
- while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
+ if sudo -n true 2>/dev/null; then
+  while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
+ elif [[ -t 0 && -n "${TERM:-}" ]]; then
+  sudo -v || true
+  while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
+ fi
 fi
 
 # ── System packages ────────────────────────────────────────────────────────────
@@ -441,7 +485,13 @@ for cpkg in "${CANONICAL_PKGS[@]}"; do
  for name in $dpkg_name; do
  [[ "$name" == @* ]] && { PKGS_TO_INSTALL+=("$name"); continue; }
  case "$PKG_MGR" in
- apt) dpkg -s "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
+ apt)
+  if apt-cache show "$name" &>/dev/null; then
+   dpkg -s "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name")
+  else
+   warn "Package '$name' not found in apt cache — skipping system package"
+  fi
+  ;;
  dnf) rpm -q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
  pacman) pacman -Q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
  zypper) rpm -q "$name" &>/dev/null || PKGS_TO_INSTALL+=("$name") ;;
@@ -752,23 +802,23 @@ else
 
  # Pre-cache Nuclei Templates
  if have nuclei; then
- spin "Fetching Nuclei Templates" nuclei -update-templates -duc -ni || true
+ spin "Fetching Nuclei Templates" bash -c "timeout 90 nuclei -update-templates -duc -ni" || true
  fi
 
  # ── Optional tools ─────────────────────────────────────────────
  if ! have trivy; then
- spin "Installing Trivy" curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || warn "Trivy: installation failed"
+ spin "Installing Trivy" bash -c "curl -sfL --connect-timeout 10 --max-time 60 https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b '$BIN_DIR'" || warn "Trivy: installation failed"
  fi
  
  if have trivy; then
- spin "Fetching Trivy Vulnerability Database" trivy image --download-db-only --no-progress || true
+ spin "Fetching Trivy Vulnerability Database" bash -c "timeout 90 trivy image --download-db-only --no-progress" || true
  fi
 
- have prowler || spin "Installing Prowler" pip install prowler -q || true
- have nxc 2>/dev/null || spin "Installing NetExec" pip install git+https://github.com/Pennyw0rth/NetExec.git -q || true
+ have prowler || spin "Installing Prowler" pip install --timeout 30 --prefer-binary prowler -q || true
+ have nxc 2>/dev/null || spin "Installing NetExec" pip install --timeout 30 --prefer-binary git+https://github.com/Pennyw0rth/NetExec.git -q || true
  
  # ── V9.5 Expansion Tools ────────────────────────────────────────────────
- spin "Installing Expansion Python Tools" pip install wafw00f semgrep checkov sslyze cloudsplaining kube-hunter droopescan git-dumper -q || true
+ spin "Installing Expansion Python Tools" pip install --timeout 30 --prefer-binary wafw00f semgrep checkov sslyze cloudsplaining kube-hunter droopescan git-dumper -q || true
  
  if ! have hakrawler; then
  spin "Installing Hakrawler" go install github.com/hakluke/hakrawler@latest >> "$LOG_FILE" 2>&1 || true
@@ -780,16 +830,32 @@ else
  spin "Installing Naabu" go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >> "$LOG_FILE" 2>&1 || true
  fi
  if ! have trufflehog; then
- spin "Installing TruffleHog" curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b "$BIN_DIR" >> "$LOG_FILE" 2>&1 || true
+ spin "Installing TruffleHog" bash -c "curl -sSfL --connect-timeout 10 --max-time 60 https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b '$BIN_DIR'" || true
  fi
 
  # ── V9.5 Faraday/DefectDojo Additions ──────────────────────────────────
- spin "Installing Faraday/Dojo Inspired Python Tools" pip install bandit detect-secrets routersploit impacket -q || true
+ local py_minor
+ py_minor=$(python3 -c "import sys; print(sys.version_info.minor)" 2>/dev/null || echo "10")
+ if [[ "$py_minor" -ge 10 ]]; then
+ spin "Installing Faraday/Dojo Inspired Python Tools" pip install --timeout 30 --prefer-binary bandit detect-secrets impacket -q || true
+ else
+ spin "Installing Faraday/Dojo Inspired Python Tools" pip install --timeout 30 --prefer-binary bandit detect-secrets routersploit impacket -q || true
+ fi
  if ! have osv-scanner; then
  spin "Installing OSV-Scanner" go install github.com/google/osv-scanner/cmd/osv-scanner@v1 >> "$LOG_FILE" 2>&1 || true
  fi
  if ! have kube-bench; then
  spin "Installing Kube-Bench" go install github.com/aquasecurity/kube-bench@latest >> "$LOG_FILE" 2>&1 || true
+ fi
+
+ # ── Nikto Standalone Fallback ──────────────────────────────────────────
+ if ! have nikto; then
+ spin "Installing Nikto (standalone fallback)" bash -c "
+   mkdir -p '$BIN_DIR/nikto-src' &&
+   curl -fsSL --connect-timeout 10 --max-time 60 https://github.com/sullo/nikto/archive/refs/tags/2.5.0.tar.gz | tar -xz -C '$BIN_DIR/nikto-src' --strip-components=1 &&
+   ln -sf '$BIN_DIR/nikto-src/program/nikto.pl' '$BIN_DIR/nikto' &&
+   chmod +x '$BIN_DIR/nikto'
+ " || warn "Nikto installation failed"
  fi
 
  # ── Node.js Vulnerability Tools ──────────────────────────────────────────

@@ -1,83 +1,125 @@
 """
-API Authentication Module V9.5
-==============================
+API Authentication Module V9.5.6
+=================================
 JWT token issuance and verification for the SMP API.
 
-Tokens are signed with a secret derived from the SMP master password salt,
-so tokens are invalidated when the password changes.
+Signing key requirements
+------------------------
+Tokens are signed with an independent cryptographically random secret loaded
+from the ``SMP_JWT_SECRET`` environment variable.  This key is **completely
+independent** of the password-hashing salt stored in ``config/auth.json``;
+rotating the user password does NOT affect token validity, and rotating the
+JWT key does NOT affect password hashing.
 
-Token format: HS256 JWT with 24h expiry (configurable).
+Production mode (default)
+    ``SMP_JWT_SECRET`` must be set to a hex or ASCII string of at least
+    32 characters (256 bits of entropy recommended).  If the variable is
+    absent or too short the module raises ``RuntimeError`` immediately,
+    refusing to issue tokens.  See ``.env.example`` for instructions.
+
+Development / CI mode
+    Set ``SMP_DEV_ALLOW_INSECURE_JWT=1`` **and** either ``SMP_CI=1`` to
+    generate a per-process ephemeral random secret.  A loud WARNING is
+    emitted at startup.  The ephemeral secret is never persisted and is
+    never written to any log at INFO level or below.
+
+Secret rotation
+    1. Generate a new 64-hex secret:
+           python3 -c "import secrets; print(secrets.token_hex(32))"
+    2. Set ``SMP_JWT_SECRET`` to that value in your environment / systemd
+       unit / secrets manager.
+    3. Restart the API server.  All existing tokens become invalid immediately
+       (they were signed with the old key).  Users must re-authenticate.
+
+Minimum key length
+    32 characters (256-bit equivalent).  Shorter values are rejected at
+    startup.
+
+The secret value is NEVER logged at any level.
 """
 import os
-import json
 import logging
-import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger("smp.api")
 
 _JWT_EXPIRY_HOURS = 24
 
+# Minimum acceptable length for SMP_JWT_SECRET (characters, not bytes).
+# 32 hex chars = 128-bit; we require 32 to enforce a meaningful lower bound.
+_MIN_SECRET_LEN = 32
+
+# Module-level cache so we load the secret once per process.
+_cached_jwt_secret: str | None = None
+
 
 def _get_jwt_secret() -> str:
     """
-    Derive a stable JWT signing secret from the auth file salt.
-    Falls back to a random env var or a startup-generated secret.
+    Return the JWT signing secret for this process.
+
+    Priority:
+      1. ``SMP_JWT_SECRET`` environment variable (production path).
+      2. Per-process ephemeral secret (development/CI only, with loud warning).
+
+    Raises RuntimeError if no valid secret is available outside of dev/CI mode.
+    The secret value is never included in log messages.
     """
-    # Primary: derive from auth.json salt (invalidated on password change)
-    try:
-        from tools.config_manager import BASE_DIR
-        auth_path = os.path.join(BASE_DIR, "config", "auth.json")
-        if os.path.exists(auth_path):
-            with open(auth_path) as f:
-                data = json.load(f)
-            salt = data.get("salt", "")
-            return hashlib.sha256(f"smp-api-jwt-{salt}".encode()).hexdigest()
-    except Exception as e:
-        from tools.errors import SMPUnclassifiedError
-        import traceback
-        import logging
-        logging.getLogger('smp').error(f'Unexpected error: {e}\n{traceback.format_exc()}')
-        raise SMPUnclassifiedError(str(e))
-        pass
+    global _cached_jwt_secret
+    if _cached_jwt_secret is not None:
+        return _cached_jwt_secret
 
-    # Fallback: env var
-    env_secret = os.environ.get("SMP_JWT_SECRET")
+    env_secret = os.environ.get("SMP_JWT_SECRET", "")
+
     if env_secret:
-        return env_secret
+        if len(env_secret) < _MIN_SECRET_LEN:
+            raise RuntimeError(
+                f"SMP_JWT_SECRET is too short ({len(env_secret)} chars); "
+                f"minimum is {_MIN_SECRET_LEN} characters.  "
+                "Generate a new secret: "
+                "python3 -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        # Accept without logging the value.
+        logger.info(
+            "[Auth] JWT signing key loaded from SMP_JWT_SECRET "
+            f"(length={len(env_secret)})."
+        )
+        _cached_jwt_secret = env_secret
+        return _cached_jwt_secret
 
-    # Last resort: generate and persist a new secret
-    import secrets
-    from tools.config_manager import BASE_DIR
-    auth_path = os.path.join(BASE_DIR, "config", "auth.json")
-    
-    try:
-        data = {}
-        if os.path.exists(auth_path):
-            with open(auth_path) as f:
-                data = json.load(f)
-        
-        # If there's an already generated secret in the file, use it
-        if "jwt_secret" in data:
-            return data["jwt_secret"]
-            
-        new_secret = secrets.token_hex(32)
-        data["jwt_secret"] = new_secret
-        os.makedirs(os.path.dirname(auth_path), exist_ok=True)
-        with open(auth_path, "w") as f:
-            json.dump(data, f, indent=4)
-        logger.info("[Auth] Generated and persisted new JWT secret.")
-        return new_secret
-    except Exception as e:
-        logger.error(f"[Auth] Failed to generate/persist JWT secret: {e}")
-        raise RuntimeError("Failed to obtain or generate JWT secret. Failing closed.")
+    # No SMP_JWT_SECRET set.  Allow an ephemeral key ONLY in explicitly
+    # marked development/CI environments.
+    _ci_mode = os.environ.get("SMP_CI") == "1"
+    _dev_allow = os.environ.get("SMP_DEV_ALLOW_INSECURE_JWT") == "1"
+
+    if _ci_mode or _dev_allow:
+        ephemeral = secrets.token_hex(32)
+        logger.warning(
+            "[Auth] *** DEVELOPMENT / CI MODE *** "
+            "SMP_JWT_SECRET is not set.  Using a per-process ephemeral JWT "
+            "signing secret.  All tokens will be invalidated on restart.  "
+            "Set SMP_JWT_SECRET for production use.  "
+            "Do NOT set SMP_DEV_ALLOW_INSECURE_JWT=1 in production."
+        )
+        _cached_jwt_secret = ephemeral
+        return _cached_jwt_secret
+
+    raise RuntimeError(
+        "SMP_JWT_SECRET environment variable is not set.  "
+        "JWT token issuance is disabled.  "
+        "Set SMP_JWT_SECRET to a random secret of at least "
+        f"{_MIN_SECRET_LEN} characters before starting the API server.  "
+        "Example: "
+        "python3 -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 
 
 def create_token(username: str, expiry_hours: int = _JWT_EXPIRY_HOURS) -> str:
     """
     Create a signed JWT token for the given username.
-    
+
     Returns: JWT string
+    Raises:  RuntimeError if no valid signing key is available.
     """
     from jose import jwt as jose_jwt
     now    = datetime.now(timezone.utc)
@@ -97,8 +139,9 @@ def create_token(username: str, expiry_hours: int = _JWT_EXPIRY_HOURS) -> str:
 def verify_token(token: str) -> str:
     """
     Verify a JWT token.
-    
+
     Returns: username string if valid, None if invalid/expired.
+    Returns None (rather than raising) so callers can treat it as a failed auth.
     """
     from jose import jwt as jose_jwt, JWTError, ExpiredSignatureError
     try:
@@ -108,6 +151,10 @@ def verify_token(token: str) -> str:
         if not username:
             return None
         return username
+    except RuntimeError:
+        # _get_jwt_secret raised — no secret configured, fail closed.
+        logger.warning("[Auth] Token verification failed: JWT secret unavailable.")
+        return None
     except Exception as e:
         logger.warning(f"[Auth] Token verification failed: {e}")
         return None

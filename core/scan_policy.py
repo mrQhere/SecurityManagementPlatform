@@ -22,6 +22,9 @@ class ScanPolicySchema(BaseModel):
     time_windows: TimeWindows = Field(default_factory=TimeWindows)
     max_duration: int = 3600 # seconds
     auto_approve_scope: bool = False
+    allow_private: bool = False
+    allow_loopback: bool = False
+    enforce_dns_rebinding: bool = False
 
 class ScanPolicy:
     def __init__(self, data: dict):

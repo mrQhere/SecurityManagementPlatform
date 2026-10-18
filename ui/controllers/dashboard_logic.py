@@ -35,6 +35,19 @@ class ScanWorker(QThread):
     def run(self):
         try:
             self.scan_log.emit(f"Starting scan for {self.target_url}...")
+            # ── V9.5.10 Server-side execution gate check ──────────────────────
+            from core.execution_gate import verify_scan_execution
+            allowed, reason = verify_scan_execution(
+                target=self.target_url,
+                engagement_id=str(self.target.get("engagement_id", "default")),
+                auth_id=self.target.get("auth_id"),
+            )
+            if not allowed:
+                self.scan_log.emit(f"Scan blocked by execution gate: {reason}")
+                self.scan_error.emit(self.target_url, f"Execution gate rejected: {reason}")
+                self.scan_complete.emit(self.target_url, False)
+                return
+
             # Deferred import
             from scanners import scan_runner
             

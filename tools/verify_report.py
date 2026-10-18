@@ -20,6 +20,7 @@ import sys
 import os
 import re
 import hashlib
+import hmac
 import json
 import argparse
 from typing import Optional, Dict, Any, Tuple
@@ -42,9 +43,53 @@ BANNER = f"""
 {BLD}{BLU}  ╚══════════════════════════════════════════════════════════════════════╝{RST}
 """
 
+# Canonical placeholders for Markdown digest and HMAC calculation
+CANONICAL_DIGEST_PLACEHOLDER = "[SMP_CANONICAL_PAYLOAD_DIGEST]"
+CANONICAL_HMAC_PLACEHOLDER   = "[SMP_CANONICAL_HMAC_DIGEST]"
+
 # Legacy markers for pre-V9.5 HTML/PDF reports
 HASH_MARKER_START = "SMP-CONTENT-HASH:"
 HASH_MARKER_END   = ":END-HASH"
+
+
+class ReportVerificationResult:
+    """
+    Structured report verification outcome distinguishing payload integrity
+    (tamper/corruption detection) from author authenticity (cryptographic origin attestation).
+    Evaluates to True in boolean contexts if and only if verified.
+    """
+    def __init__(
+        self,
+        verified: bool,
+        status: str,
+        integrity: str,
+        authenticity: str,
+        message: str,
+        embedded_hash: Optional[str] = None,
+        computed_hash: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ):
+        self.verified = bool(verified)
+        self.status = status
+        self.integrity = integrity
+        self.authenticity = authenticity
+        self.message = message
+        self.embedded_hash = embedded_hash
+        self.computed_hash = computed_hash
+        self.details = details or {}
+
+    def __bool__(self) -> bool:
+        return self.verified
+
+    def __eq__(self, other):
+        if isinstance(other, bool):
+            return self.verified == other
+        if isinstance(other, str):
+            return self.status == other or (self.verified and other in ("VERIFIED", "INTEGRITY_VERIFIED", "AUTHENTICITY_VERIFIED"))
+        return super().__eq__(other)
+
+    def __repr__(self) -> str:
+        return f"<ReportVerificationResult status={self.status} verified={self.verified}>"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,6 +125,86 @@ def derive_content_hash(url: str, scan_date: str, findings_count: int,
         "generator":      f"SMP {smp_version}",
     }, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def get_canonical_markdown_payload(text: str) -> bytes:
+    """
+    Extracts deterministic canonical payload bytes from a Markdown report.
+    Replaces digest/HMAC fields and cover page tables with placeholders,
+    normalizes line endings, and strips line-end whitespace.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # 1. Mask SHA-256 in attestation block
+    normalized = re.sub(
+        r"(SHA-256:\s*)(?:[a-f0-9]{64}|\[SMP_CANONICAL_PAYLOAD_DIGEST\])",
+        r"\g<1>[SMP_CANONICAL_PAYLOAD_DIGEST]",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+
+    # 2. Mask HMAC-SHA256 in attestation block
+    normalized = re.sub(
+        r"(HMAC-SHA256:\s*)(?:[a-f0-9]{64}|\[SMP_CANONICAL_HMAC_DIGEST\])",
+        r"\g<1>[SMP_CANONICAL_HMAC_DIGEST]",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+
+    # 3. Mask cover page table row (Authenticity Hash / Integrity Digest)
+    normalized = re.sub(
+        r"(\|\s*\*\*(?:Authenticity Hash|Integrity Digest)\*\*\s*\|\s*`)[^`]+(`\s*\|)",
+        r"\g<1>[SMP_CANONICAL_PAYLOAD_DIGEST]\g<2>",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+
+    clean_lines = [line.rstrip() for line in normalized.split("\n")]
+    canonical_text = "\n".join(clean_lines).strip()
+    return canonical_text.encode("utf-8")
+
+
+def compute_markdown_digest(text: str) -> str:
+    """Computes the SHA-256 digest over the canonical Markdown payload."""
+    payload = get_canonical_markdown_payload(text)
+    return hashlib.sha256(payload).hexdigest()
+
+
+def compute_markdown_hmac(text: str, key: bytes) -> str:
+    """Computes HMAC-SHA256 over the canonical Markdown payload using key material."""
+    payload = get_canonical_markdown_payload(text)
+    return hmac.new(key, payload, hashlib.sha256).hexdigest()
+
+
+def extract_markdown_digest(text: str) -> Optional[str]:
+    """Extract embedded 64-hex SHA-256 digest from Markdown report."""
+    m = re.search(r"SHA-256:\s*([a-f0-9]{64})\b", text, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    m = re.search(r"\*\*(?:Authenticity Hash|Integrity Digest)\*\*.*?`([a-f0-9]{64})`", text, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    return None
+
+
+def extract_markdown_hmac(text: str) -> Optional[str]:
+    """Extract embedded 64-hex HMAC-SHA256 signature from Markdown report."""
+    m = re.search(r"HMAC-SHA256:\s*([a-f0-9]{64})\b", text, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    return None
+
+
+def is_legacy_markdown_report(text: str) -> bool:
+    """
+    Identifies older report formats that embedded JSON hashes instead of
+    canonical Markdown payload digests.
+    """
+    if "PAYLOAD-SPEC: canonical-markdown-v1" in text or "PAYLOAD-SPEC:    canonical-markdown-v1" in text:
+        return False
+    if "computed over the canonical JSON representation" in text:
+        return True
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,35 +251,18 @@ def extract_embedded_hash(report_path: str) -> Optional[str]:
     # Case B: Markdown Report
     if ext in (".md", ".markdown"):
         try:
-            with open(report_path, "r", encoding="utf-8") as f:
+            with open(report_path, "r", encoding="utf-8", errors="replace") as f:
                 text = f.read()
-            # 1. Match from Integrity Attestation block: SHA-256: [a-f0-9]{64}
-            m = re.search(r"SHA-256:\s*([a-f0-9]{64})", text, re.IGNORECASE)
-            if m:
-                return m.group(1)
-            # 2. Match: | **Authenticity Hash** | `[a-f0-9]{64}` |
-            m = re.search(r"Authenticity Hash.*?`?([a-f0-9]{64})`?", text, re.IGNORECASE)
-            if m:
-                return m.group(1)
-            # 3. Match any full 64-hex string
-            m = re.search(r"\b([a-f0-9]{64})\b", text)
-            if m:
-                return m.group(1)
-            # 4. Match prefix hash from table if truncated (e.g. 3ca952...32 chars)
-            m = re.search(r"Authenticity Hash.*?`?([a-f0-9]{16,64})", text, re.IGNORECASE)
-            if m:
-                return m.group(1)
+            return extract_markdown_digest(text)
         except Exception:
             return None
 
     # Case C: PDF Report
     if ext == ".pdf":
         text = _extract_text_from_pdf(report_path)
-        # Search for full 64-character hex string
         m = re.search(r"([a-f0-9]{64})", text)
         if m:
             return m.group(1)
-        # Legacy marker search
         pattern = re.compile(re.escape(HASH_MARKER_START) + r"([a-f0-9]{64})" + re.escape(HASH_MARKER_END))
         m = pattern.search(text)
         if m:
@@ -163,7 +271,6 @@ def extract_embedded_hash(report_path: str) -> Optional[str]:
     # Case D: HTML Report
     if ext in (".html", ".htm"):
         text = _extract_text_from_html(report_path)
-        # Search for metadata block or hash pattern
         m = re.search(r"([a-f0-9]{64})", text)
         if m:
             return m.group(1)
@@ -186,12 +293,12 @@ def extract_metadata_from_report(report_path: str) -> Dict[str, Any]:
                 data = json.load(f)
             stats = data.get("statistics", {})
             return {
-                "format": "V9.5 JSON",
+                "format": "JSON",
                 "report_id": data.get("report_id"),
                 "engagement_id": data.get("engagement_id"),
                 "target": data.get("target"),
                 "operator": data.get("operator"),
-                "smp_version": data.get("smp_version"),
+                "smp_version": data.get("smp_version") or data.get("report_generator_version"),
                 "generated_at": data.get("generated_at"),
                 "risk_rating": stats.get("risk_rating"),
                 "total_findings": stats.get("total_findings"),
@@ -206,20 +313,20 @@ def extract_metadata_from_report(report_path: str) -> Dict[str, Any]:
 
     if ext in (".md", ".markdown"):
         try:
-            with open(report_path, "r", encoding="utf-8") as f:
+            with open(report_path, "r", encoding="utf-8", errors="replace") as f:
                 text = f.read()
-            # Extract table rows
+
             def _find_field(name):
                 m = re.search(rf"\*\*{name}\*\*.*?`([^`]+)`", text)
                 return m.group(1).strip() if m else None
 
-            meta["format"] = "V9.5 Markdown"
+            meta["format"] = "Markdown"
             meta["report_id"] = _find_field("Report ID")
             meta["engagement_id"] = _find_field("Engagement ID")
             meta["target"] = _find_field("Target")
             meta["operator"] = _find_field("Operator")
             meta["generated_at"] = _find_field("Generated")
-            meta["authenticity_hash"] = _find_field("Authenticity Hash") or extract_embedded_hash(report_path)
+            meta["authenticity_hash"] = extract_markdown_digest(text)
             return meta
         except Exception:
             return {}
@@ -242,7 +349,7 @@ def extract_metadata_from_report(report_path: str) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def verify_json_report(report_path: str) -> Tuple[bool, str, Dict[str, Any]]:
-    """Verify V9.5 canonical JSON report."""
+    """Verify V9.5+ canonical JSON report."""
     with open(report_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -252,21 +359,99 @@ def verify_json_report(report_path: str) -> Tuple[bool, str, Dict[str, Any]]:
 
     computed_hash = compute_json_canonical_hash(data)
 
-    if computed_hash == embedded_hash:
+    if hmac.compare_digest(computed_hash, embedded_hash):
         return True, computed_hash, data
     else:
         return False, f"Hash mismatch: computed={computed_hash} != embedded={embedded_hash}", data
 
 
-def verify_report(report_path: str, verbose: bool = True) -> bool:
+def verify_markdown_report(
+    report_path: str,
+    signing_key: Optional[bytes] = None,
+) -> Tuple[str, str, Dict[str, Any]]:
+    """
+    Verifies a Markdown report by recomputing the canonical payload digest and optional HMAC.
+    Returns:
+        (status, message, details)
+    """
+    if not os.path.exists(report_path):
+        return "NOT_FOUND", f"File not found: {report_path}", {}
+
+    try:
+        with open(report_path, "r", encoding="utf-8", errors="replace") as f:
+            text = f.read()
+    except Exception as e:
+        return "MALFORMED", f"Error reading report: {e}", {}
+
+    if not text.strip():
+        return "MALFORMED", "Report file is empty", {}
+
+    embedded_digest = extract_markdown_digest(text)
+    embedded_hmac = extract_markdown_hmac(text)
+    details = {
+        "format": "Markdown",
+        "embedded_digest": embedded_digest,
+        "embedded_hmac": embedded_hmac,
+    }
+
+    if not embedded_digest:
+        m_partial = re.search(r"SHA-256:\s*([^\s\n\r]+)", text, re.IGNORECASE)
+        if m_partial and len(m_partial.group(1)) != 64:
+            return "MALFORMED", f"Malformed SHA-256 digest: expected 64 hex characters, got {len(m_partial.group(1))}", details
+        return "MALFORMED", "No embedded SHA-256 digest found in Markdown report", details
+
+    computed_digest = compute_markdown_digest(text)
+    details["computed_digest"] = computed_digest
+
+    if hmac.compare_digest(computed_digest, embedded_digest):
+        details["integrity"] = "VERIFIED"
+        if signing_key:
+            if not embedded_hmac:
+                details["authenticity"] = "UNATTESTED"
+                return "INTEGRITY_VERIFIED", "Integrity verified (SHA-256 payload matches); report does not contain HMAC signature for authenticity", details
+            computed_hmac = compute_markdown_hmac(text, signing_key)
+            details["computed_hmac"] = computed_hmac
+            if hmac.compare_digest(computed_hmac, embedded_hmac):
+                details["authenticity"] = "VERIFIED"
+                return "AUTHENTICITY_VERIFIED", "Integrity and Authenticity VERIFIED (HMAC-SHA256 signature verified with key material)", details
+            else:
+                details["authenticity"] = "FAILED"
+                return "AUTHENTICITY_FAILED", "Authenticity verification FAILED: HMAC signature does not match key material", details
+        else:
+            details["authenticity"] = "UNATTESTED"
+            return "INTEGRITY_VERIFIED", "Integrity VERIFIED: canonical Markdown payload matches embedded digest (unkeyed SHA-256: author authenticity unattested)", details
+
+    # Recomputed digest does NOT match embedded digest
+    if is_legacy_markdown_report(text):
+        details["integrity"] = "UNVERIFIABLE"
+        details["authenticity"] = "UNVERIFIABLE"
+        return "UNVERIFIABLE_LEGACY", "UNVERIFIABLE_LEGACY: Report embeds legacy JSON data hash; standalone Markdown payload integrity cannot be verified", details
+
+    details["integrity"] = "FAILED"
+    details["authenticity"] = "FAILED"
+    return "FAILED", f"Verification FAILED: payload digest mismatch (computed={computed_digest[:16]}... != embedded={embedded_digest[:16]}...). Tampering or fabricated hash detected.", details
+
+
+def verify_report(
+    report_path: str,
+    verbose: bool = True,
+    signing_key: Optional[bytes] = None,
+) -> ReportVerificationResult:
     """
     Main verification function.
-    Returns True if the report is authentic and unmodified, False otherwise.
+    Returns ReportVerificationResult (evaluates truthy if verified, falsy otherwise).
+    Distinguishes payload integrity from author authenticity.
     """
     if not os.path.exists(report_path):
         if verbose:
             print(f"{RED}  ❌ File not found: {report_path}{RST}")
-        return False
+        return ReportVerificationResult(
+            verified=False,
+            status="NOT_FOUND",
+            integrity="NOT_FOUND",
+            authenticity="NOT_FOUND",
+            message=f"File not found: {report_path}",
+        )
 
     size_kb = os.path.getsize(report_path) / 1024
     fname = os.path.basename(report_path)
@@ -285,6 +470,9 @@ def verify_report(report_path: str, verbose: bool = True) -> bool:
             stats = data.get("statistics", {})
 
             if valid:
+                status = "INTEGRITY_VERIFIED"
+                integrity = "VERIFIED"
+                authenticity = "UNATTESTED"
                 if verbose:
                     print(f"{BLD}  Scan Metadata:{RST}")
                     print(f"    Report ID:          {data.get('report_id')}")
@@ -292,44 +480,89 @@ def verify_report(report_path: str, verbose: bool = True) -> bool:
                     print(f"    Target:             {data.get('target')}")
                     print(f"    Operator:           {data.get('operator')}")
                     print(f"    Generated:          {data.get('generated_at')}")
-                    print(f"    Platform:           SMP {data.get('smp_version')}")
                     print(f"    Risk Rating:        {stats.get('risk_rating')}")
                     print(f"    Total Findings:     {stats.get('total_findings')}")
-                    print(f"    Authenticity Hash:  {msg_or_hash}")
+                    print(f"    Payload Digest:     {msg_or_hash}")
                     print()
-                    print(f"{GRN}{BLD}  ✅  VERIFIED — Canonical SHA-256 signature is authentic and unmodified.{RST}")
-                    print(f"{GRN}  Payload integrity matches canonical signature: {msg_or_hash[:32]}...{RST}\n")
-                return True
+                    print(f"{GRN}{BLD}  ✅  INTEGRITY VERIFIED — Payload matches canonical JSON representation.{RST}")
+                    print(f"{CYN}  ℹ️   Authenticity: UNATTESTED (unkeyed hash validates integrity against corruption/tampering, not author identity).{RST}\n")
+                return ReportVerificationResult(
+                    verified=True,
+                    status=status,
+                    integrity=integrity,
+                    authenticity=authenticity,
+                    message="Payload matches canonical JSON representation",
+                    embedded_hash=msg_or_hash,
+                    computed_hash=msg_or_hash,
+                    details=data,
+                )
             else:
                 if verbose:
                     print(f"{RED}{BLD}  ❌  VERIFICATION FAILED — Tampering or corruption detected!{RST}")
                     print(f"{RED}  {msg_or_hash}{RST}\n")
-                return False
+                return ReportVerificationResult(
+                    verified=False,
+                    status="FAILED",
+                    integrity="FAILED",
+                    authenticity="FAILED",
+                    message=msg_or_hash,
+                    details=data,
+                )
         except Exception as e:
             if verbose:
                 print(f"{RED}  ❌ Error parsing JSON report: {e}{RST}\n")
-            return False
+            return ReportVerificationResult(
+                verified=False,
+                status="MALFORMED",
+                integrity="FAILED",
+                authenticity="FAILED",
+                message=f"Error parsing JSON report: {e}",
+            )
 
     # ── Verify Markdown Format ───────────────────────────────────────────────
     if ext in (".md", ".markdown"):
-        embedded_hash = extract_embedded_hash(report_path)
+        status, message, details = verify_markdown_report(report_path, signing_key=signing_key)
         meta = extract_metadata_from_report(report_path)
+        details.update(meta)
+        is_verified = status in ("INTEGRITY_VERIFIED", "AUTHENTICITY_VERIFIED")
+        integrity = details.get("integrity", "FAILED")
+        authenticity = details.get("authenticity", "FAILED")
 
-        if embedded_hash and len(embedded_hash) == 64:
-            if verbose:
-                print(f"{BLD}  Report Details:{RST}")
-                for k, v in meta.items():
-                    if v:
-                        print(f"    {k.replace('_', ' ').title():<20} {v}")
-                print(f"\n  {DIM}Embedded Hash:{RST} {embedded_hash}")
-                print()
-                print(f"{GRN}{BLD}  ✅  VERIFIED — Markdown VAPT report structure and hash signature valid.{RST}")
-                print(f"{GRN}  Authenticity signature: {embedded_hash}{RST}\n")
-            return True
-        else:
-            if verbose:
-                print(f"{YEL}  ⚠️  No 64-character SHA-256 authenticity hash found in Markdown report.{RST}\n")
-            return False
+        if verbose:
+            print(f"{BLD}  Report Details:{RST}")
+            for k, v in meta.items():
+                if v and k not in ("format", "authenticity_hash"):
+                    print(f"    {k.replace('_', ' ').title():<20} {v}")
+            if details.get("embedded_digest"):
+                print(f"    Embedded Digest:     {details['embedded_digest']}")
+            if details.get("computed_digest"):
+                print(f"    Computed Digest:     {details['computed_digest']}")
+            print()
+
+            if is_verified:
+                print(f"{GRN}{BLD}  ✅  STATUS: {status}{RST}")
+                print(f"{GRN}  • Integrity:    {integrity} (canonical Markdown payload matches digest){RST}")
+                if authenticity == "VERIFIED":
+                    print(f"{GRN}  • Authenticity: VERIFIED (HMAC-SHA256 signature verified with key){RST}\n")
+                else:
+                    print(f"{CYN}  • Authenticity: UNATTESTED (unkeyed hash validates integrity; separate key material required for author identity){RST}\n")
+            elif status == "UNVERIFIABLE_LEGACY":
+                print(f"{YEL}{BLD}  ⚠️   STATUS: UNVERIFIABLE_LEGACY{RST}")
+                print(f"{YEL}  {message}{RST}\n")
+            else:
+                print(f"{RED}{BLD}  ❌  STATUS: FAILED — Verification Failed{RST}")
+                print(f"{RED}  {message}{RST}\n")
+
+        return ReportVerificationResult(
+            verified=is_verified,
+            status=status,
+            integrity=integrity,
+            authenticity=authenticity,
+            message=message,
+            embedded_hash=details.get("embedded_digest"),
+            computed_hash=details.get("computed_digest"),
+            details=details,
+        )
 
     # ── Verify PDF / HTML Format ─────────────────────────────────────────────
     embedded_hash = extract_embedded_hash(report_path)
@@ -345,14 +578,29 @@ def verify_report(report_path: str, verbose: bool = True) -> bool:
                         print(f"    {k:<20} {v}")
 
             print()
-            print(f"{GRN}{BLD}  ✅  VERIFIED — Document contains valid SMP authenticity signature.{RST}")
-            print(f"{GRN}  Signature: {embedded_hash}{RST}\n")
-        return True
+            print(f"{GRN}{BLD}  ✅  INTEGRITY VERIFIED — Document contains embedded verification token.{RST}")
+            print(f"{CYN}  ℹ️   Authenticity: UNATTESTED (unkeyed hash){RST}\n")
+        return ReportVerificationResult(
+            verified=True,
+            status="INTEGRITY_VERIFIED",
+            integrity="VERIFIED",
+            authenticity="UNATTESTED",
+            message="Document contains embedded verification token",
+            embedded_hash=embedded_hash,
+            details=meta,
+        )
     else:
         if verbose:
             print(f"{YEL}  ⚠️  No embedded verification hash found in this document.{RST}")
             print("  This report may have been generated without authenticity signing.\n")
-        return False
+        return ReportVerificationResult(
+            verified=False,
+            status="MISSING_HASH",
+            integrity="FAILED",
+            authenticity="UNATTESTED",
+            message="No embedded verification hash found in document",
+            details=meta,
+        )
 
 
 def print_manual_verify_instructions(report_path: str):
@@ -375,25 +623,39 @@ def print_manual_verify_instructions(report_path: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SMP V9.5 — Universal Report Authenticity Verifier",
+        description="SMP V9.5 — Universal Report Authenticity & Integrity Verifier",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("report", help="Path to the SMP report file (.json, .md, .pdf, .html)")
+    parser.add_argument("--key", help="HMAC secret key (string or hex) for author authenticity verification")
+    parser.add_argument("--key-file", help="Path to file containing HMAC secret key")
     parser.add_argument("--manual", action="store_true", help="Print manual verification instructions")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON verification result")
     parser.add_argument("--quiet", action="store_true", help="Suppress banner and verbose output")
     args = parser.parse_args()
 
+    signing_key = None
+    if args.key:
+        signing_key = args.key.encode("utf-8")
+    elif args.key_file and os.path.exists(args.key_file):
+        with open(args.key_file, "rb") as kf:
+            signing_key = kf.read().strip()
+
     if not args.quiet and not args.json:
         print(BANNER)
 
-    result = verify_report(args.report, verbose=not args.json and not args.quiet)
+    result = verify_report(args.report, verbose=not args.json and not args.quiet, signing_key=signing_key)
 
     if args.json:
         out = {
             "file": args.report,
-            "verified": result,
-            "hash": extract_embedded_hash(args.report),
+            "status": result.status,
+            "verified": result.verified,
+            "integrity": result.integrity,
+            "authenticity": result.authenticity,
+            "hash": result.embedded_hash,
+            "computed_hash": result.computed_hash,
+            "message": result.message,
         }
         print(json.dumps(out, indent=2))
 

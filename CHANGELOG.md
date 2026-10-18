@@ -11,6 +11,93 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v9.5.13] - 2026-10-18
+### Fixed
+- scanners/scan_runner.py: Fixed `ResilientPopen.kill()` and `.terminate()` so process group termination failure in `os.killpg()` no longer raises before standard subprocess fallback is attempted (`super().kill()` / `super().terminate()`).
+- scanners/scan_runner.py: Avoided masking process-already-exited conditions (`ProcessLookupError`) as unclassified exceptions, cleanly handling terminated processes and preventing false crash reports.
+- scanners/scan_runner.py: Preserved original process group exceptions for diagnostics when both group and standard termination fail (`raise fallback_err from group_err`).
+- scanners/scan_runner.py: Added child process reaping (`wait(timeout=...)`) across all termination, kill, and exit paths to eliminate zombie/defunct processes.
+- setup.sh: Fixed installer hangs and 12-hour build timeouts. Added 120s command timeouts to `spin()`, safely wrapped piped script installations in `bash -c`, skipped unavailable apt packages (such as `nikto` on modern Debian/Ubuntu) with standalone fallback, prevented interactive sudo hangs, and bypassed incompatible `routersploit` dependencies on Python >= 3.10.
+- tests/test_subprocess_resilience.py: Added 11 focused unit and integration tests covering successful group termination, group failure fallback, already-exited processes, chained diagnostic exceptions, Windows bypass, and scanner timeout handling.
+
+## [v9.5.12] - 2026-10-18
+### Fixed
+- scanners/scan_runner.py: Corrected terminal-state recovery in `resume_interrupted_scans()`. Cancelled scans are centrally defined as terminal states and excluded from startup resumption, remaining cancelled in the database.
+- core/state_machine.py: Centrally defined terminal states (`TERMINAL_SCANNER_STATES`, `TERMINAL_SCAN_STATUSES`) and recoverable in-flight states (`RECOVERABLE_IN_FLIGHT_STATUSES`), with fail-closed validation predicates `is_terminal_status()` and `is_recoverable_status()`.
+- scanners/scan_runner.py: Replaced negative status exclusion with positive recoverable classification (`is_recoverable_status()`). Scans in unknown, empty, corrupt, or unhandled statuses fail closed and never trigger automatic scanning.
+- tests/test_scan_resumption.py: Added 100 database-backed and state-machine tests validating that every terminal state (including `Cancelled`, `Completed`, `Failed`, `Report Pending`, `Timeout`, `Blocked`) never resumes, corrupt statuses fail closed, and only explicitly recoverable in-flight states resume after an unclean shutdown.
+
+## [v9.5.11] - 2026-10-18
+### Security
+- core/url_validator.py: Replaced prefix-only target URL validation with RFC 3986 standard URL parsing, canonicalization, and destination security gate (`parse_and_canonicalize_url()`, `check_destination_allowed()`, `resolve_and_validate_destination()`, `validate_redirect_destination()`, and `SafeRedirectSession`).
+- core/url_validator.py: Enforced strict scheme validation (HTTP/HTTPS only), valid ports (1–65535 with default port normalization), IPv4 dot-decimal without leading zero / octal / hex confusion, RFC 3986 bracketed IPv6 literals, and IDNA domain name conversion (Punycode).
+- core/url_validator.py: Fail closed on ASCII control characters (< 32, 127 DEL), userinfo/credentials (`user:pass@`), malformed authorities, internal whitespace, and unsupported schemes (`ftp:`, `file:`, `gopher:`, `javascript:`, `data:`).
+- core/url_validator.py: Built policy-governed destination defense against cloud metadata (`169.254.169.254`, `100.100.100.200`, `fd00:ec2::254`, `metadata.google.internal`), loopback (`127.0.0.0/8`, `::1`, `localhost`), link-local (`169.254.0.0/16`, `fe80::/10`), unspecified/broadcast (`0.0.0.0`, `::`, `255.255.255.255`), and unauthorized private networks (`10/8`, `172.16/12`, `192.168/16`, `100.64/10`, `fc00::/7`).
+- core/url_validator.py: Defended against DNS rebinding attacks by resolving all IP addresses and rejecting requests if any resolved IP belongs to a forbidden destination.
+- core/url_validator.py: Created `SafeRedirectSession` and `validate_redirect_destination()` resolving relative paths and enforcing scope and destination safety on initial requests and every redirect hop before network activity.
+- core/scope_engine.py: Updated `ScopeEngine.is_allowed()` to extract normalized host and canonical URL, supporting domain, IP, and CIDR rules against full URLs, and updated `check_redirect()` to enforce destination boundaries and scope on every redirect hop.
+- core/scan_policy.py: Added destination and rebinding policy fields (`allow_private`, `allow_loopback`, `enforce_dns_rebinding`) to `ScanPolicySchema`.
+- core/execution_gate.py: Integrated destination checks and URL canonicalization at execution gate launch time.
+- api/server.py: Replaced prefix-only checks in `TargetCreate` and `ScanStartRequest` with `parse_and_canonicalize_url()` and destination gate checks, rejecting malformed and forbidden destinations at validation time with clean HTTP 400 responses.
+- tests/test_url_destination_hardening.py: Added 140 table-driven regression tests covering IPv4, IPv6, IDNA, ports, credentials, malformed inputs, destination boundaries, DNS rebinding, and redirect handling with strictly mocked DNS.
+
+## [v9.5.10] - 2026-10-18
+### Security
+- core/execution_gate.py: Created central server-side scan execution gate (`verify_scan_execution()`) enforcing engagement status, authorization validity, target scope, scanner manifest activity level, user policy allowlist/denylist, and cancellation state immediately before tool execution.
+- core/execution_gate.py: Added `get_scanner_activity_level()` mapping scanner tools to manifest activity levels, ensuring manifest activity cannot exceed policy limits.
+- scanners/scan_planner.py: ScanPlanner unified with the execution gate; `create_plan()` evaluates `verify_scan_execution()` and fails closed with `ScopeViolationError` or `SMPAuthError`. ScanPlanner is no longer an optional side path.
+- scanners/scan_runner.py: Routed all launch entry points (`start_scan_for_target()`, `_run_scan_sequence()`, and `run_with_resilience()`) through `verify_scan_execution()`. Out-of-scope or unauthorized scans fail closed before any tool process or subprocess is spawned.
+- scanners/core/plugin.py: `GenericPlugin.execute()` verifies execution permissions through `verify_scan_execution()` immediately prior to running resilient execution routines.
+- ui/controllers/dashboard_logic.py: `ScanWorker.run()` enforces execution gate validation before scan sequences begin, emitting UI errors and aborting cleanly on denial.
+- api/server.py: Added `POST /api/v6/scan` endpoint with `ScanStartRequest` model validating scans against the execution gate before launching, returning HTTP 403 on denial.
+- tests/test_execution_gate.py: Added 20 focused regression tests asserting that out-of-scope, expired, revoked, intrusive-unauthorized, inactive-engagement, or cancelled scans never call `subprocess.Popen` or `subprocess.run`, and proving that valid scope and authorization allow execution.
+
+## [v9.5.9] - 2026-10-18
+### Security
+- core/scope_engine.py: Enforced scanner activity level against engagement policy maximum activity level. `is_allowed()` now evaluates activity level permissions before target rules and never grants access based solely on a target string match.
+- core/scope_engine.py: Added strict, documented ranking for every `ActivityLevel` (`PASSIVE` < `LOW_IMPACT_ACTIVE` < `ACTIVE` < `INTRUSIVE` < `DESTRUCTIVE`). Unknown or malformed scanner activity or policy limits fail closed (denied by default).
+- core/scope_engine.py: Updated `ScopeEngine.__init__()` and added `set_policy()` / `set_max_activity_level()` to configure policy limits from `ScanPolicy` instances or direct values, with per-call overrides in `is_allowed()`.
+- core/scope_engine.py: Updated `check_redirect()` to respect activity level limits.
+- scanners/scan_planner.py: Passed `policy=scan_policy` when initializing `ScopeEngine`.
+- tests/test_activity_level_policy.py: Added 70 regression tests covering complete 5x5 activity matrix, unknown activity rejection, non-target-only grant verification, string resolution, and ScanPolicy integration.
+
+## [v9.5.8] - 2026-10-18
+### Security
+- core/authorization.py: Extracted `is_authorization_currently_valid()` as the single canonical timezone-safe validity gate shared between `AuthorizationTracker` and `ScopeEngine`. Normalizes timestamps to UTC and safely handles naive, offset-aware, missing, and malformed expiry values.
+- core/scope_engine.py: Scope rules are now created strictly from authorizations that are active, unexpired, and not revoked, using `is_authorization_currently_valid()`.
+- core/scope_engine.py: Database and parse errors during authorization loading fail closed and expose a safe diagnostic (`diagnostic` attribute and error reason) rather than returning an empty success-like policy.
+- tests/test_authorization_expiry.py: Added 26 regression tests covering future expiry, expired authorizations, exact boundary timestamps, revoked status, missing expiry, malformed values, timezone offsets, and ScopeEngine database failure diagnostics.
+
+## [v9.5.7] - 2026-10-17
+### Security
+- api/server.py: Removed caller-controlled JWT subject. The token endpoint previously used `request.username` (caller-supplied) as the JWT `sub` claim after verifying only a shared master password, allowing any authenticated caller to mint a token for any arbitrary identity.
+- api/server.py: Added `_ADMIN_SUBJECT = "smp-admin"` server-defined constant. All issued tokens carry this fixed subject, independent of what username the caller sends.
+- api/server.py: Token response now returns `subject` (server-resolved) instead of `username` (caller echo-back).
+- tests/test_token_subject.py: Eight focused regression tests covering: server constant existence and stability, create_token always called with `_ADMIN_SUBJECT`, arbitrary caller usernames rejected as JWT subject, invalid credentials → 401, response subject always equals server constant, two different callers get identical subject, audit actor derived from JWT sub.
+- tests/test_baseline.py: Replaced hard-coded version allowlist with forward-compatible `9.5.x` SemVer check to prevent spurious failures on future patch bumps.
+
+## [v9.5.6] - 2026-10-17
+### Security
+- api/auth.py: Removed JWT signing key derivation from `config/auth.json` salt (SHA-256 of public password-hashing salt). The signing key is now loaded exclusively from the `SMP_JWT_SECRET` environment variable, making it fully independent of password management.
+- api/auth.py: Added minimum key length enforcement (32 characters). Absent or too-short `SMP_JWT_SECRET` raises `RuntimeError` at call-time, refusing to issue tokens (fail-closed).
+- api/auth.py: Removed the last-resort path that wrote a generated `jwt_secret` into `config/auth.json`.
+- api/auth.py: Added a development/CI escape hatch (`SMP_DEV_ALLOW_INSECURE_JWT=1` or `SMP_CI=1`) that generates a per-process ephemeral random secret with a loud WARNING, never persisted to disk.
+- api/auth.py: JWT signing secret value is never written to any log record at any level.
+- .env.example: Documented `SMP_JWT_SECRET` as required in production, key rotation procedure, minimum length, independence from password salt, and `SMP_DEV_ALLOW_INSECURE_JWT` dev escape hatch.
+- tests/test_auth.py: Nine focused regression tests covering production fail-closed, too-short key, salt independence, secret non-leakage to logs, dev/CI ephemeral mode, and salt-derivation regression.
+
+## [v9.5.5] - 2026-10-17
+### Added
+- tools/verify_report.py: Deterministic canonical Markdown payload extraction (`get_canonical_markdown_payload`) and digest verification (`compute_markdown_digest`).
+- tools/verify_report.py: User-facing verification status distinctly separating payload integrity (tamper/corruption detection) from author authenticity (cryptographic origin attestation).
+- tools/verify_report.py: Keyed MAC (HMAC-SHA256) digital signature support with secret key material stored separately from the report payload.
+- tools/verify_report.py: Explicit `UNVERIFIABLE_LEGACY` status for older report formats embedding JSON-data hashes instead of canonical Markdown payload digests.
+- tests/test_report_verification.py: Focused regression suite verifying valid, one-byte modified, fabricated, missing, malformed, legacy, and keyed HMAC reports.
+
+### Fixed
+- tools/verify_report.py: Markdown verification now rejects fabricated 64-hex strings and one-byte modifications by recomputing the digest over the canonical payload rather than accepting any arbitrary 64-hex string.
+- tools/report_generator.py: Embed canonical Markdown payload digest (`PAYLOAD-SPEC: canonical-markdown-v1`) and optional HMAC-SHA256 signature in generated Markdown reports.
+
 ## [V9.5.1] - 2026-08-16
 ### Fixed
 - tools/scheduler.py: add missing `import os` (resolves ruff F821 — undefined name `os` in nuclei update job)

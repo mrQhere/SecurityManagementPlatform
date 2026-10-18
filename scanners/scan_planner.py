@@ -12,24 +12,24 @@ class ScanPlanner:
         self.target = target
         self.policy = scan_policy
         self.auth_id = auth_id
-        self.scope_engine = ScopeEngine(engagement_id)
+        self.scope_engine = ScopeEngine(engagement_id, policy=scan_policy)
         
     def create_plan(self) -> Dict[str, Any]:
         """Create comprehensive scan plan based on target and policy."""
-        # 1. Validate target against scope
-        allowed, reason = self.scope_engine.is_allowed(self.target, self.policy.data["activity_level_limit"])
+        from core.execution_gate import verify_scan_execution
+        allowed, reason = verify_scan_execution(
+            target=self.target,
+            engagement_id=self.engagement_id,
+            scan_policy=self.policy,
+            auth_id=self.auth_id,
+            scope_engine=self.scope_engine,
+            scanner_activity=self.policy.data.get("activity_level_limit", ActivityLevel.PASSIVE),
+        )
         if not allowed:
+            if "auth_id is required" in reason or "invalid, expired, or revoked" in reason:
+                from tools.errors import SMPAuthError
+                raise SMPAuthError(reason)
             raise ScopeViolationError(reason)
-            
-        # 1.5. Validate authorization for intrusive scans
-        if self.policy.data.get("activity_level_limit", ActivityLevel.PASSIVE) >= ActivityLevel.INTRUSIVE:
-            from tools.errors import SMPAuthError
-            if not self.auth_id:
-                raise SMPAuthError("auth_id is required for intrusive scans")
-            from core.authorization import AuthorizationTracker
-            tracker = AuthorizationTracker()
-            if not tracker.is_valid(self.auth_id):
-                raise SMPAuthError(f"Authorization {self.auth_id} is invalid, expired, or revoked.")
             
         # 2. Asset discovery phase
         asset_plan = self._plan_asset_discovery()

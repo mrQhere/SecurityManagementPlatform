@@ -99,7 +99,8 @@ class TestSMPComponents(unittest.TestCase):
         with open(meta_file, "r") as f:
             meta = json.load(f)
 
-        self.assertEqual(meta.get("version"), "V9.5")
+        version = str(meta.get("version", ""))
+        self.assertTrue(version == "V9.5" or (version.startswith("9.5.") and version[4:].isdigit()), f"Invalid version: {version}")
         self.assertIn("release_date", meta)
 
         # Test settings management

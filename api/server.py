@@ -22,6 +22,7 @@ import os
 import logging
 import hashlib
 from datetime import datetime
+from typing import Optional
 
 logger = logging.getLogger("smp.api")
 
@@ -93,14 +94,19 @@ if _FASTAPI_AVAILABLE:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         from tools.errors import SMPValidationError, SMPInvalidTargetError, SMPInvalidPayloadError
-        error_msg = str(exc.errors())
-        if "URL must start with" in error_msg:
-            err = SMPInvalidTargetError("URL must start with http:// or https://")
-            return JSONResponse(status_code=400, content=err.to_dict())
-        if "Username must be alphanumeric" in error_msg:
-            err = SMPInvalidPayloadError("Username must be alphanumeric.")
-            return JSONResponse(status_code=400, content=err.to_dict())
-            
+        for err in exc.errors():
+            ctx = err.get("ctx", {})
+            error_obj = ctx.get("error")
+            if isinstance(error_obj, SMPError):
+                return JSONResponse(status_code=400, content=error_obj.to_dict())
+            loc = err.get("loc", ())
+            msg = err.get("msg", "")
+            if "url" in loc or "target_url" in loc or "invalid_target" in str(err) or "URL" in msg:
+                clean_msg = msg.split(", ", 1)[-1] if ", " in msg else msg
+                return JSONResponse(status_code=400, content=SMPInvalidTargetError(clean_msg).to_dict())
+            if "username" in loc or "alphanumeric" in msg:
+                return JSONResponse(status_code=400, content=SMPInvalidPayloadError("Username must be alphanumeric.").to_dict())
+
         # Fallback to generic validation error
         return JSONResponse(
             status_code=400,
@@ -111,6 +117,14 @@ if _FASTAPI_AVAILABLE:
 
 
 # ── JWT Authentication ────────────────────────────────────────────────────────
+
+# Server-defined subject for the single-administrator model.
+# The JWT `sub` claim is ALWAYS this constant, regardless of what username
+# the caller supplies in the token request.  In a single-admin system, the
+# only meaningful authenticated identity is "the holder of the master password".
+# If SMP is ever extended to support per-account records, resolve the subject
+# from the account store here instead.
+_ADMIN_SUBJECT = "smp-admin"
 
 _bearer = HTTPBearer() if _FASTAPI_AVAILABLE else None
 
@@ -136,9 +150,13 @@ class TargetCreate(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, v):
-        if not v.startswith("http://") and not v.startswith("https://"):
-            raise SMPInvalidTargetError("URL must start with http:// or https://")
-        return v
+        from core.url_validator import parse_and_canonicalize_url, check_destination_allowed
+        from tools.errors import SMPInvalidTargetError
+        parsed = parse_and_canonicalize_url(v)
+        allowed, reason = check_destination_allowed(parsed)
+        if not allowed:
+            raise SMPInvalidTargetError(f"Forbidden destination: {reason}")
+        return parsed.url
 
 class TokenRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -149,6 +167,26 @@ class TokenRequest(BaseModel):
     def validate_username(cls, v):
         if not v.isalnum():
             raise SMPInvalidPayloadError("Username must be alphanumeric.")
+        return v
+
+class ScanStartRequest(BaseModel):
+    target_url: Optional[str] = None
+    target_id: Optional[int] = None
+    engagement_id: Optional[str] = "default"
+    auth_id: Optional[str] = None
+    activity_level: Optional[str] = None
+
+    @field_validator("target_url")
+    @classmethod
+    def validate_target_url(cls, v):
+        if v is not None:
+            from core.url_validator import parse_and_canonicalize_url, check_destination_allowed
+            from tools.errors import SMPInvalidTargetError
+            parsed = parse_and_canonicalize_url(v)
+            allowed, reason = check_destination_allowed(parsed)
+            if not allowed:
+                raise SMPInvalidTargetError(f"Forbidden destination: {reason}")
+            return parsed.url
         return v
 
 
@@ -196,12 +234,15 @@ if _FASTAPI_AVAILABLE:
 
         try:
             from api.auth import create_token
-            token = create_token(request.username)
+            # Subject is always the server-defined administrator constant.
+            # request.username is accepted in the request body for
+            # forward-compatibility but is NOT used to set the JWT subject.
+            token = create_token(_ADMIN_SUBJECT)
             return {
                 "access_token": token,
                 "token_type": "bearer",
                 "expires_in": 86400,
-                "username": request.username,
+                "subject": _ADMIN_SUBJECT,
             }
         except Exception as e:
             logger.error(f"[API] Token creation failed: {e}")
@@ -237,6 +278,47 @@ if _FASTAPI_AVAILABLE:
             logger.error(f"[API] list_scans error: {e}")
             from tools.errors import SMPDatabaseError
             raise SMPDatabaseError("Failed to fetch scans.")
+
+    @app.post("/api/v6/scan", tags=["Scans"])
+    def start_scan_endpoint(scan_req: ScanStartRequest, user: str = Depends(_get_current_user)):
+        """Start a new scan through the server-side execution gate."""
+        target_url = scan_req.target_url
+        target_id = scan_req.target_id
+        
+        if not target_url and target_id:
+            from tools.db_manager import get_target
+            t = get_target(target_id)
+            if t:
+                target_url = t.get("url")
+            else:
+                raise HTTPException(status_code=404, detail="Target not found")
+        elif not target_url:
+            raise HTTPException(status_code=400, detail="target_id or target_url required")
+
+        # ── V9.5.10 Server-side execution gate check ──────────────────────────
+        from core.execution_gate import verify_scan_execution
+        allowed, reason = verify_scan_execution(
+            target=target_url,
+            engagement_id=scan_req.engagement_id or "default",
+            auth_id=scan_req.auth_id,
+            scanner_activity=scan_req.activity_level,
+        )
+        if not allowed:
+            logger.warning(f"[API] Scan execution blocked for {target_url}: {reason}")
+            raise HTTPException(status_code=403, detail=f"Execution gate rejected: {reason}")
+
+        from scanners.scan_runner import start_scan_for_target
+        target_dict = {
+            "id": target_id or 0,
+            "url": target_url,
+            "engagement_id": scan_req.engagement_id,
+            "auth_id": scan_req.auth_id,
+        }
+        started = start_scan_for_target(target_dict)
+        if not started:
+            raise HTTPException(status_code=409, detail="Scan could not be started or already active")
+
+        return {"status": "started", "target": target_url, "started_by": user}
 
     @app.get("/api/v6/findings", tags=["Findings"])
     def list_findings(scan_id: int, user: str = Depends(_get_current_user)):

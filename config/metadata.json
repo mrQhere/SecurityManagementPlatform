@@ -1,5 +1,6 @@
 {
-    "version": "V9.5",
-    "release_date": "2026-08-15",
+    "version": "9.5.13",
+    "semver_baseline": "9.5.4",
+    "release_date": "2026-10-18",
     "status": "Stable"
 }

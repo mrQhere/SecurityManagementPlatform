@@ -76,7 +76,7 @@ class DAGOrchestrator:
                     time.sleep(random.uniform(1.0, 3.0))
                     
                 # Setup resilient subprocess execution context here if needed...
-                res = plugin.execute()
+                res = plugin.execute(cancel_event=c_event)
                 
                 if res is not None:
                     plugin.process_results(res)
