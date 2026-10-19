@@ -66,3 +66,34 @@ def test_setup_sh_syntax_and_functions():
     assert "SMP-9001" in content
     assert "SMP-9002" in content
     assert "SMP-9005" in content
+
+
+def test_setup_spin_function_execution():
+    """Verify that spin executes shell functions without timeout errors."""
+    setup_path = os.path.join(BASE_DIR, "setup.sh")
+    test_cmd = [
+        "bash",
+        "-c",
+        f"""
+        SCRIPT_DIR="{BASE_DIR}"
+        BIN_DIR="{BASE_DIR}/bin"
+        source <(sed -e "s|SCRIPT_DIR=.*|SCRIPT_DIR={BASE_DIR}|" -e '/^verify_network_routes/,$d' "{setup_path}")
+        test_fn() {{ echo "fn_success"; return 0; }}
+        LOG_FILE=$(mktemp)
+        spin "Testing spin function execution" test_fn
+        status=$?
+        log_content=$(cat "$LOG_FILE")
+        rm -f "$LOG_FILE"
+        echo "LOG: $log_content"
+        exit $status
+        """,
+    ]
+    res = subprocess.run(test_cmd, capture_output=True, text=True)
+    assert res.returncode == 0, f"spin function execution failed: {res.stderr}\n{res.stdout}"
+    assert "fn_success" in res.stdout
+    assert "No such file or directory" not in res.stdout
+    assert "100%" in res.stdout
+    assert "▕" in res.stdout
+    assert "█" in res.stdout
+    assert "▏" in res.stdout
+

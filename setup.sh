@@ -52,42 +52,131 @@ done
 
 > "$LOG_FILE"
 
-# ── UI ─────────────────────────────────────────────────────────────────────────
+# ── UI & Ollama-style Progress Bar Engine ──────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'; DIM='\033[2m'
-ok() { printf "\r\033[K${GREEN}✔${RESET} %s\n" "$*"; }
-warn() { printf "\r\033[K${YELLOW}⚠${RESET} %s\n" "$*"; }
-fail() { printf "\r\033[K${RED}✘${RESET} %s\n" "$*"; exit 1; }
-info() { printf "\r\033[K${CYAN}ℹ${RESET} %s\n" "$*"; }
+
+BAR_BLOCKS="████████████████████████████████████████"
+BAR_SPACES="                                        "
+BAR_LEFT="▕"
+BAR_RIGHT="▏"
+
+_bar_layout() {
+  local cols; cols=$(tput cols 2>/dev/null || echo 80)
+  if [[ "$cols" -ge 105 ]]; then
+    echo "28 42"
+  else
+    echo "20 38"
+  fi
+}
+
+ok() {
+  local bar_w name_w
+  read -r bar_w name_w <<< "$(_bar_layout)"
+  printf "\r\033[K${GREEN}✔${RESET} %-${name_w}.${name_w}s \033[1;32m100%%\033[0m ${GREEN}${BAR_LEFT}%s${BAR_RIGHT}${RESET}\n" \
+    "$*" "${BAR_BLOCKS:0:bar_w}"
+}
+
+warn() {
+  local bar_w name_w
+  read -r bar_w name_w <<< "$(_bar_layout)"
+  printf "\r\033[K${YELLOW}⚠${RESET} %-${name_w}.${name_w}s ${YELLOW}%s${RESET}\n" "$*" ""
+}
+
+fail() {
+  printf "\r\033[K${RED}✘${RESET} %s\n" "$*"
+  exit 1
+}
+
+info() {
+  printf "\r\033[K${CYAN}ℹ${RESET} %s\n" "$*"
+}
 
 spin() {
   local msg="$1"; shift
+  local t_start=$(date +%s)
+  local bar_w name_w
+  read -r bar_w name_w <<< "$(_bar_layout)"
+
   (
-    local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏") i=0
+    local sp=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+    local i=0
     while true; do
-      printf "\r\033[K${CYAN}%s${RESET} %s" "${sp[$((i%10))]}" "$msg"
-      ((i++)) || true; sleep 0.1
+      local spin_char="${sp[$((i % 10))]}"
+      # Progressively add boxes as time elapses (Ollama box accumulation)
+      local pct=$(( 95 - 2375 / (25 + (i * 4) / 10) ))
+      [[ $pct -lt 1 ]] && pct=1
+      [[ $pct -gt 95 ]] && pct=95
+      local filled=$(( (pct * bar_w) / 100 ))
+      local empty=$(( bar_w - filled ))
+      local bar="${BAR_BLOCKS:0:filled}${BAR_SPACES:0:empty}"
+      local sec=$(( i / 10 ))
+      local tenths=$(( i % 10 ))
+      printf "\r\033[K${CYAN}%s${RESET} %-${name_w}.${name_w}s \033[1m%3d%%\033[0m ${CYAN}${BAR_LEFT}%s${BAR_RIGHT}${RESET} ${DIM}(%d.%ds)${RESET}" \
+        "$spin_char" "$msg" "$pct" "$bar" "$sec" "$tenths"
+      i=$((i + 1))
+      sleep 0.1
     done
   ) & local spin_pid=$!
+  trap 'kill $spin_pid 2>/dev/null || true; exit 130' INT TERM
 
   local cmd_timeout="${SETUP_CMD_TIMEOUT:-120}"
   local status=0
-  if command -v timeout &>/dev/null; then
+  if declare -F -- "$1" &>/dev/null; then
+    ( "$@" ) >> "$LOG_FILE" 2>&1 &
+    local cmd_pid=$!
+    local elapsed=0
+    local max_wait=$((cmd_timeout * 10))
+    while kill -0 "$cmd_pid" 2>/dev/null; do
+      if (( elapsed >= max_wait )); then
+        pkill -P "$cmd_pid" 2>/dev/null || true
+        kill -TERM "$cmd_pid" 2>/dev/null || true
+        sleep 0.2
+        pkill -9 -P "$cmd_pid" 2>/dev/null || true
+        kill -KILL "$cmd_pid" 2>/dev/null || true
+        status=124
+        break
+      fi
+      sleep 0.1
+      elapsed=$((elapsed + 1))
+    done
+    if [[ $status -ne 124 ]]; then
+      wait "$cmd_pid" 2>/dev/null || status=$?
+    else
+      wait "$cmd_pid" 2>/dev/null || true
+    fi
+  elif command -v timeout &>/dev/null; then
     timeout "$cmd_timeout" "$@" >> "$LOG_FILE" 2>&1 || status=$?
   else
     "$@" >> "$LOG_FILE" 2>&1 || status=$?
   fi
 
   kill $spin_pid 2>/dev/null; wait $spin_pid 2>/dev/null || true
+  trap - INT TERM
+
+  local t_end=$(date +%s)
+  local dur=$(( t_end - t_start ))
+  [[ $dur -lt 1 ]] && dur=1
 
   if [[ $status -eq 0 ]]; then
-    ok "$msg"
+    printf "\r\033[K${GREEN}✔${RESET} %-${name_w}.${name_w}s \033[1;32m100%%\033[0m ${GREEN}${BAR_LEFT}%s${BAR_RIGHT}${RESET} ${DIM}(%ss)${RESET}\n" \
+      "$msg" "${BAR_BLOCKS:0:bar_w}" "$dur"
     return 0
   elif [[ $status -eq 124 ]]; then
-    warn "$msg — timed out after ${cmd_timeout}s"
+    local pct=95
+    local filled=$(( (pct * bar_w) / 100 ))
+    local empty=$(( bar_w - filled ))
+    local bar="${BAR_BLOCKS:0:filled}${BAR_SPACES:0:empty}"
+    printf "\r\033[K${YELLOW}⚠${RESET} %-${name_w}.${name_w}s \033[1;33m %s%%\033[0m ${YELLOW}${BAR_LEFT}%s${BAR_RIGHT}${RESET} ${DIM}(timed out ${cmd_timeout}s)${RESET}\n" \
+      "$msg" "$pct" "$bar"
     return 1
   else
-    warn "$msg — see setup.log"
+    local pct=50
+    local filled=$(( (pct * bar_w) / 100 ))
+    local empty=$(( bar_w - filled ))
+    local bar="${BAR_BLOCKS:0:filled}${BAR_SPACES:0:empty}"
+    printf "\r\033[K${RED}✘${RESET} %-${name_w}.${name_w}s \033[1;31m %s%%\033[0m ${RED}${BAR_LEFT}%s${BAR_RIGHT}${RESET} ${DIM}(see setup.log)${RESET}\n" \
+      "$msg" "$pct" "$bar"
     return 1
   fi
 }
@@ -661,17 +750,17 @@ else
     local url expected_sha
     if is_arm; then
       url="$url_arm"
-      expected_sha="${T_SHA_ARM[$name]}"
+      expected_sha="${T_SHA_ARM[$name]:-}"
     else
       url="$url_amd"
-      expected_sha="${T_SHA_AMD[$name]}"
+      expected_sha="${T_SHA_AMD[$name]:-}"
     fi
     info "Downloading $name from: $url"
     local tmp; tmp="$(mktemp -d)"
     local archive="$tmp/archive"
-    if ! curl -fL --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
+    if ! curl -fL --connect-timeout 10 --max-time 180 --retry 3 --retry-delay 2 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
       run_troubleshooter "Downloading $name"
-      if ! curl -fL --retry 2 --retry-delay 3 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
+      if ! curl -fL --connect-timeout 10 --max-time 180 --retry 2 --retry-delay 3 -o "$archive" "$url" >> "$LOG_FILE" 2>&1; then
         rm -rf "$tmp"
         warn "$name: download failed"
         return 1
@@ -794,7 +883,7 @@ else
  fi
  # Fallback: go install (pinned)
  if have go && spin "Building $name from source" \
- go install -v "${T_GO[$name]}" >> "$LOG_FILE" 2>&1; then
+ go install -v "${T_GO[$name]}"; then
  continue
  fi
  warn "$name: download and source build failed — scan will be skipped"
@@ -821,13 +910,13 @@ else
  spin "Installing Expansion Python Tools" pip install --timeout 30 --prefer-binary wafw00f semgrep checkov sslyze cloudsplaining kube-hunter droopescan git-dumper -q || true
  
  if ! have hakrawler; then
- spin "Installing Hakrawler" go install github.com/hakluke/hakrawler@latest >> "$LOG_FILE" 2>&1 || true
+ spin "Installing Hakrawler" go install github.com/hakluke/hakrawler@latest || true
  fi
  if ! have gau; then
- spin "Installing Gau" go install github.com/lc/gau/v2/cmd/gau@latest >> "$LOG_FILE" 2>&1 || true
+ spin "Installing Gau" go install github.com/lc/gau/v2/cmd/gau@latest || true
  fi
  if ! have naabu; then
- spin "Installing Naabu" go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >> "$LOG_FILE" 2>&1 || true
+ spin "Installing Naabu" go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest || true
  fi
  if ! have trufflehog; then
  spin "Installing TruffleHog" bash -c "curl -sSfL --connect-timeout 10 --max-time 60 https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b '$BIN_DIR'" || true
@@ -842,10 +931,10 @@ else
  spin "Installing Faraday/Dojo Inspired Python Tools" pip install --timeout 30 --prefer-binary bandit detect-secrets routersploit impacket -q || true
  fi
  if ! have osv-scanner; then
- spin "Installing OSV-Scanner" go install github.com/google/osv-scanner/cmd/osv-scanner@v1 >> "$LOG_FILE" 2>&1 || true
+ spin "Installing OSV-Scanner" go install github.com/google/osv-scanner/cmd/osv-scanner@v1 || true
  fi
  if ! have kube-bench; then
- spin "Installing Kube-Bench" go install github.com/aquasecurity/kube-bench@latest >> "$LOG_FILE" 2>&1 || true
+ spin "Installing Kube-Bench" go install github.com/aquasecurity/kube-bench@latest || true
  fi
 
  # ── Nikto Standalone Fallback ──────────────────────────────────────────
